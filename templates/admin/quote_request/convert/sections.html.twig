@@ -1,5 +1,6 @@
 {% set quote_request = hookable_metadata.context.quote_request %}
 {% set form = hookable_metadata.context.form %}
+{% form_theme form '@SyliusAdmin/shared/form_theme.html.twig' %}
 {% set totals = tmonier_quote_request_totals(quote_request) %}
 
 <div class="page-body">

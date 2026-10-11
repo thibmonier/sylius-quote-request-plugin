@@ -80,6 +80,9 @@ final class QuoteToOrderTest extends KernelTestCase
             }
         }
 
+        // Taxes of the US zone are computed on the discounted negotiated prices.
+        self::assertGreaterThan(0, $cart->getTaxTotal());
+
         // The totals shown on the quote are the ones of the order, shipping apart.
         self::assertSame($expectedTotals->discount, -$discount);
         self::assertSame($expectedTotals->taxTotal, $cart->getTaxTotal() - $this->shippingTaxes($cart));

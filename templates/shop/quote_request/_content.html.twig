@@ -1,4 +1,5 @@
 {% set token = quote_request.token %}
+{% if message_form is not null %}{% form_theme message_form '@SyliusShop/form/theme.html.twig' %}{% endif %}
 
 <div class="d-flex flex-wrap align-items-center gap-3 mb-3">
     <h1 class="h2 mb-0">{{ 'tmonier_quote_request.ui.quote_number'|trans({'%number%': quote_request.number}) }}</h1>
