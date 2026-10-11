@@ -129,6 +129,18 @@ PDF engine probe, failure-tolerant proposal e-mail, attachment kept for async wo
 wkhtmltopdf sandbox options; prorated fixed discount; memoised quote lookup (no query for
 regular carts); ordered demo quote; export-ignore list.
 
+## 2d. Re-verification fixes (2026-10-12)
+
+Quote `version` (optimistic lock) checked under the row lock; conversion refuses unorderable
+accepted quotes, partial carts and customer carts already in the checkout, empties the
+customer cart, checks the chosen shipping method in every checkout state; the quote cart is
+restored even when emptied (memoised lookup, no content shortcut) and an order without the
+quote lines never orders the quote; one "ordered" event after the flush for both adapters,
+never for a failed flush; expirer continues past a quote changed meanwhile; rate limit keys
+(mailbox, IPv6 /64), valid submissions only, customers included, own budget for messages;
+absolute e-mail links via UrlHelper and `sylius.unsecured_urls`; refused proposals keep the
+merchant edits; per-PDF private temporary directories; binary paths with spaces.
+
 ## 3. Model
 
 - `QuoteRequest` (`tmonier_quote_request`): number (`Q000042`, from the id), status, token,

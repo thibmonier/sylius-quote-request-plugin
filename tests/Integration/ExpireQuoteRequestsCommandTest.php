@@ -60,6 +60,27 @@ final class ExpireQuoteRequestsCommandTest extends KernelTestCase
         self::assertStringNotContainsString((string) $past->getNumber(), $tester->getDisplay());
     }
 
+    public function testAProposalAcceptedMeanwhileIsSkippedAndTheOthersExpire(): void
+    {
+        $raced = $this->proposal(new \DateTimeImmutable('-1 day'));
+        $other = $this->proposal(new \DateTimeImmutable('-1 day'));
+        // Accepted by the customer in another request after the cron loaded it.
+        $this->entityManager()->getConnection()->executeStatement(
+            'UPDATE tmonier_quote_request SET status = ?, version = version + 1 WHERE id = ?',
+            [QuoteRequestStatuses::ACCEPTED, $raced->getId()],
+        );
+
+        $tester = $this->commandTester();
+        $tester->execute([], ['verbosity' => \Symfony\Component\Console\Output\OutputInterface::VERBOSITY_VERBOSE]);
+
+        $tester->assertCommandIsSuccessful();
+        self::assertStringContainsString((string) $other->getNumber(), $tester->getDisplay());
+        self::assertStringNotContainsString((string) $raced->getNumber(), $tester->getDisplay());
+        $statuses = $this->entityManager()->getConnection()->fetchAllKeyValue('SELECT id, status FROM tmonier_quote_request WHERE id IN (?, ?)', [$raced->getId(), $other->getId()]);
+        self::assertSame(QuoteRequestStatuses::ACCEPTED, $statuses[$raced->getId() ?? 0]);
+        self::assertSame(QuoteRequestStatuses::EXPIRED, $statuses[$other->getId() ?? 0]);
+    }
+
     private function proposal(\DateTimeImmutable $validUntil): QuoteRequestInterface
     {
         $quote = $this->quote();

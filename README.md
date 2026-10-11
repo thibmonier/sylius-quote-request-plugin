@@ -176,10 +176,12 @@ tmonier_sylius_quote_request:
         wholesale: 12.5
     pdf_binary: ~               # wkhtmltopdf path, with knplabs/knp-snappy, when KnpSnappyBundle is not installed
     base_url: ~                 # base of the links in the e-mails; the channel hostname when null
-    rate_limit:                 # guests: quote requests and messages
+    rate_limit:                 # valid quote requests (guests and customers) and messages
         enabled: true
-        per_ip: 10
-        per_email: 3
+        per_ip: 10              # IPv6: per /64 network
+        per_email: 3            # case, +tag and Gmail dots ignored
+        messages_per_ip: 30
+        messages_per_quote: 10
         interval: '1 hour'
         cache_pool: cache.rate_limiter
 ```
@@ -210,9 +212,9 @@ public function onAccepted(QuoteRequestEvent $event): void
 
 `created`, `proposed`, `accepted`, `declined`, `cancelled`, `expired` and the messages events
 are dispatched once the change is committed (accept, convert and the merchant transitions run
-in a transaction holding a lock on the quote row). `ordered` is dispatched during the checkout
-completion with the Symfony Workflow adapter (flushed with the order), or after the flush on
-the Winzou path; on the first path, listeners must not flush. The Symfony Workflow events of
+in a transaction holding a lock on the quote row). `ordered` is dispatched after the order
+flush, whatever the state machine adapter, only if the quote is stored as ordered; what its
+listeners persist is flushed right after. The Symfony Workflow events of
 `tmonier_quote_request` are available too.
 
 ## Security
@@ -223,18 +225,27 @@ the Winzou path; on the first path, listeners must not flush. The Symfony Workfl
 - The quotes of a **shop account** need their owner logged in, link or not (other customers get
   a 403, visitors the login page); their e-mails link to *My quotes*. The cart of an accepted
   quote is never handed to another customer.
-- Guests are rate limited (per IP and per e-mail) and a honeypot field drops robots. E-mails
+- Quote requests are rate limited per IP (IPv6 /64) and per mailbox (sub-addresses and Gmail
+  dots count as one), messages per quote and per IP; only valid submissions count. A honeypot
+  field drops robots. E-mails
   to the customer never repeat the contact details typed in the form (the recipient may not be
   the author); the merchant e-mail keeps them.
-- Links in e-mails come from `base_url` or the channel hostname, never from the request Host
-  header. Set `framework.trusted_hosts` anyway.
+- Links in e-mails come from `base_url` or the channel hostname (scheme following
+  `sylius.unsecured_urls`); without either, from the router default URI or the request: set
+  `framework.trusted_hosts` (or `base_url`).
 - Every action is a POST with a CSRF token; the admin pages are behind the Sylius admin
   firewall. Customers can only cancel a request in progress or decline a proposal.
 - Customer input is escaped in the e-mails (the Sylius e-mail layout disables autoescaping) and
   in the PDF; wkhtmltopdf runs with `--disable-local-file-access` and `--disable-javascript`.
 - Accepting and converting check that every product can still be ordered (enabled, sold in
-  the channel, stock for tracked variants); the conversion runs the `sylius_checkout_complete`
-  validation of the shop checkout and is atomic.
+  the channel, stock for tracked variants): no partial or empty order. The conversion runs the
+  `sylius_checkout_complete` validation of the shop checkout, keeps the chosen shipping method
+  or fails, and is atomic.
+- Concurrency: quotes carry an optimistic-lock version; accept, checkout start, conversion and
+  merchant transitions lock the quote row and refuse a quote changed meanwhile (tested with two
+  connections). A conversion is refused while the customer is in the checkout of the quote
+  cart, and empties that cart otherwise. An order that does not hold the quote lines at their
+  locked prices never makes the quote "ordered".
 
 ## Limitations
 

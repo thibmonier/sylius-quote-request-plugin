@@ -97,6 +97,26 @@ trait QuoteRequestTestTrait
         return $channel;
     }
 
+    /**
+     * A country where an enabled shipping method of the channel ships (random fixtures may put
+     * every method in the WORLD zone, without the US).
+     */
+    private function shippableCountry(): string
+    {
+        /** @var \Sylius\Component\Core\Repository\ShippingMethodRepositoryInterface<\Sylius\Component\Core\Model\ShippingMethodInterface> $repository */
+        $repository = self::getContainer()->get('sylius.repository.shipping_method');
+        foreach ($repository->findEnabledForChannel($this->channel()) as $method) {
+            $zone = $method->getZone();
+            if (null !== $zone && 'country' === $zone->getType()) {
+                foreach ($zone->getMembers() as $member) {
+                    return (string) $member->getCode();
+                }
+            }
+        }
+
+        self::markTestSkipped('No shipping zone of countries in the fixtures.');
+    }
+
     private function localeCode(): string
     {
         return (string) $this->channel()->getDefaultLocale()?->getCode();

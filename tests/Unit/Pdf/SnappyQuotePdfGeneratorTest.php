@@ -58,4 +58,20 @@ final class SnappyQuotePdfGeneratorTest extends TestCase
 
         self::assertTrue($generator->isAvailable());
     }
+
+    public function testABinaryPathWithSpacesIsAccepted(): void
+    {
+        $directory = sprintf('%s/wk tools %s', sys_get_temp_dir(), bin2hex(random_bytes(4)));
+        mkdir($directory);
+        $binary = $directory . '/wkhtmltopdf';
+        file_put_contents($binary, "#!/bin/sh\nexit 0\n");
+        chmod($binary, 0755);
+
+        try {
+            self::assertTrue((new SnappyQuotePdfGenerator($this->twig(), new Pdf($binary)))->isAvailable());
+        } finally {
+            unlink($binary);
+            rmdir($directory);
+        }
+    }
 }

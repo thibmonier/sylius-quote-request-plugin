@@ -240,6 +240,45 @@ final class QuoteToOrderTest extends KernelTestCase
         self::assertSame((new \DateTimeImmutable('+30 days'))->format('Y-m-d') . ' 23:59:59', $quote->getValidUntil()?->format('Y-m-d H:i:s'));
     }
 
+    public function testAnEmptiedQuoteCartGetsItsLinesBack(): void
+    {
+        [$first, $second] = $this->variants();
+        $quote = $this->proposedQuote([[$first, 2, 1000]]);
+        $cart = $this->manager()->accept($quote, $this->customer(), false);
+        /** @var \Sylius\Component\Order\Modifier\OrderModifierInterface $orderModifier */
+        $orderModifier = self::getContainer()->get('sylius.modifier.order');
+
+        $orderModifier->removeFromOrder($cart, $this->items($cart)[0]);
+        self::assertSame([1000], $this->unitPrices($cart), 'The quote line is restored.');
+
+        // A product added next to it leaves the cart too: the quote cart holds the quote only.
+        $orderModifier->addToOrder($cart, $this->newItem($second, 1));
+        self::assertSame([1000], $this->unitPrices($cart));
+        self::assertSame($first, $this->items($cart)[0]->getVariant());
+    }
+
+    public function testOrderedListenersThatOnlyPersistAreSavedOnTheWorkflowPath(): void
+    {
+        [$first] = $this->variants();
+        $quote = $this->proposedQuote([[$first, 2, 1000]]);
+        $cart = $this->manager()->accept($quote, $this->customer(), false);
+        /** @var \Symfony\Component\EventDispatcher\EventDispatcherInterface $dispatcher */
+        $dispatcher = self::getContainer()->get('event_dispatcher');
+        $dispatched = 0;
+        $dispatcher->addListener(\Tmonier\SyliusQuoteRequestPlugin\Event\QuoteRequestEvents::ORDERED, function (\Tmonier\SyliusQuoteRequestPlugin\Event\QuoteRequestEvent $event) use (&$dispatched): void {
+            ++$dispatched;
+            /** @var \Tmonier\SyliusQuoteRequestPlugin\Factory\QuoteRequestFactoryInterface $factory */
+            $factory = self::getContainer()->get('tmonier_quote_request.factory');
+            $event->getQuoteRequest()->addMessage($factory->createMessage('admin', 'ERP', 'Order exported'));
+        });
+
+        $this->checkout($cart, $quote);
+
+        self::assertSame(1, $dispatched);
+        $count = $this->entityManager()->getConnection()->fetchOne("SELECT COUNT(*) FROM tmonier_quote_request_message WHERE quote_request_id = ? AND body = 'Order exported'", [$quote->getId()]);
+        self::assertSame(1, \Tests\Tmonier\SyliusQuoteRequestPlugin\DbValue::int($count));
+    }
+
     /**
      * @param list<array{0: ProductVariantInterface, 1: int, 2: int}> $lines
      */
@@ -423,6 +462,17 @@ final class QuoteToOrderTest extends KernelTestCase
         $processor = self::getContainer()->get('sylius.order_processing.order_processor');
 
         return $processor;
+    }
+
+    private function newItem(ProductVariantInterface $variant, int $quantity): OrderItemInterface
+    {
+        $item = $this->orderItemFactory()->createNew();
+        $item->setVariant($variant);
+        /** @var OrderItemQuantityModifierInterface $quantityModifier */
+        $quantityModifier = self::getContainer()->get('sylius.modifier.order_item_quantity');
+        $quantityModifier->modify($item, $quantity);
+
+        return $item;
     }
 
     /** @return FactoryInterface<OrderItemInterface> */

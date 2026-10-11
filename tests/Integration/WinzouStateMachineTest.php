@@ -133,6 +133,69 @@ final class WinzouStateMachineTest extends KernelTestCase
         return $quote;
     }
 
+    public function testOrderedListenersThatOnlyPersistAreSaved(): void
+    {
+        /** @var EventDispatcherInterface $dispatcher */
+        $dispatcher = self::getContainer()->get('event_dispatcher');
+        $dispatcher->addListener(QuoteRequestEvents::ORDERED, static function (\Tmonier\SyliusQuoteRequestPlugin\Event\QuoteRequestEvent $event): void {
+            /** @var QuoteRequestFactoryInterface $factory */
+            $factory = self::getContainer()->get('tmonier_quote_request.factory');
+            $event->getQuoteRequest()->addMessage($factory->createMessage('admin', 'ERP', 'Order exported'));
+        });
+        $quote = $this->proposedQuote();
+        $cart = $this->manager()->accept($quote, $this->customer(), false);
+
+        $this->completeCheckout($cart);
+        $this->entityManager()->flush();
+
+        $count = $this->entityManager()->getConnection()->fetchOne("SELECT COUNT(*) FROM tmonier_quote_request_message WHERE quote_request_id = ? AND body = 'Order exported'", [$quote->getId()]);
+        self::assertSame(1, \Tests\Tmonier\SyliusQuoteRequestPlugin\DbValue::int($count), 'Same behaviour as the Symfony Workflow path.');
+    }
+
+    public function testAFailedFlushDispatchesNoOrderedEvent(): void
+    {
+        $events = 0;
+        /** @var EventDispatcherInterface $dispatcher */
+        $dispatcher = self::getContainer()->get('event_dispatcher');
+        $dispatcher->addListener(QuoteRequestEvents::ORDERED, static function () use (&$events): void {
+            ++$events;
+        });
+        $quote = $this->proposedQuote();
+        $cart = $this->manager()->accept($quote, $this->customer(), false);
+        $this->completeCheckout($cart);
+        /** @var \Tmonier\SyliusQuoteRequestPlugin\EventListener\OrderCheckoutCompletedDoctrineListener $listener */
+        $listener = self::getContainer()->get('tmonier_quote_request.listener.order_checkout_completed_doctrine');
+        $listener->onFlush(new \Doctrine\ORM\Event\OnFlushEventArgs($this->entityManager()));
+        // The flush does not happen (failure): its pending "ordered" event must never come out.
+        $this->entityManager()->clear();
+
+        $this->entityManager()->flush(); // a later, unrelated flush
+
+        self::assertSame(0, $events);
+    }
+
+    private function completeCheckout(\Sylius\Component\Core\Model\OrderInterface $cart): void
+    {
+        /** @var StateMachineInterface $stateMachine */
+        $stateMachine = self::getContainer()->get('sylius_abstraction.state_machine');
+        /** @var FactoryInterface<AddressInterface> $addressFactory */
+        $addressFactory = self::getContainer()->get('sylius.factory.address');
+        $address = $addressFactory->createNew();
+        $address->setFirstName('Ada');
+        $address->setLastName('Buyer');
+        $address->setStreet('1 Main Street');
+        $address->setCity('New York');
+        $address->setPostcode('10001');
+        $address->setCountryCode('US');
+        $cart->setShippingAddress($address);
+        $cart->setBillingAddress(clone $address);
+        foreach ([OrderCheckoutTransitions::TRANSITION_ADDRESS, OrderCheckoutTransitions::TRANSITION_SELECT_SHIPPING, OrderCheckoutTransitions::TRANSITION_SELECT_PAYMENT, OrderCheckoutTransitions::TRANSITION_COMPLETE] as $transition) {
+            if (OrderCheckoutTransitions::TRANSITION_COMPLETE === $transition || $stateMachine->can($cart, OrderCheckoutTransitions::GRAPH, $transition)) {
+                $stateMachine->apply($cart, OrderCheckoutTransitions::GRAPH, $transition);
+            }
+        }
+    }
+
     private function statusOf(QuoteRequestInterface $quote): string
     {
         return $quote->getStatus();

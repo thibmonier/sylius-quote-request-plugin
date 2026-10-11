@@ -233,6 +233,85 @@ final class ShopQuoteRequestTest extends WebTestCase
         self::assertEmailHtmlBodyContains($customerEmail, '://localhost/' . $this->localeCode() . '/quotes/');
     }
 
+    public function testSubAddressesAndAnIpv6NetworkShareTheirBudget(): void
+    {
+        [$variant] = $this->sellableVariants(1);
+
+        for ($attempt = 1; $attempt <= 4; ++$attempt) {
+            $this->addToBasket($variant, 5);
+            $crawler = $this->client->request('GET', $this->shopUrl('/quote-request'));
+            $form = $crawler->filter('[data-test-tmonier-quote-submit]')->form([
+                'tmonier_quote_request[firstName]' => 'Spam',
+                'tmonier_quote_request[lastName]' => 'Bot',
+                'tmonier_quote_request[email]' => sprintf('Victim+%d@example.com', $attempt),
+            ]);
+            $this->client->request('POST', $form->getUri(), $form->getPhpValues(), [], ['REMOTE_ADDR' => sprintf('2001:db8:1:1::%d', $attempt)]);
+        }
+
+        self::assertResponseStatusCodeSame(429);
+        self::assertSame(3, \Tests\Tmonier\SyliusQuoteRequestPlugin\DbValue::int($this->connection()->fetchOne("SELECT COUNT(*) FROM tmonier_quote_request WHERE email LIKE 'victim+%@example.com'")));
+    }
+
+    public function testInvalidSubmissionsDoNotCountAndCustomersAreLimitedToo(): void
+    {
+        $customer = $this->shopCustomer();
+        $this->loginShopUser($customer);
+        [$variant] = $this->sellableVariants(1);
+
+        // Two invalid submissions (no last name): no budget used.
+        for ($attempt = 1; $attempt <= 2; ++$attempt) {
+            $this->addToBasket($variant, 5);
+            $crawler = $this->client->request('GET', $this->shopUrl('/quote-request'));
+            $this->client->submit($crawler->filter('[data-test-tmonier-quote-submit]')->form(['tmonier_quote_request[lastName]' => '']));
+            self::assertResponseStatusCodeSame(422);
+        }
+        for ($attempt = 1; $attempt <= 4; ++$attempt) {
+            $this->addToBasket($variant, 5);
+            $crawler = $this->client->request('GET', $this->shopUrl('/quote-request'));
+            $this->client->submit($crawler->filter('[data-test-tmonier-quote-submit]')->form(['tmonier_quote_request[lastName]' => 'Customer']));
+        }
+
+        self::assertResponseStatusCodeSame(429);
+        self::assertSame(3, $this->entityManager()->getRepository(QuoteRequest::class)->count(['customer' => $customer, 'lastName' => 'Customer']));
+    }
+
+    public function testAGuestConversationHasItsOwnBudget(): void
+    {
+        [$variant] = $this->sellableVariants(1);
+        $quote = $this->createQuote([[$variant, 5]]);
+
+        for ($message = 1; $message <= 6; ++$message) {
+            $crawler = $this->client->request('GET', $this->tokenUrl($quote));
+            $this->client->submit($crawler->filter('[data-test-tmonier-quote-send-message]')->form([
+                'tmonier_quote_request_message[body]' => 'Message ' . $message,
+            ]));
+            $crawler = $this->client->followRedirect();
+            self::assertSame(['Your message was sent.'], $this->flashes($crawler));
+        }
+    }
+
+    public function testEmailLinksStayAbsoluteWithoutChannelHostname(): void
+    {
+        $this->channel()->setHostname(null);
+        $this->entityManager()->flush();
+        [$variant] = $this->sellableVariants(1);
+        $this->addToBasket($variant, 5);
+        $crawler = $this->client->request('GET', $this->shopUrl('/quote-request'));
+
+        $this->client->submit($crawler->filter('[data-test-tmonier-quote-submit]')->form([
+            'tmonier_quote_request[firstName]' => 'Ada',
+            'tmonier_quote_request[lastName]' => 'Guest',
+            'tmonier_quote_request[email]' => 'ada.links@example.com',
+        ]));
+
+        $adminEmail = self::getMailerMessage(0);
+        $customerEmail = self::getMailerMessage(1);
+        self::assertNotNull($adminEmail);
+        self::assertNotNull($customerEmail);
+        self::assertEmailHtmlBodyContains($adminEmail, 'href="http://localhost/admin/quote-requests/');
+        self::assertEmailHtmlBodyContains($customerEmail, 'href="http://localhost/' . $this->localeCode() . '/quotes/');
+    }
+
     private function addToBasket(ProductVariantInterface $variant, int $quantity): void
     {
         $product = $variant->getProduct();

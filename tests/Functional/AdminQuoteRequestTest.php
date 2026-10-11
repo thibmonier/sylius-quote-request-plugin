@@ -267,18 +267,7 @@ final class AdminQuoteRequestTest extends WebTestCase
 
     public function testTheMerchantConvertsAnAcceptedQuoteInOneClick(): void
     {
-        $customer = $this->shopCustomer();
-        if (null === $customer->getDefaultAddress()) {
-            $address = new \Sylius\Component\Core\Model\Address();
-            $address->setFirstName('Ada');
-            $address->setLastName('Buyer');
-            $address->setStreet('1 Main Street');
-            $address->setCity('New York');
-            $address->setPostcode('10001');
-            $address->setCountryCode('US');
-            $customer->setDefaultAddress($address);
-            $this->entityManager()->flush();
-        }
+        $customer = $this->customerWithDefaultAddress();
         [$variant] = $this->sellableVariants(1);
         $quote = $this->createQuote([[$variant, 4, 1500]], $customer, QuoteRequestStatuses::ACCEPTED);
         $this->loginAdmin();
@@ -328,7 +317,7 @@ final class AdminQuoteRequestTest extends WebTestCase
         ]));
 
         self::assertResponseStatusCodeSame(422);
-        self::assertStringContainsString('is not available for this address', (string) $this->client->getResponse()->getContent());
+        self::assertStringContainsString('The order could not be placed', (string) $this->client->getResponse()->getContent());
         // Atomic: the quote is not accepted on the customer's behalf, no e-mail, no cart.
         $quote = $this->reloadQuote($quote);
         self::assertSame(QuoteRequestStatuses::PROPOSED, $quote->getStatus());
@@ -379,7 +368,7 @@ final class AdminQuoteRequestTest extends WebTestCase
         self::assertNotSame('completed', $quote->getOrder()?->getCheckoutState());
     }
 
-    public function testConvertingAnAcceptedQuoteLeavesTheCustomerCartAlone(): void
+    public function testConvertingAnAcceptedQuoteUsesADedicatedCart(): void
     {
         $customer = $this->customerWithDefaultAddress();
         [$variant] = $this->sellableVariants(1);
@@ -400,9 +389,7 @@ final class AdminQuoteRequestTest extends WebTestCase
         $customerCart = $this->entityManager()->find(OrderInterface::class, $customerCartId);
         self::assertInstanceOf(OrderInterface::class, $customerCart);
         self::assertSame(OrderInterface::STATE_CART, $customerCart->getState());
-        foreach ($customerCart->getItems() as $item) {
-            self::assertFalse($item->isImmutable(), 'The released cart is back to the catalog prices.');
-        }
+        self::assertCount(0, $customerCart->getItems(), 'The quote products leave the customer cart.');
     }
 
     public function testTheValidityDateLastsUntilTheEndOfTheDay(): void
@@ -441,7 +428,7 @@ final class AdminQuoteRequestTest extends WebTestCase
         $address->setStreet('1 Main Street');
         $address->setCity('New York');
         $address->setPostcode('10001');
-        $address->setCountryCode('US');
+        $address->setCountryCode($this->shippableCountry());
         $customer->setDefaultAddress($address);
         $this->entityManager()->flush();
 
