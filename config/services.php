@@ -16,6 +16,8 @@ use Tmonier\SyliusQuoteRequestPlugin\Controller\Shop\QuoteRequestController as S
 use Tmonier\SyliusQuoteRequestPlugin\Conversion\QuoteOrderConverter;
 use Tmonier\SyliusQuoteRequestPlugin\Conversion\QuoteOrderConverterInterface;
 use Tmonier\SyliusQuoteRequestPlugin\Event\QuoteEventQueue;
+use Tmonier\SyliusQuoteRequestPlugin\Event\QuoteRequestEvents;
+use Tmonier\SyliusQuoteRequestPlugin\EventListener\SourceCartCleaner;
 use Tmonier\SyliusQuoteRequestPlugin\EventListener\OrderCheckoutCompletedListener;
 use Tmonier\SyliusQuoteRequestPlugin\EventListener\QuoteCartCompletionGuardListener;
 use Tmonier\SyliusQuoteRequestPlugin\EventListener\QuoteRequestGuardListener;
@@ -182,6 +184,7 @@ return static function (ContainerConfigurator $container): void {
             service('sylius.manager.order'),
             service('sylius_shop.storage.cart_session'),
             service('tmonier_quote_request.order_resolver'),
+            service('sylius.modifier.order_item_quantity'),
         ])
     ;
     $services->alias(QuoteCartManagerInterface::class, 'tmonier_quote_request.cart_manager');
@@ -198,7 +201,6 @@ return static function (ContainerConfigurator $container): void {
             service('sylius.manager.order'),
             service('validator'),
             service('tmonier_quote_request.orderability_checker'),
-            service('sylius.repository.order'),
             service('clock'),
             param('tmonier_quote_request.checkout_idle_minutes'),
         ])
@@ -275,6 +277,12 @@ return static function (ContainerConfigurator $container): void {
         ])
         ->tag('monolog.logger', ['channel' => 'tmonier_quote_request'])
         ->tag('kernel.event_subscriber')
+    ;
+
+    $services
+        ->set('tmonier_quote_request.listener.source_cart_cleaner', SourceCartCleaner::class)
+        ->args([service('tmonier_quote_request.cart_manager')])
+        ->tag('kernel.event_listener', ['event' => QuoteRequestEvents::ORDERED])
     ;
 
     // Menus

@@ -27,19 +27,32 @@ final class QuoteRequestMailer implements EventSubscriberInterface
         private readonly ?string $adminEmail,
         private readonly LoggerInterface $logger,
         private readonly RequestStack $requestStack,
-        private readonly ?string $attachmentBaseDirectory = null,
+        private readonly string $attachmentBaseDirectory,
     ) {
     }
 
-    /** Resolved when used (not when the container is compiled): the runtime temporary directory by default. */
+    /**
+     * The configured directory (by default in the project, `var/tmonier_quote_request/pdf`),
+     * created on first use with explicit permissions (0711 whatever the umask: traversable by an
+     * async worker running as another user, not listable).
+     */
     public function attachmentDirectory(): string
     {
-        $directory = $this->attachmentBaseDirectory ?? sys_get_temp_dir();
+        $directory = rtrim($this->attachmentBaseDirectory, '/');
         if (!is_dir($directory)) {
-            @mkdir($directory, 0711, true);
+            $missing = [];
+            for ($path = $directory; '' !== $path && '/' !== $path && !is_dir($path); $path = dirname($path)) {
+                $missing[] = $path;
+            }
+            foreach (array_reverse($missing) as $path) {
+                if (!@mkdir($path, 0711) && !is_dir($path)) {
+                    throw new \RuntimeException(sprintf('Cannot create "%s".', $path));
+                }
+                chmod($path, 0711);
+            }
         }
 
-        return rtrim($directory, '/');
+        return $directory;
     }
 
     public static function getSubscribedEvents(): array

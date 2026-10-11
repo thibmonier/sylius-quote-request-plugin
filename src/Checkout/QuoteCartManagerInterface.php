@@ -24,8 +24,8 @@ interface QuoteCartManagerInterface
     public function release(QuoteRequestInterface $quoteRequest, bool $removeItems = false): void;
 
     /**
-     * Once the merchant placed the order of a quote: removes its products from another cart of
-     * the customer (the cart the request was made from, other carts), keeping the rest (flushed).
+     * Once a quote is ordered: removes the requested quantities of its products from the cart
+     * the request was made from, keeping the rest; never a cart in checkout (flushed).
      */
     public function removeQuotedProducts(OrderInterface $cart, QuoteRequestInterface $quoteRequest): void;
 }

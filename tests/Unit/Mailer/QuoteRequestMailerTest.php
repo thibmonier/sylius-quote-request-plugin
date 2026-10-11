@@ -39,14 +39,8 @@ final class QuoteRequestMailerTest extends TestCase
 
     protected function tearDown(): void
     {
-        foreach (glob($this->directory . '/*/*') ?: [] as $file) {
-            unlink($file);
-        }
-        foreach (glob($this->directory . '/*') ?: [] as $directory) {
-            rmdir($directory);
-        }
         if (is_dir($this->directory)) {
-            rmdir($this->directory);
+            (new \Symfony\Component\Filesystem\Filesystem())->remove($this->directory);
         }
     }
 
@@ -181,23 +175,48 @@ final class QuoteRequestMailerTest extends TestCase
         return $quote;
     }
 
-    public function testTheDirectoryIsResolvedAtRuntime(): void
+    public function testTheConfiguredDirectoryIsCreatedWithExplicitPermissionsWhateverTheUmask(): void
     {
-        $mailer = new QuoteRequestMailer(new class() implements SenderInterface {
-            public function send(string $code, array $recipients, array $data = [], array $attachments = [], array $replyTo = []): void
-            {
-            }
-        }, new FakePdfGenerator(true), null, new NullLogger(), $this->requestStack);
-        $previous = getenv('TMPDIR');
-        $temp = sprintf('%s/tmonier_tmpdir_%s', sys_get_temp_dir(), bin2hex(random_bytes(4)));
-        mkdir($temp);
-        putenv('TMPDIR=' . $temp);
+        $base = $this->directory . '/nested/pdf';
+        $previous = umask(077);
 
         try {
-            self::assertSame(rtrim(sys_get_temp_dir(), '/'), $mailer->attachmentDirectory());
+            $mailer = new QuoteRequestMailer($this->recordingSender(), new FakePdfGenerator(true), null, new NullLogger(), $this->requestStack, $base);
+            self::assertSame($base, $mailer->attachmentDirectory(), 'The injected path, not a temporary directory.');
+            $quote = $this->quote();
+            $quote->setNumber('Q000044');
+            $mailer->onProposed(new QuoteRequestEvent($quote));
         } finally {
-            putenv(false === $previous ? 'TMPDIR' : 'TMPDIR=' . $previous);
-            rmdir($temp);
+            umask($previous);
         }
+
+        $path = (string) array_key_first($this->attachments);
+        self::assertStringStartsWith($base . '/' . QuoteRequestMailer::DIRECTORY_PREFIX, $path);
+        self::assertSame('0711', substr(sprintf('%o', fileperms($this->directory . '/nested')), -4));
+        self::assertSame('0711', substr(sprintf('%o', fileperms($base)), -4));
+        self::assertSame('0711', substr(sprintf('%o', fileperms(dirname($path))), -4));
+        self::assertSame('0644', substr(sprintf('%o', fileperms($path)), -4));
+    }
+
+    private function recordingSender(): SenderInterface
+    {
+        $record = function (string $code, array $recipients, array $replyTo, array $attachments): void {
+            foreach ($attachments as $attachment) {
+                if (is_string($attachment)) {
+                    $this->attachments[$attachment] = (string) file_get_contents($attachment);
+                }
+            }
+        };
+
+        return new class($record) implements SenderInterface {
+            public function __construct(private readonly \Closure $record)
+            {
+            }
+
+            public function send(string $code, array $recipients, array $data = [], array $attachments = [], array $replyTo = []): void
+            {
+                ($this->record)($code, $recipients, $replyTo, $attachments);
+            }
+        };
     }
 }

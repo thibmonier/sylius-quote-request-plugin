@@ -177,7 +177,7 @@ tmonier_sylius_quote_request:
     pdf_binary: ~               # wkhtmltopdf path, with knplabs/knp-snappy, when KnpSnappyBundle is not installed
     base_url: ~                 # base of the links in the e-mails; the channel hostname when null
     checkout_idle_minutes: 30   # the merchant converts a quote whose cart checkout was abandoned that long ago
-    pdf_attachment_directory: ~ # PDFs attached to the proposal e-mail (kept 48 h); runtime temp dir when null
+    pdf_attachment_directory: '%kernel.project_dir%/var/tmonier_quote_request/pdf' # proposal PDFs, kept 48 h
     rate_limit:                 # valid quote requests (guests and customers) and messages
         enabled: true
         per_ip: 10              # IPv6: per /56 network; IPv4-mapped addresses count as IPv4
@@ -215,8 +215,9 @@ public function onAccepted(QuoteRequestEvent $event): void
 Events are dispatched once the change is committed, in the order of the changes (`accepted`
 before `ordered` in a merchant conversion): after the plugin's own transactions, or, inside a
 transaction of somebody else (e.g. the messenger `doctrine_transaction` middleware of the API),
-at the end of the request, command or message, `ordered` only if the database confirms it.
-Nothing is dispatched for a rolled back change. What the `ordered` listeners persist is
+at the end of the request, command or message, each one only if the database holds the change
+it reports. Nothing is dispatched for a rolled back change; a failed operation drops only its
+own events. What the `ordered` listeners persist is
 flushed right after them, whatever the state machine adapter. The Symfony Workflow events of
 `tmonier_quote_request` are available too.
 
@@ -254,9 +255,10 @@ flushed right after them, whatever the state machine adapter. The Symfony Workfl
   (Symfony Workflow guard and a Doctrine check for any adapter). An order that does not hold
   the quote lines never makes the quote "ordered".
 - A merchant conversion takes over the customer's quote cart (emptied), unless the customer is
-  in its checkout: then it waits until the cart has been idle for `checkout_idle_minutes`. The
-  quoted products also leave the cart the request was made from and the other carts of the
-  customer (the rest of those carts is kept).
+  in its checkout: then it waits until the cart has been idle for `checkout_idle_minutes`.
+- Once a quote is ordered (customer checkout or merchant conversion), the requested quantities
+  of its products leave the cart the request was made from ("Request a quote for this cart"),
+  unless that cart is in checkout; the rest of the cart and the other carts are not touched.
 - The rate limiters use the lock component (the plugin enables `framework.lock` with the flock
   store unless the application configures it): parallel requests respect the limits (tested).
 
@@ -269,8 +271,9 @@ flushed right after them, whatever the state machine adapter. The Symfony Workfl
 - Rate limit keys only fold `+tag` sub-addressing (all providers) and Gmail dots; other
   provider aliases count as distinct mailboxes.
 - The PDF of the proposal e-mail is attached by path (Sylius mailer): it is kept 48 hours in
-  an unguessable directory (0711, file 0644) of `pdf_attachment_directory` (the runtime
-  temporary directory by default) so that an async mailer worker on the same host, even as
+  an unguessable directory of `pdf_attachment_directory` (default
+  `%kernel.project_dir%/var/tmonier_quote_request/pdf`; directories 0711 and files 0644 set
+  explicitly, whatever the umask) so that an async mailer worker on the same host, even as
   another user, can read it. With workers on other hosts, use a shared directory or send the
   e-mails synchronously.
 - A PDF engine that fails sends the proposal without attachment and warns the merchant.

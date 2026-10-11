@@ -32,7 +32,6 @@ final class QuoteOrderConverter implements QuoteOrderConverterInterface
     /**
      * @param RepositoryInterface<CustomerInterface> $customerRepository
      * @param FactoryInterface<CustomerInterface> $customerFactory
-     * @param RepositoryInterface<OrderInterface> $orderRepository
      */
     public function __construct(
         private readonly QuoteRequestManagerInterface $quoteRequestManager,
@@ -44,7 +43,6 @@ final class QuoteOrderConverter implements QuoteOrderConverterInterface
         private readonly EntityManagerInterface $entityManager,
         private readonly ValidatorInterface $validator,
         private readonly QuoteOrderabilityCheckerInterface $orderabilityChecker,
-        private readonly RepositoryInterface $orderRepository,
         private readonly ClockInterface $clock,
         private readonly int $checkoutIdleMinutes = 30,
     ) {
@@ -133,12 +131,6 @@ final class QuoteOrderConverter implements QuoteOrderConverterInterface
             $this->applyIfPossible($cart, OrderCheckoutTransitions::TRANSITION_COMPLETE, true);
             $this->entityManager->flush();
 
-            // The products are ordered: they leave the other carts of the customer (the cart the
-            // request was made from included), the rest of those carts is kept.
-            foreach ($this->otherCarts($quoteRequest, $customer, $cart) as $otherCart) {
-                $this->quoteCartManager->removeQuotedProducts($otherCart, $quoteRequest);
-            }
-
             return $cart;
         }, true);
     }
@@ -211,25 +203,6 @@ final class QuoteOrderConverter implements QuoteOrderConverterInterface
         }
 
         $this->quoteCartManager->release($quoteRequest, true);
-    }
-
-    /** @return list<OrderInterface> */
-    private function otherCarts(QuoteRequestInterface $quoteRequest, CustomerInterface $customer, OrderInterface $order): array
-    {
-        $carts = [];
-        $source = $quoteRequest->getSourceOrder();
-        if (null !== $source) {
-            $carts[] = $source;
-        }
-        /** @var list<OrderInterface> $customerCarts */
-        $customerCarts = $this->orderRepository->findBy(['customer' => $customer, 'channel' => $quoteRequest->getChannel(), 'state' => OrderInterface::STATE_CART]);
-        foreach ($customerCarts as $customerCart) {
-            if (!in_array($customerCart, $carts, true)) {
-                $carts[] = $customerCart;
-            }
-        }
-
-        return array_values(array_filter($carts, static fn (OrderInterface $cart): bool => $cart !== $order));
     }
 
     private function applyIfPossible(OrderInterface $cart, string $transition, bool $required = false): bool

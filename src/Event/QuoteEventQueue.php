@@ -12,25 +12,25 @@ use Symfony\Component\HttpKernel\KernelEvents;
 use Symfony\Component\Messenger\Event\WorkerMessageFailedEvent;
 use Symfony\Component\Messenger\Event\WorkerMessageHandledEvent;
 use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
-use Tmonier\SyliusQuoteRequestPlugin\Workflow\QuoteRequestStatuses;
 
 /**
  * Dispatches the plugin events once the change is committed, in the order they happened.
  *
- * - Inside a transaction of the plugin (accept, conversion...): held until its commit,
- *   dropped on rollback.
+ * - Inside a transaction of the plugin (accept, conversion...): held until its commit; a failed
+ *   operation drops only its own events.
  * - Inside a transaction of somebody else (e.g. the messenger doctrine_transaction middleware
- *   of the Sylius API): held until the end of the request, command or message, then
- *   dispatched only if the database confirms the quote is ordered (a rolled back order leaves
- *   nothing behind).
+ *   of the Sylius API): held until the end of the request, command or message, then each event
+ *   is checked against the database (the change it reports must be stored: a rolled back
+ *   change leaves nothing behind).
  * - Otherwise dispatched right away.
  */
 final class QuoteEventQueue implements EventSubscriberInterface
 {
-    /** @var list<array{QuoteRequestEvent, string}> */
+    /** @var list<array{event: QuoteRequestEvent, name: string, proof: array{0: string, 1: ?string}}> */
     private array $events = [];
 
-    private int $holds = 0;
+    /** @var list<int> queue length when each running plugin operation started */
+    private array $marks = [];
 
     public function __construct(
         private readonly EventDispatcherInterface $eventDispatcher,
@@ -52,8 +52,9 @@ final class QuoteEventQueue implements EventSubscriberInterface
 
     public function dispatch(QuoteRequestEvent $event, string $eventName): void
     {
-        if ($this->holds > 0 || $this->connection->getTransactionNestingLevel() > $this->baselineTransactionLevel) {
-            $this->events[] = [$event, $eventName];
+        if ([] !== $this->marks || $this->connection->getTransactionNestingLevel() > $this->baselineTransactionLevel) {
+            // The change this event reports: checked against the database before dispatching.
+            $this->events[] = ['event' => $event, 'name' => $eventName, 'proof' => self::proof($event, $eventName)];
 
             return;
         }
@@ -61,22 +62,22 @@ final class QuoteEventQueue implements EventSubscriberInterface
         $this->dispatchNow($event, $eventName);
     }
 
-    /** A transaction of the plugin starts. */
+    /** A plugin operation starts (its own transaction). */
     public function hold(): void
     {
-        ++$this->holds;
+        $this->marks[] = count($this->events);
     }
 
-    /** A transaction of the plugin ends: dispatch what it held if committed, drop it otherwise. */
+    /** A plugin operation ends: its events are dropped if it failed, dispatched once nothing else holds them. */
     public function release(bool $committed): void
     {
-        $this->holds = max(0, $this->holds - 1);
+        $mark = array_pop($this->marks) ?? 0;
         if (!$committed) {
-            $this->discard();
+            $this->events = array_slice($this->events, 0, $mark);
 
             return;
         }
-        if (0 === $this->holds && $this->connection->getTransactionNestingLevel() <= $this->baselineTransactionLevel) {
+        if ([] === $this->marks && $this->connection->getTransactionNestingLevel() <= $this->baselineTransactionLevel) {
             $this->flush();
         }
     }
@@ -84,11 +85,10 @@ final class QuoteEventQueue implements EventSubscriberInterface
     public function flush(): void
     {
         while ([] !== $this->events) {
-            [$event, $eventName] = array_shift($this->events);
-            if (QuoteRequestEvents::ORDERED === $eventName && !$this->isStoredAsOrdered($event)) {
-                continue;
+            $entry = array_shift($this->events);
+            if ($this->isStored($entry['event'], $entry['proof'])) {
+                $this->dispatchNow($entry['event'], $entry['name']);
             }
-            $this->dispatchNow($event, $eventName);
         }
     }
 
@@ -111,13 +111,47 @@ final class QuoteEventQueue implements EventSubscriberInterface
         }
     }
 
-    private function isStoredAsOrdered(QuoteRequestEvent $event): bool
+    /**
+     * What must be in the database for the event to be true: the column the change wrote (with
+     * its value), the message it posted, or for "created" the quote row itself.
+     *
+     * @return array{0: string, 1: ?string}
+     */
+    private static function proof(QuoteRequestEvent $event, string $eventName): array
+    {
+        $quoteRequest = $event->getQuoteRequest();
+
+        return match ($eventName) {
+            QuoteRequestEvents::PROPOSED => ['proposed_at', $quoteRequest->getProposedAt()?->format('Y-m-d H:i:s')],
+            QuoteRequestEvents::ACCEPTED => ['accepted_at', $quoteRequest->getAcceptedAt()?->format('Y-m-d H:i:s')],
+            QuoteRequestEvents::ORDERED, QuoteRequestEvents::DECLINED, QuoteRequestEvents::EXPIRED, QuoteRequestEvents::CANCELLED => ['status', $quoteRequest->getStatus()],
+            QuoteRequestEvents::MESSAGE_POSTED, QuoteRequestEvents::CHANGES_REQUESTED => ['message', is_scalar($id = ($quoteRequest->getMessages()->last() ?: null)?->getId()) ? (string) $id : null],
+            default => ['row', null],
+        };
+    }
+
+    /** @param array{0: string, 1: ?string} $proof */
+    private function isStored(QuoteRequestEvent $event, array $proof): bool
     {
         $id = $event->getQuoteRequest()->getId();
         if (null === $id) {
             return false;
         }
 
-        return QuoteRequestStatuses::ORDERED === $this->connection->fetchOne('SELECT status FROM tmonier_quote_request WHERE id = ?', [$id]);
+        [$column, $expected] = $proof;
+        if ('message' === $column) {
+            return null !== $expected && false !== $this->connection->fetchOne('SELECT id FROM tmonier_quote_request_message WHERE id = ? AND quote_request_id = ?', [$expected, $id]);
+        }
+
+        $row = $this->connection->fetchAssociative('SELECT status, proposed_at, accepted_at FROM tmonier_quote_request WHERE id = ?', [$id]);
+        if (!is_array($row)) {
+            return false;
+        }
+        if ('row' === $column) {
+            return true;
+        }
+        $stored = $row[$column] ?? null;
+
+        return null !== $expected && is_string($stored) && substr($stored, 0, 19) === $expected;
     }
 }

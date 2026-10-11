@@ -8,7 +8,9 @@ use Doctrine\ORM\EntityManagerInterface;
 use Sylius\Component\Core\Model\CustomerInterface;
 use Sylius\Component\Core\Model\OrderInterface;
 use Sylius\Component\Core\Model\OrderItemInterface;
+use Sylius\Component\Core\OrderCheckoutStates;
 use Sylius\Component\Core\Storage\CartStorageInterface;
+use Sylius\Component\Order\Modifier\OrderItemQuantityModifierInterface;
 use Sylius\Component\Order\Processor\OrderProcessorInterface;
 use Sylius\Resource\Factory\FactoryInterface;
 use Symfony\Component\HttpFoundation\Exception\SessionNotFoundException;
@@ -26,6 +28,7 @@ final class QuoteCartManager implements QuoteCartManagerInterface
         private readonly EntityManagerInterface $objectManager,
         private readonly CartStorageInterface $cartStorage,
         private readonly QuoteOrderResolverInterface $quoteOrderResolver,
+        private readonly OrderItemQuantityModifierInterface $orderItemQuantityModifier,
     ) {
     }
 
@@ -107,26 +110,42 @@ final class QuoteCartManager implements QuoteCartManagerInterface
             return;
         }
 
-        $variants = [];
+        // Locks the cart row (a checkout step of the customer waits) and reads its real state:
+        // a cart in checkout is never changed under the customer's feet.
+        $table = $this->objectManager->getClassMetadata($cart::class)->getTableName();
+        $checkoutState = $this->objectManager->getConnection()->fetchOne(sprintf('SELECT checkout_state FROM %s WHERE id = ? FOR UPDATE', $table), [$cart->getId()]);
+        if (OrderCheckoutStates::STATE_CART !== $checkoutState) {
+            return;
+        }
+
+        // The quoted quantities only: what the customer added on top stays.
+        $toRemove = [];
         foreach ($quoteRequest->getLines() as $line) {
-            if (null !== $line->getVariant()) {
-                $variants[] = $line->getVariant();
+            $variant = $line->getVariant();
+            if (null !== $variant) {
+                $key = spl_object_id($variant);
+                $toRemove[$key] = ($toRemove[$key] ?? 0) + ($line->getRequestedQuantity() ?? $line->getQuantity());
             }
         }
 
-        // Waits for a checkout step of the customer on this cart, if any.
-        $table = $this->objectManager->getClassMetadata($cart::class)->getTableName();
-        $this->objectManager->getConnection()->fetchOne(sprintf('SELECT id FROM %s WHERE id = ? FOR UPDATE', $table), [$cart->getId()]);
-
-        $removed = false;
+        $changed = false;
         foreach ($cart->getItems()->toArray() as $item) {
             /** @var OrderItemInterface $item */
-            if (in_array($item->getVariant(), $variants, true)) {
-                $cart->removeItem($item);
-                $removed = true;
+            $variant = $item->getVariant();
+            $key = null === $variant ? null : spl_object_id($variant);
+            if (null === $key || ($toRemove[$key] ?? 0) <= 0) {
+                continue;
             }
+            $removed = min($toRemove[$key], $item->getQuantity());
+            $toRemove[$key] -= $removed;
+            if ($removed >= $item->getQuantity()) {
+                $cart->removeItem($item);
+            } else {
+                $this->orderItemQuantityModifier->modify($item, $item->getQuantity() - $removed);
+            }
+            $changed = true;
         }
-        if ($removed) {
+        if ($changed) {
             $this->orderProcessor->process($cart);
             $this->objectManager->flush();
         }

@@ -367,6 +367,143 @@ final class QuoteToOrderTest extends KernelTestCase
         ], $log);
     }
 
+    public function testEventsOfARolledBackForeignTransactionAreDropped(): void
+    {
+        [$first] = $this->variants();
+        $log = $this->eventLog();
+        $quote = $this->proposedQuote([[$first, 2, 1000]]);
+        $connection = $this->entityManager()->getConnection();
+
+        // E.g. the messenger doctrine_transaction middleware around an API command.
+        $connection->beginTransaction();
+        $this->converter()->convert($quote, $this->usAddress(), null, null);
+        self::assertSame([], $log->entries, 'Held until the end of the foreign transaction.');
+        $connection->rollBack();
+        $this->eventQueue()->flush(); // kernel.terminate / console.terminate
+
+        self::assertSame([], $log->entries, 'Nothing was stored: no "accepted", no "ordered".');
+    }
+
+    public function testAFailedOperationKeepsTheEventsOfAnEarlierOneInTheSameTransaction(): void
+    {
+        [$first, $second] = $this->variants();
+        $log = $this->eventLog();
+        $converted = $this->proposedQuote([[$first, 2, 1000]]);
+        $failing = $this->proposedQuote([[$second, 1, 1000]]);
+        $second->setEnabled(false);
+        $this->entityManager()->flush();
+        $connection = $this->entityManager()->getConnection();
+
+        $connection->beginTransaction();
+        $this->converter()->convert($converted, $this->usAddress(), null, null);
+
+        try {
+            $this->converter()->convert($failing, $this->usAddress(), null, null);
+            self::fail('The second conversion must fail.');
+        } catch (\RuntimeException) {
+        }
+        $connection->commit();
+        $this->eventQueue()->flush();
+
+        self::assertSame([
+            [\Tmonier\SyliusQuoteRequestPlugin\Event\QuoteRequestEvents::ACCEPTED, $converted->getNumber()],
+            [\Tmonier\SyliusQuoteRequestPlugin\Event\QuoteRequestEvents::ORDERED, $converted->getNumber()],
+        ], $log->entries);
+    }
+
+    public function testTheCustomerCheckoutRemovesTheRequestedQuantitiesFromTheSourceCartOnly(): void
+    {
+        [$quoted, $kept] = $this->variants();
+        $source = $this->cartOf($this->customer(), [[$quoted, 3], [$kept, 1]]);
+        $otherCart = $this->cartOf($this->customer(), [[$quoted, 4]]);
+
+        /** @var QuoteRequestFactoryInterface $factory */
+        $factory = self::getContainer()->get('tmonier_quote_request.factory');
+        $quote = $factory->createForChannel($this->channel(), (string) $this->channel()->getDefaultLocale()?->getCode(), $this->customer());
+        $line = $factory->createLine($quote, $quoted, 2);
+        self::assertNotNull($line);
+        $line->setUnitPrice(999);
+        $quote->addLine($line);
+        $quote->setSourceOrder($source);
+        $this->manager()->submit($quote);
+        $this->manager()->apply($quote, QuoteRequestTransitions::TRANSITION_PROPOSE);
+        $cart = $this->manager()->accept($quote, $this->customer(), false);
+        $this->checkout($cart, $quote);
+
+        $this->entityManager()->refresh($source);
+        $this->entityManager()->refresh($otherCart);
+        $quantities = static fn (OrderInterface $order): array => array_map(static fn (OrderItemInterface $item): array => [$item->getVariant()?->getCode(), $item->getQuantity()], array_values($order->getItems()->toArray()));
+        self::assertSame([[$quoted->getCode(), 1], [$kept->getCode(), 1]], $quantities($source), 'The 2 requested units leave the source cart, the rest stays.');
+        self::assertSame([[$quoted->getCode(), 4]], $quantities($otherCart), 'Other carts of the customer are not touched.');
+    }
+
+    public function testASourceCartInCheckoutIsNotTouched(): void
+    {
+        [$quoted] = $this->variants();
+        $source = $this->cartOf($this->customer(), [[$quoted, 2]]);
+        $source->setCheckoutState(\Sylius\Component\Core\OrderCheckoutStates::STATE_PAYMENT_SELECTED);
+        $this->entityManager()->flush();
+        $quote = $this->proposedQuote([[$quoted, 2, 999]]);
+        $quote->setSourceOrder($source);
+        $this->entityManager()->flush();
+
+        $this->converter()->convert($quote, $this->usAddress(), null, null);
+
+        $this->entityManager()->refresh($source);
+        self::assertCount(1, $source->getItems());
+        self::assertSame(2, $this->items($source)[0]->getQuantity());
+    }
+
+    /** @param list<array{0: ProductVariantInterface, 1: int}> $lines */
+    private function cartOf(CustomerInterface $customer, array $lines): OrderInterface
+    {
+        /** @var FactoryInterface<OrderInterface> $orderFactory */
+        $orderFactory = self::getContainer()->get('sylius.factory.order');
+        $cart = $orderFactory->createNew();
+        $cart->setChannel($this->channel());
+        $cart->setLocaleCode((string) $this->channel()->getDefaultLocale()?->getCode());
+        $cart->setCurrencyCode((string) $this->channel()->getBaseCurrency()?->getCode());
+        $cart->setCustomer($customer);
+        foreach ($lines as [$variant, $quantity]) {
+            $cart->addItem($this->newItem($variant, $quantity));
+        }
+        $this->orderProcessor()->process($cart);
+        $this->entityManager()->persist($cart);
+        $this->entityManager()->flush();
+
+        return $cart;
+    }
+
+    private function eventLog(): EventLog
+    {
+        $log = new EventLog();
+        /** @var \Symfony\Component\EventDispatcher\EventDispatcherInterface $dispatcher */
+        $dispatcher = self::getContainer()->get('event_dispatcher');
+        foreach ([\Tmonier\SyliusQuoteRequestPlugin\Event\QuoteRequestEvents::ACCEPTED, \Tmonier\SyliusQuoteRequestPlugin\Event\QuoteRequestEvents::ORDERED] as $eventName) {
+            $dispatcher->addListener($eventName, static function (\Tmonier\SyliusQuoteRequestPlugin\Event\QuoteRequestEvent $event) use ($log, $eventName): void {
+                $log->entries[] = [$eventName, $event->getQuoteRequest()->getNumber()];
+            });
+        }
+
+        return $log;
+    }
+
+    private function converter(): \Tmonier\SyliusQuoteRequestPlugin\Conversion\QuoteOrderConverterInterface
+    {
+        /** @var \Tmonier\SyliusQuoteRequestPlugin\Conversion\QuoteOrderConverterInterface $converter */
+        $converter = self::getContainer()->get('tmonier_quote_request.order_converter');
+
+        return $converter;
+    }
+
+    private function eventQueue(): \Tmonier\SyliusQuoteRequestPlugin\Event\QuoteEventQueue
+    {
+        /** @var \Tmonier\SyliusQuoteRequestPlugin\Event\QuoteEventQueue $queue */
+        $queue = self::getContainer()->get('tmonier_quote_request.event_queue');
+
+        return $queue;
+    }
+
     /**
      * @param list<array{0: ProductVariantInterface, 1: int, 2: int}> $lines
      */

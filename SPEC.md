@@ -151,6 +151,14 @@ orders (proposed or accepted quotes), other customer carts too; abandoned checko
 after `checkout_idle_minutes`; PDF attachment directory resolved at runtime, readable by other
 local users; tests build their own catalog (no skips), two-connection and parallel-process tests.
 
+## 2f. Round-4 fixes (2026-10-12)
+
+Each event held for a foreign transaction is checked against the database (the column it
+reports, or the posted message) before dispatch; a failed operation drops only its own events.
+Source-cart cleaning moved to the "ordered" event (customer checkout and merchant conversion),
+limited to the recorded source cart, the requested quantities and carts not in checkout. PDF
+directory in the project by default, created with explicit permissions.
+
 ## 3. Model
 
 - `QuoteRequest` (`tmonier_quote_request`): number (`Q000042`, from the id), status, token,
