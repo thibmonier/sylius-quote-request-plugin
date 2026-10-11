@@ -90,6 +90,9 @@ final class QuoteCartManager implements QuoteCartManagerInterface
         foreach ($cart->getItems()->toArray() as $item) {
             /** @var OrderItemInterface $item */
             $item->setImmutable(false);
+            foreach ($item->getAdjustments(QuoteRequestInterface::LOCK_ADJUSTMENT)->toArray() as $marker) {
+                $item->removeAdjustment($marker);
+            }
             if ($removeItems) {
                 $cart->removeItem($item);
             }

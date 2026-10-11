@@ -110,6 +110,9 @@ final class QuoteOrderSynchronizer implements QuoteOrderSynchronizerInterface
 
     private function lockPrice(OrderItemInterface $item, QuoteRequestLineInterface $line): void
     {
+        if ($item->getAdjustments(QuoteRequestInterface::LOCK_ADJUSTMENT)->isEmpty()) {
+            $item->addAdjustment($this->adjustmentFactory->createWithData(QuoteRequestInterface::LOCK_ADJUSTMENT, 'Quote price', 0, true));
+        }
         $item->setImmutable(true);
         $item->setUnitPrice($line->getEffectiveUnitPrice());
         $item->setOriginalUnitPrice(max($line->getCatalogUnitPrice(), $line->getEffectiveUnitPrice()));

@@ -10,9 +10,9 @@ use Doctrine\ORM\Event\PostFlushEventArgs;
 use Psr\Clock\ClockInterface;
 use Sylius\Component\Core\Model\OrderInterface;
 use Sylius\Component\Core\OrderCheckoutStates;
-use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
 use Tmonier\SyliusQuoteRequestPlugin\Checkout\QuoteCartInspector;
 use Tmonier\SyliusQuoteRequestPlugin\Entity\QuoteRequestInterface;
+use Tmonier\SyliusQuoteRequestPlugin\Event\QuoteEventQueue;
 use Tmonier\SyliusQuoteRequestPlugin\Event\QuoteRequestEvent;
 use Tmonier\SyliusQuoteRequestPlugin\Event\QuoteRequestEvents;
 use Tmonier\SyliusQuoteRequestPlugin\Workflow\QuoteRequestStatuses;
@@ -27,8 +27,8 @@ use Tmonier\SyliusQuoteRequestPlugin\Workflow\QuoteRequestTransitions;
  * - any adapter (Winzou included): onFlush sees the order checkout state becoming "completed"
  *   and sets the quote fields (no workflow, no event inside onFlush).
  *
- * The event is dispatched on postFlush, only for quotes really stored as "ordered" (a failed
- * flush leaves nothing behind); what its listeners persist is flushed right after.
+ * The event goes through {@see QuoteEventQueue}: on postFlush, only for quotes really stored as
+ * "ordered", and after the commit of an enclosing transaction.
  */
 final class OrderCheckoutCompletedDoctrineListener
 {
@@ -36,7 +36,7 @@ final class OrderCheckoutCompletedDoctrineListener
     private array $ordered = [];
 
     public function __construct(
-        private readonly EventDispatcherInterface $eventDispatcher,
+        private readonly QuoteEventQueue $eventQueue,
         private readonly ClockInterface $clock,
     ) {
     }
@@ -61,6 +61,11 @@ final class OrderCheckoutCompletedDoctrineListener
             }
 
             $quoteRequest = $entityManager->getRepository(QuoteRequestInterface::class)->findOneBy(['order' => $order]);
+            $backing = $quoteRequest instanceof QuoteRequestInterface && in_array($quoteRequest->getStatus(), [QuoteRequestStatuses::ACCEPTED, QuoteRequestStatuses::ORDERED], true) ? $quoteRequest : null;
+            if (!QuoteCartInspector::isBackedByQuote($order, $backing)) {
+                // Any adapter: never place an order at quote prices without its accepted quote.
+                throw new \LogicException(sprintf('Order %s holds quote prices without its accepted quote: checkout refused.', (string) $order->getId()));
+            }
             if (!$quoteRequest instanceof QuoteRequestInterface) {
                 continue;
             }
@@ -92,21 +97,13 @@ final class OrderCheckoutCompletedDoctrineListener
         $ordered = $this->ordered;
         $this->ordered = [];
 
-        $dispatched = false;
         foreach ($ordered as $quoteRequest) {
-            // Only what the database holds: a quote marked in memory by a flush that failed is dropped.
+            // Only what this flush stored: a quote marked in memory by a failed flush is dropped.
             if (!$entityManager->contains($quoteRequest) || QuoteRequestStatuses::ORDERED !== ($unitOfWork->getOriginalEntityData($quoteRequest)['status'] ?? null)) {
                 continue;
             }
-            $this->eventDispatcher->dispatch(new QuoteRequestEvent($quoteRequest, QuoteRequestTransitions::TRANSITION_ORDER), QuoteRequestEvents::ORDERED);
-            $dispatched = true;
-        }
-
-        if ($dispatched) {
-            $unitOfWork->computeChangeSets();
-            if ([] !== $unitOfWork->getScheduledEntityInsertions() || [] !== $unitOfWork->getScheduledEntityUpdates() || [] !== $unitOfWork->getScheduledEntityDeletions()) {
-                $entityManager->flush();
-            }
+            // Dispatched now, or after the commit of the enclosing transaction.
+            $this->eventQueue->dispatch(new QuoteRequestEvent($quoteRequest, QuoteRequestTransitions::TRANSITION_ORDER), QuoteRequestEvents::ORDERED);
         }
     }
 

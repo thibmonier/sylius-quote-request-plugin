@@ -17,7 +17,7 @@ class QuoteRequest implements QuoteRequestInterface
 
     protected ?string $number = null;
 
-    /** Optimistic lock: a flush based on an outdated quote fails instead of overwriting it. */
+    /** Bumped by the decisions on the quote cart (accept, checkout start, conversion), checked under lock. */
     protected ?int $version = 1;
 
     protected string $status = QuoteRequestStatuses::NEW;

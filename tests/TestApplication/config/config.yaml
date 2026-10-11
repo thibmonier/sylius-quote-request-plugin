@@ -7,6 +7,8 @@ parameters:
     env(TMONIER_QUOTE_ALLOW_GUESTS): '1'
 
 tmonier_sylius_quote_request:
+    # Every test runs inside a transaction: level 1 is "no transaction".
+    transaction_baseline: 1
     allow_guests: '%env(bool:TMONIER_QUOTE_ALLOW_GUESTS)%'
     rate_limit:
         cache_pool: cache.tmonier_quote_request_limiter

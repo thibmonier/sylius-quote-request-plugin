@@ -4,21 +4,26 @@ declare(strict_types=1);
 
 namespace Tmonier\SyliusQuoteRequestPlugin\OrderProcessing;
 
+use Sylius\Component\Core\Calculator\ProductVariantPricesCalculatorInterface;
 use Sylius\Component\Core\Model\OrderInterface;
 use Sylius\Component\Order\Model\OrderInterface as BaseOrderInterface;
 use Sylius\Component\Order\Processor\OrderProcessorInterface;
+use Tmonier\SyliusQuoteRequestPlugin\Checkout\QuoteCartInspector;
+use Tmonier\SyliusQuoteRequestPlugin\Entity\QuoteRequestInterface;
 use Tmonier\SyliusQuoteRequestPlugin\Pricing\QuoteOrderSynchronizerInterface;
 
 /**
  * Registered after the prices recalculator (priority 50) and before shipping, promotions and
  * taxes: the cart of an accepted quote keeps exactly the quote lines, at the negotiated prices,
- * whatever the customer changes in the cart.
+ * whatever the customer changes in the cart. A cart that is not (or no longer) linked to an
+ * accepted quote loses its quote prices: its locked items get back the catalog prices.
  */
 final class QuotePriceLockProcessor implements OrderProcessorInterface
 {
     public function __construct(
         private readonly QuoteOrderResolverInterface $quoteOrderResolver,
         private readonly QuoteOrderSynchronizerInterface $synchronizer,
+        private readonly ProductVariantPricesCalculatorInterface $pricesCalculator,
     ) {
     }
 
@@ -29,10 +34,23 @@ final class QuotePriceLockProcessor implements OrderProcessorInterface
         }
 
         $quoteRequest = $this->quoteOrderResolver->resolveLockingQuote($order);
-        if (null === $quoteRequest) {
+        if (null !== $quoteRequest) {
+            $this->synchronizer->synchronize($quoteRequest, $order);
+
             return;
         }
 
-        $this->synchronizer->synchronize($quoteRequest, $order);
+        $channel = $order->getChannel();
+        foreach (QuoteCartInspector::lockedItems($order) as $item) {
+            foreach ($item->getAdjustments(QuoteRequestInterface::LOCK_ADJUSTMENT)->toArray() as $marker) {
+                $item->removeAdjustment($marker);
+            }
+            $item->setImmutable(false);
+            $variant = $item->getVariant();
+            if (null !== $variant && null !== $channel && null !== $variant->getChannelPricingForChannel($channel)) {
+                $item->setUnitPrice($this->pricesCalculator->calculate($variant, ['channel' => $channel]));
+                $item->setOriginalUnitPrice($this->pricesCalculator->calculateOriginal($variant, ['channel' => $channel]));
+            }
+        }
     }
 }

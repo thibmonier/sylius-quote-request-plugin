@@ -46,7 +46,8 @@ interface QuoteRequestManagerInterface
     /**
      * Runs the operation in a transaction holding a lock on the quote row; the plugin events are
      * dispatched once committed. On failure everything is rolled back and the entity manager is
-     * cleared. Nested calls join the running transaction.
+     * cleared. Nested calls join the running transaction. A decision on the quote cart (accept,
+     * checkout start, conversion) also checks and bumps the quote version.
      *
      * @template T
      *
@@ -54,7 +55,7 @@ interface QuoteRequestManagerInterface
      *
      * @return T
      */
-    public function transactional(QuoteRequestInterface $quoteRequest, callable $operation): mixed;
+    public function transactional(QuoteRequestInterface $quoteRequest, callable $operation, bool $decision = false): mixed;
 
     public function postMessage(QuoteRequestInterface $quoteRequest, QuoteMessageInterface $message): void;
 

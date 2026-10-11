@@ -129,7 +129,7 @@ final class QuoteOrderConverter implements QuoteOrderConverterInterface
             $this->entityManager->flush();
 
             return $cart;
-        });
+        }, true);
     }
 
     private function resolveCustomer(QuoteRequestInterface $quoteRequest): CustomerInterface

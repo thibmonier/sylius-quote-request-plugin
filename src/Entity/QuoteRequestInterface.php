@@ -15,6 +15,13 @@ interface QuoteRequestInterface extends ResourceInterface, VersionedInterface
 {
     public const DISCOUNT_ADJUSTMENT_ORIGIN = 'tmonier_quote_request';
 
+    /**
+     * Marker of the cart items whose price is locked by a quote: a neutral, zero adjustment of
+     * this type (not cleared by the Sylius processing). Such an item may only exist in a cart
+     * linked to an accepted quote.
+     */
+    public const LOCK_ADJUSTMENT = 'tmonier_quote_lock';
+
     public function getId(): ?int;
 
     public function getNumber(): ?string;

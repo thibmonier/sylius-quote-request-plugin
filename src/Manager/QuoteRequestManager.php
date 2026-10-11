@@ -9,10 +9,10 @@ use Psr\Clock\ClockInterface;
 use Sylius\Abstraction\StateMachine\StateMachineInterface;
 use Sylius\Component\Core\Model\CustomerInterface;
 use Sylius\Component\Core\Model\OrderInterface;
-use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
 use Tmonier\SyliusQuoteRequestPlugin\Checkout\QuoteCartManagerInterface;
 use Tmonier\SyliusQuoteRequestPlugin\Entity\QuoteMessageInterface;
 use Tmonier\SyliusQuoteRequestPlugin\Entity\QuoteRequestInterface;
+use Tmonier\SyliusQuoteRequestPlugin\Event\QuoteEventQueue;
 use Tmonier\SyliusQuoteRequestPlugin\Event\QuoteRequestEvent;
 use Tmonier\SyliusQuoteRequestPlugin\Event\QuoteRequestEvents;
 use Tmonier\SyliusQuoteRequestPlugin\Workflow\QuoteRequestStatuses;
@@ -24,13 +24,10 @@ final class QuoteRequestManager implements QuoteRequestManagerInterface
 
     private int $depth = 0;
 
-    /** @var list<array{QuoteRequestEvent, string}> events held until the transaction commits */
-    private array $pendingEvents = [];
-
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
         private readonly StateMachineInterface $stateMachine,
-        private readonly EventDispatcherInterface $eventDispatcher,
+        private readonly QuoteEventQueue $eventQueue,
         private readonly QuoteCartManagerInterface $quoteCartManager,
         private readonly ClockInterface $clock,
         private readonly int $defaultValidityDays,
@@ -91,7 +88,7 @@ final class QuoteRequestManager implements QuoteRequestManagerInterface
             $this->dispatch($quoteRequest, QuoteRequestTransitions::TRANSITION_ACCEPT);
 
             return $cart;
-        });
+        }, true);
     }
 
     public function startCheckout(QuoteRequestInterface $quoteRequest, ?CustomerInterface $customer = null): OrderInterface
@@ -103,7 +100,7 @@ final class QuoteRequestManager implements QuoteRequestManagerInterface
         // The lock re-checks status and version: a concurrent start or conversion is refused.
         return $this->transactional($quoteRequest, function () use ($quoteRequest, $customer): OrderInterface {
             return $this->quoteCartManager->start($quoteRequest, $customer);
-        });
+        }, true);
     }
 
     public function markOrdered(QuoteRequestInterface $quoteRequest): void
@@ -126,46 +123,52 @@ final class QuoteRequestManager implements QuoteRequestManagerInterface
         $this->entityManager->flush();
     }
 
-    public function transactional(QuoteRequestInterface $quoteRequest, callable $operation): mixed
+    public function transactional(QuoteRequestInterface $quoteRequest, callable $operation, bool $decision = false): mixed
     {
         if ($this->depth > 0) {
+            if ($decision) {
+                $this->bumpVersion($quoteRequest);
+            }
+
             return $operation();
         }
 
         $connection = $this->entityManager->getConnection();
         ++$this->depth;
+        $this->eventQueue->hold();
         $connection->beginTransaction();
+        $committed = false;
 
         try {
-            $this->lock($quoteRequest);
+            $this->lock($quoteRequest, $decision);
+            if ($decision) {
+                $this->bumpVersion($quoteRequest);
+            }
             $result = $operation();
             $this->entityManager->flush();
             $connection->commit();
+            $committed = true;
         } catch (\Throwable $exception) {
             $connection->rollBack();
-            $this->pendingEvents = [];
             // What was flushed in the transaction is gone: forget the in-memory changes too.
             $this->entityManager->clear();
 
             throw $exception;
         } finally {
             --$this->depth;
-        }
-
-        $events = $this->pendingEvents;
-        $this->pendingEvents = [];
-        foreach ($events as [$event, $eventName]) {
-            $this->eventDispatcher->dispatch($event, $eventName);
+            $this->eventQueue->release($committed);
         }
 
         return $result;
     }
 
     /**
-     * Locks the quote row until the end of the transaction and checks that nobody changed it
-     * meanwhile (double click, customer and merchant at the same time).
+     * Locks the quote row until the end of the transaction and checks that nobody changed its
+     * status meanwhile; for the decisions on the quote cart (accept, checkout start,
+     * conversion) the version too, which those decisions bump. Messages and merchant edits
+     * neither check nor bump it, so they never make a concurrent request fail.
      */
-    private function lock(QuoteRequestInterface $quoteRequest): void
+    private function lock(QuoteRequestInterface $quoteRequest, bool $decision): void
     {
         $id = $quoteRequest->getId();
         if (null === $id) {
@@ -175,12 +178,15 @@ final class QuoteRequestManager implements QuoteRequestManagerInterface
         $table = $this->entityManager->getClassMetadata($quoteRequest::class)->getTableName();
         $row = $this->entityManager->getConnection()->fetchAssociative(sprintf('SELECT status, version FROM %s WHERE id = ? FOR UPDATE', $table), [$id]);
         $status = is_array($row) && is_string($row['status'] ?? null) ? $row['status'] : 'unknown';
-        // The version changes with any committed change (status, cart link, lines...): the
-        // in-memory quote is outdated, nothing may be decided on it.
         $version = is_array($row) && is_numeric($row['version'] ?? null) ? (int) $row['version'] : null;
-        if ($status !== $quoteRequest->getStatus() || $version !== $quoteRequest->getVersion()) {
+        if ($status !== $quoteRequest->getStatus() || ($decision && $version !== $quoteRequest->getVersion())) {
             throw QuoteTransitionException::concurrentChange($status);
         }
+    }
+
+    private function bumpVersion(QuoteRequestInterface $quoteRequest): void
+    {
+        $quoteRequest->setVersion((int) $quoteRequest->getVersion() + 1);
     }
 
     private function assertCan(QuoteRequestInterface $quoteRequest, string $transition): void
@@ -229,12 +235,6 @@ final class QuoteRequestManager implements QuoteRequestManagerInterface
 
     private function dispatchEvent(QuoteRequestEvent $event, string $eventName): void
     {
-        if ($this->depth > 0) {
-            $this->pendingEvents[] = [$event, $eventName];
-
-            return;
-        }
-
-        $this->eventDispatcher->dispatch($event, $eventName);
+        $this->eventQueue->dispatch($event, $eventName);
     }
 }

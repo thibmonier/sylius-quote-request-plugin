@@ -15,7 +15,9 @@ use Tmonier\SyliusQuoteRequestPlugin\Controller\Admin\QuoteRequestController as 
 use Tmonier\SyliusQuoteRequestPlugin\Controller\Shop\QuoteRequestController as ShopQuoteRequestController;
 use Tmonier\SyliusQuoteRequestPlugin\Conversion\QuoteOrderConverter;
 use Tmonier\SyliusQuoteRequestPlugin\Conversion\QuoteOrderConverterInterface;
+use Tmonier\SyliusQuoteRequestPlugin\Event\QuoteEventQueue;
 use Tmonier\SyliusQuoteRequestPlugin\EventListener\OrderCheckoutCompletedListener;
+use Tmonier\SyliusQuoteRequestPlugin\EventListener\QuoteCartCompletionGuardListener;
 use Tmonier\SyliusQuoteRequestPlugin\EventListener\QuoteRequestGuardListener;
 use Tmonier\SyliusQuoteRequestPlugin\Expiration\QuoteRequestExpirer;
 use Tmonier\SyliusQuoteRequestPlugin\Expiration\QuoteRequestExpirerInterface;
@@ -84,7 +86,7 @@ return static function (ContainerConfigurator $container): void {
         ->args([
             service('tmonier_quote_request.manager.quote_request'),
             service('sylius_abstraction.state_machine'),
-            service('event_dispatcher'),
+            service('tmonier_quote_request.event_queue'),
             service('tmonier_quote_request.cart_manager'),
             service('clock'),
             param('tmonier_quote_request.default_validity_days'),
@@ -156,6 +158,7 @@ return static function (ContainerConfigurator $container): void {
         ->args([
             service('tmonier_quote_request.order_resolver'),
             service('tmonier_quote_request.order_synchronizer'),
+            service('sylius.calculator.product_variant_price'),
         ])
         // After the prices recalculator (50), before shipping (40), promotions (20) and taxes (10).
         ->tag('sylius.order_processor', ['priority' => 45])
@@ -215,6 +218,17 @@ return static function (ContainerConfigurator $container): void {
 
     // Workflow and events
     $services
+        ->set('tmonier_quote_request.event_queue', QuoteEventQueue::class)
+        ->args([
+            service('event_dispatcher'),
+            service('doctrine.dbal.default_connection'),
+            service('doctrine.orm.entity_manager'),
+            param('tmonier_quote_request.transaction_baseline'),
+        ])
+        ->tag('kernel.event_subscriber')
+    ;
+
+    $services
         ->set('tmonier_quote_request.listener.guard', QuoteRequestGuardListener::class)
         ->args([service('clock'), service('tmonier_quote_request.orderability_checker')])
         ->tag('kernel.event_listener', ['event' => sprintf('workflow.%s.guard.%s', $graph, QuoteRequestTransitions::TRANSITION_PROPOSE), 'method' => 'guardPropose'])
@@ -231,10 +245,16 @@ return static function (ContainerConfigurator $container): void {
         ->tag('kernel.event_listener', ['event' => 'workflow.sylius_order_checkout.completed.complete'])
     ;
 
+    $services
+        ->set('tmonier_quote_request.listener.quote_cart_completion_guard', QuoteCartCompletionGuardListener::class)
+        ->args([service('tmonier_quote_request.repository.quote_request')])
+        ->tag('kernel.event_listener', ['event' => 'workflow.sylius_order_checkout.guard.complete'])
+    ;
+
     // Same outcome whatever the state machine adapter (Winzou included): checkout state flushed as completed.
     $services
         ->set('tmonier_quote_request.listener.order_checkout_completed_doctrine', OrderCheckoutCompletedDoctrineListener::class)
-        ->args([service('event_dispatcher'), service('clock')])
+        ->args([service('tmonier_quote_request.event_queue'), service('clock')])
         ->tag('doctrine.event_listener', ['event' => 'onFlush'])
         ->tag('doctrine.event_listener', ['event' => 'postFlush'])
         ->tag('doctrine.event_listener', ['event' => 'onClear'])
