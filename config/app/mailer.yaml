@@ -1,0 +1,20 @@
+sylius_mailer:
+    emails:
+        tmonier_quote_request_admin_new_request:
+            subject: tmonier_quote_request.email.admin_new_request.subject
+            template: "@TmonierSyliusQuoteRequestPlugin/email/admin_new_request.html.twig"
+        tmonier_quote_request_customer_request_received:
+            subject: tmonier_quote_request.email.customer_request_received.subject
+            template: "@TmonierSyliusQuoteRequestPlugin/email/customer_request_received.html.twig"
+        tmonier_quote_request_customer_proposal:
+            subject: tmonier_quote_request.email.customer_proposal.subject
+            template: "@TmonierSyliusQuoteRequestPlugin/email/customer_proposal.html.twig"
+        tmonier_quote_request_admin_accepted:
+            subject: tmonier_quote_request.email.admin_accepted.subject
+            template: "@TmonierSyliusQuoteRequestPlugin/email/admin_accepted.html.twig"
+        tmonier_quote_request_admin_customer_message:
+            subject: tmonier_quote_request.email.admin_customer_message.subject
+            template: "@TmonierSyliusQuoteRequestPlugin/email/admin_customer_message.html.twig"
+        tmonier_quote_request_customer_merchant_message:
+            subject: tmonier_quote_request.email.customer_merchant_message.subject
+            template: "@TmonierSyliusQuoteRequestPlugin/email/customer_merchant_message.html.twig"

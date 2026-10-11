@@ -1,0 +1,115 @@
+sylius_grid:
+    grids:
+        tmonier_quote_request_admin_quote_request:
+            driver:
+                name: doctrine/orm
+                options:
+                    class: "%tmonier_quote_request.model.quote_request.class%"
+                    repository:
+                        method: createListQueryBuilder
+            sorting:
+                createdAt: desc
+            fields:
+                number:
+                    type: twig
+                    label: sylius.ui.number
+                    path: .
+                    sortable: ~
+                    options:
+                        template: "@TmonierSyliusQuoteRequestPlugin/admin/quote_request/grid/field/number.html.twig"
+                        vars:
+                            th_class: "w-1"
+                createdAt:
+                    type: twig
+                    label: sylius.ui.date
+                    sortable: ~
+                    options:
+                        template: "@SyliusAdmin/shared/grid/field/date.html.twig"
+                        vars:
+                            th_class: "w-1 text-center"
+                customer:
+                    type: twig
+                    label: sylius.ui.customer
+                    path: .
+                    sortable: lastName
+                    options:
+                        template: "@TmonierSyliusQuoteRequestPlugin/admin/quote_request/grid/field/customer.html.twig"
+                        vars:
+                            th_class: "w-100"
+                channel:
+                    type: twig
+                    label: sylius.ui.channel
+                    sortable: channel.code
+                    options:
+                        template: "@SyliusAdmin/shared/grid/field/channel.html.twig"
+                status:
+                    type: twig
+                    label: sylius.ui.state
+                    sortable: ~
+                    options:
+                        template: "@TmonierSyliusQuoteRequestPlugin/admin/quote_request/grid/field/status.html.twig"
+                validUntil:
+                    type: twig
+                    label: tmonier_quote_request.ui.valid_until
+                    sortable: ~
+                    options:
+                        template: "@SyliusAdmin/shared/grid/field/date.html.twig"
+                        vars:
+                            th_class: "w-1 text-center"
+                lines:
+                    type: twig
+                    label: tmonier_quote_request.ui.lines
+                    path: .
+                    options:
+                        template: "@TmonierSyliusQuoteRequestPlugin/admin/quote_request/grid/field/lines.html.twig"
+                        vars:
+                            th_class: "w-1 text-end"
+                            td_class: "text-end"
+            filters:
+                status:
+                    type: select
+                    label: sylius.ui.state
+                    form_options:
+                        choices:
+                            tmonier_quote_request.status.new: new
+                            tmonier_quote_request.status.in_review: in_review
+                            tmonier_quote_request.status.proposed: proposed
+                            tmonier_quote_request.status.accepted: accepted
+                            tmonier_quote_request.status.ordered: ordered
+                            tmonier_quote_request.status.declined: declined
+                            tmonier_quote_request.status.expired: expired
+                            tmonier_quote_request.status.cancelled: cancelled
+                number:
+                    type: string
+                    label: sylius.ui.number
+                    form_options:
+                        type: !php/const Sylius\Component\Grid\Filter\StringFilter::TYPE_CONTAINS
+                customer:
+                    type: string
+                    label: sylius.ui.customer
+                    options:
+                        fields: [email, company, firstName, lastName]
+                    form_options:
+                        type: !php/const Sylius\Component\Grid\Filter\StringFilter::TYPE_CONTAINS
+                channel:
+                    type: ux_autocomplete
+                    label: sylius.ui.channel
+                    form_options:
+                        extra_options:
+                            class: "%sylius.model.channel.class%"
+                            choice_label: name
+                date:
+                    type: date
+                    label: sylius.ui.date
+                    options:
+                        field: createdAt
+                        inclusive_to: true
+            actions:
+                item:
+                    show:
+                        type: show
+                        options:
+                            link:
+                                route: tmonier_quote_request_admin_quote_request_show
+                                parameters:
+                                    id: resource.id

@@ -1,0 +1,47 @@
+framework:
+    workflows:
+        tmonier_quote_request:
+            type: state_machine
+            marking_store:
+                type: method
+                property: status
+            supports:
+                - Tmonier\SyliusQuoteRequestPlugin\Entity\QuoteRequestInterface
+            initial_marking: new
+            places:
+                - new
+                - in_review
+                - proposed
+                - accepted
+                - ordered
+                - declined
+                - expired
+                - cancelled
+            transitions:
+                review:
+                    from: new
+                    to: in_review
+                propose:
+                    from: [new, in_review]
+                    to: proposed
+                revise:
+                    from: proposed
+                    to: in_review
+                request_changes:
+                    from: proposed
+                    to: in_review
+                accept:
+                    from: proposed
+                    to: accepted
+                order:
+                    from: accepted
+                    to: ordered
+                decline:
+                    from: [new, in_review, proposed]
+                    to: declined
+                expire:
+                    from: proposed
+                    to: expired
+                cancel:
+                    from: [new, in_review, proposed, accepted]
+                    to: cancelled

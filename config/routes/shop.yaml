@@ -1,0 +1,72 @@
+tmonier_quote_request_shop_new:
+    path: /quote-request
+    methods: [GET, POST]
+    defaults:
+        _controller: tmonier_quote_request.controller.shop::newAction
+
+tmonier_quote_request_shop_basket_add:
+    path: /quote-request/products/{productId}
+    methods: [POST]
+    requirements:
+        productId: '\d+'
+    defaults:
+        _controller: tmonier_quote_request.controller.shop::addToBasketAction
+
+tmonier_quote_request_shop_from_cart:
+    path: /quote-request/from-cart
+    methods: [POST]
+    defaults:
+        _controller: tmonier_quote_request.controller.shop::fromCartAction
+
+tmonier_quote_request_shop_release_cart:
+    path: /quote-request/release-cart
+    methods: [POST]
+    defaults:
+        _controller: tmonier_quote_request.controller.shop::releaseCartAction
+
+tmonier_quote_request_shop_show_by_token:
+    path: /quotes/{token}
+    methods: [GET]
+    requirements:
+        token: '[A-Za-z0-9_-]{20,64}'
+    defaults:
+        _controller: tmonier_quote_request.controller.shop::showByTokenAction
+
+tmonier_quote_request_shop_transition:
+    path: /quotes/{token}/{action}
+    methods: [POST]
+    requirements:
+        token: '[A-Za-z0-9_-]{20,64}'
+        action: 'accept|decline|cancel'
+    defaults:
+        _controller: tmonier_quote_request.controller.shop::transitionAction
+
+tmonier_quote_request_shop_message:
+    path: /quotes/{token}/message
+    methods: [POST]
+    requirements:
+        token: '[A-Za-z0-9_-]{20,64}'
+    defaults:
+        _controller: tmonier_quote_request.controller.shop::messageAction
+
+tmonier_quote_request_shop_checkout:
+    path: /quotes/{token}/checkout
+    methods: [POST]
+    requirements:
+        token: '[A-Za-z0-9_-]{20,64}'
+    defaults:
+        _controller: tmonier_quote_request.controller.shop::checkoutAction
+
+tmonier_quote_request_shop_account_index:
+    path: /account/quotes
+    methods: [GET]
+    defaults:
+        _controller: tmonier_quote_request.controller.shop::accountIndexAction
+
+tmonier_quote_request_shop_account_show:
+    path: /account/quotes/{number}
+    methods: [GET]
+    requirements:
+        number: '[A-Za-z0-9_-]{1,32}'
+    defaults:
+        _controller: tmonier_quote_request.controller.shop::accountShowAction

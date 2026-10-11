@@ -1,0 +1,43 @@
+tmonier_quote_request_admin_quote_request_index:
+    path: /quote-requests/
+    methods: [GET]
+    defaults:
+        _controller: tmonier_quote_request.controller.quote_request::indexAction
+        _sylius:
+            section: admin
+            permission: true
+            template: "@SyliusAdmin/shared/crud/index.html.twig"
+            grid: tmonier_quote_request_admin_quote_request
+
+tmonier_quote_request_admin_quote_request_show:
+    path: /quote-requests/{id}
+    methods: [GET, POST]
+    requirements:
+        id: '\d+'
+    defaults:
+        _controller: tmonier_quote_request.controller.admin::showAction
+
+tmonier_quote_request_admin_quote_request_transition:
+    path: /quote-requests/{id}/transition/{transition}
+    methods: [POST]
+    requirements:
+        id: '\d+'
+        transition: '[a-z_]+'
+    defaults:
+        _controller: tmonier_quote_request.controller.admin::transitionAction
+
+tmonier_quote_request_admin_quote_request_message:
+    path: /quote-requests/{id}/message
+    methods: [POST]
+    requirements:
+        id: '\d+'
+    defaults:
+        _controller: tmonier_quote_request.controller.admin::messageAction
+
+tmonier_quote_request_admin_quote_request_convert:
+    path: /quote-requests/{id}/convert
+    methods: [GET, POST]
+    requirements:
+        id: '\d+'
+    defaults:
+        _controller: tmonier_quote_request.controller.admin::convertAction
