@@ -287,6 +287,85 @@ final class QuoteToOrderTest extends KernelTestCase
         self::assertSame(1, \Tests\Tmonier\SyliusQuoteRequestPlugin\DbValue::int($count));
     }
 
+    public function testTheMerchantOrderRemovesTheQuotedProductsFromTheGuestSourceCart(): void
+    {
+        [$quoted, $kept] = $this->variants();
+        /** @var FactoryInterface<OrderInterface> $orderFactory */
+        $orderFactory = self::getContainer()->get('sylius.factory.order');
+        $guestCart = $orderFactory->createNew();
+        $guestCart->setChannel($this->channel());
+        $guestCart->setLocaleCode((string) $this->channel()->getDefaultLocale()?->getCode());
+        $guestCart->setCurrencyCode((string) $this->channel()->getBaseCurrency()?->getCode());
+        $guestCart->addItem($this->newItem($quoted, 2));
+        $guestCart->addItem($this->newItem($kept, 1));
+        $this->orderProcessor()->process($guestCart);
+        $this->entityManager()->persist($guestCart);
+        $this->entityManager()->flush();
+
+        /** @var QuoteRequestFactoryInterface $factory */
+        $factory = self::getContainer()->get('tmonier_quote_request.factory');
+        $quote = $factory->createForChannel($this->channel(), (string) $this->channel()->getDefaultLocale()?->getCode());
+        $quote->setEmail('guest-source@example.com');
+        $line = $factory->createLine($quote, $quoted, 2);
+        self::assertNotNull($line);
+        $line->setUnitPrice(999);
+        $quote->addLine($line);
+        $quote->setSourceOrder($guestCart);
+        $this->manager()->submit($quote);
+        $this->manager()->apply($quote, QuoteRequestTransitions::TRANSITION_PROPOSE);
+
+        /** @var \Tmonier\SyliusQuoteRequestPlugin\Conversion\QuoteOrderConverterInterface $converter */
+        $converter = self::getContainer()->get('tmonier_quote_request.order_converter');
+        $converter->convert($quote, $this->usAddress(), null, null);
+
+        self::assertSame(QuoteRequestStatuses::ORDERED, $quote->getStatus());
+        self::assertSame([$kept], array_map(static fn (OrderItemInterface $item) => $item->getVariant(), $this->items($guestCart)));
+    }
+
+    public function testConversionEventsComeAfterTheCommitInOrderAndNotOnRollback(): void
+    {
+        [$first] = $this->variants();
+        /** @var \Symfony\Component\EventDispatcher\EventDispatcherInterface $dispatcher */
+        $dispatcher = self::getContainer()->get('event_dispatcher');
+        $connection = $this->entityManager()->getConnection();
+        $log = [];
+        foreach ([\Tmonier\SyliusQuoteRequestPlugin\Event\QuoteRequestEvents::ACCEPTED, \Tmonier\SyliusQuoteRequestPlugin\Event\QuoteRequestEvents::ORDERED] as $eventName) {
+            $dispatcher->addListener($eventName, static function () use (&$log, $eventName, $connection): void {
+                $log[] = [$eventName, $connection->getTransactionNestingLevel()];
+            });
+        }
+        /** @var \Tmonier\SyliusQuoteRequestPlugin\Conversion\QuoteOrderConverterInterface $converter */
+        $converter = self::getContainer()->get('tmonier_quote_request.order_converter');
+
+        // A failure after the checkout completion: everything is rolled back, no event.
+        $quote = $this->proposedQuote([[$first, 2, 1000]]);
+        $quoteId = $quote->getId();
+        $failing = static function (): void {
+            throw new \RuntimeException('ERP down');
+        };
+        $dispatcher->addListener('workflow.sylius_order_checkout.completed.complete', $failing, -100);
+        try {
+            $converter->convert($quote, $this->usAddress(), null, null);
+            self::fail('The conversion must fail.');
+        } catch (\RuntimeException $exception) {
+            self::assertSame('ERP down', $exception->getMessage());
+        }
+        $dispatcher->removeListener('workflow.sylius_order_checkout.completed.complete', $failing);
+        self::assertSame([], $log);
+        self::assertSame(QuoteRequestStatuses::PROPOSED, $connection->fetchOne('SELECT status FROM tmonier_quote_request WHERE id = ?', [$quoteId]));
+
+        // Success: "accepted" then "ordered", both once committed (level 1 = the test transaction).
+        // The failure cleared the entity manager: fresh entities.
+        $first = $this->entityManager()->find(ProductVariantInterface::class, $first->getId());
+        self::assertInstanceOf(ProductVariantInterface::class, $first);
+        $quote = $this->proposedQuote([[$first, 2, 1000]]);
+        $converter->convert($quote, $this->usAddress(), null, null);
+        self::assertSame([
+            [\Tmonier\SyliusQuoteRequestPlugin\Event\QuoteRequestEvents::ACCEPTED, 1],
+            [\Tmonier\SyliusQuoteRequestPlugin\Event\QuoteRequestEvents::ORDERED, 1],
+        ], $log);
+    }
+
     /**
      * @param list<array{0: ProductVariantInterface, 1: int, 2: int}> $lines
      */

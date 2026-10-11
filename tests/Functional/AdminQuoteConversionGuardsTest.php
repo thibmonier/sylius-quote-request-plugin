@@ -131,6 +131,29 @@ final class AdminQuoteConversionGuardsTest extends WebTestCase
         self::assertCount(1, $this->orderOf($quote)->getItems());
     }
 
+    public function testAnAbandonedCheckoutNoLongerBlocksTheConversion(): void
+    {
+        $customer = $this->customerWithAddress();
+        [$variant] = $this->sellableVariants(1);
+        $quote = $this->createQuote([[$variant, 3, 1200]], $customer, QuoteRequestStatuses::ACCEPTED);
+        $cart = $this->orderOf($quote);
+        $cart->setCheckoutState(OrderCheckoutStates::STATE_ADDRESSED);
+        $this->entityManager()->flush();
+        // Left 2 hours ago (checkout_idle_minutes: 30).
+        $this->connection()->executeStatement('UPDATE sylius_order SET updated_at = ? WHERE id = ?', [(new \DateTimeImmutable('-2 hours'))->format('Y-m-d H:i:s'), $cart->getId()]);
+        $this->entityManager()->refresh($cart);
+        $this->loginAdmin();
+
+        $crawler = $this->client->request('GET', sprintf('/admin/quote-requests/%d', $this->idOf($quote)));
+        $this->client->submit($crawler->filter('[data-test-tmonier-quote-convert-now]')->form());
+
+        $quote = $this->reloadQuote($quote);
+        self::assertSame(QuoteRequestStatuses::ORDERED, $quote->getStatus());
+        $abandoned = $this->entityManager()->find(OrderInterface::class, $this->idOf($cart));
+        self::assertInstanceOf(OrderInterface::class, $abandoned);
+        self::assertCount(0, $abandoned->getItems());
+    }
+
     public function testARefusedProposalKeepsTheMerchantEdits(): void
     {
         [$variant] = $this->sellableVariants(1);

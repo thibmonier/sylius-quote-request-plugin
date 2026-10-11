@@ -312,6 +312,53 @@ final class ShopQuoteRequestTest extends WebTestCase
         self::assertEmailHtmlBodyContains($customerEmail, 'href="http://localhost/' . $this->localeCode() . '/quotes/');
     }
 
+    public function testAQuoteRequestedFromTheCartAndPlacedByTheMerchantLeavesTheOtherProductsInTheCart(): void
+    {
+        $customer = $this->shopCustomer();
+        $address = new \Sylius\Component\Core\Model\Address();
+        $address->setFirstName('Ada');
+        $address->setLastName('Buyer');
+        $address->setStreet('1 Main Street');
+        $address->setCity('New York');
+        $address->setPostcode('10001');
+        $address->setCountryCode($this->shippableCountry());
+        $customer->setDefaultAddress($address);
+        [$quoted, $kept] = $this->sellableVariants(2);
+        $cart = $this->createCart($customer, [[$quoted, 2], [$kept, 5]]);
+        $this->loginShopUser($customer);
+
+        $crawler = $this->client->request('GET', $this->shopUrl('/cart/'));
+        $this->client->submit($crawler->filter('[data-test-tmonier-request-quote-from-cart-button]')->form());
+        $crawler = $this->client->followRedirect();
+        $form = $crawler->filter('[data-test-tmonier-quote-submit]')->form([
+            'tmonier_quote_request[firstName]' => 'Ada',
+            'tmonier_quote_request[lastName]' => 'Buyer',
+        ]);
+        $quantities = $form->getValues();
+        foreach (array_keys($quantities) as $field) {
+            if (str_ends_with($field, '[quantity]') && $crawler->filter(sprintf('[data-test-tmonier-quote-line="%s"] input[name="%s"]', $kept->getCode(), $field))->count() > 0) {
+                $form[$field] = '0';
+            }
+        }
+        $this->client->submit($form);
+        $quote = $this->entityManager()->getRepository(QuoteRequest::class)->findOneBy(['customer' => $customer], ['id' => 'DESC']);
+        self::assertInstanceOf(QuoteRequestInterface::class, $quote);
+        self::assertSame($cart->getId(), $quote->getSourceOrder()?->getId());
+        self::assertCount(1, $quote->getLines());
+
+        // Proposed, then placed by the merchant (PROPOSED -> convert).
+        $this->quoteManager()->apply($quote, 'propose');
+        $this->loginAdmin();
+        $crawler = $this->client->request('GET', sprintf('/admin/quote-requests/%d', $this->idOf($quote)));
+        $this->client->submit($crawler->filter('[data-test-tmonier-quote-convert-now]')->form());
+        self::assertSame('ordered', $this->reloadQuote($quote)->getStatus());
+
+        $cart = $this->entityManager()->find(OrderInterface::class, $this->idOf($cart));
+        self::assertInstanceOf(OrderInterface::class, $cart);
+        $variants = array_map(static fn (OrderItemInterface $item): ?string => $item->getVariant()?->getCode(), array_values($cart->getItems()->toArray()));
+        self::assertSame([$kept->getCode()], $variants, 'The quoted product left the cart, the other one stayed.');
+    }
+
     private function addToBasket(ProductVariantInterface $variant, int $quantity): void
     {
         $product = $variant->getProduct();

@@ -64,21 +64,38 @@ final class ExpireQuoteRequestsCommandTest extends KernelTestCase
     {
         $raced = $this->proposal(new \DateTimeImmutable('-1 day'));
         $other = $this->proposal(new \DateTimeImmutable('-1 day'));
-        // Accepted by the customer in another request after the cron loaded it.
-        $this->entityManager()->getConnection()->executeStatement(
-            'UPDATE tmonier_quote_request SET status = ?, version = version + 1 WHERE id = ?',
-            [QuoteRequestStatuses::ACCEPTED, $raced->getId()],
-        );
+        $racedId = $raced->getId();
+        $connection = $this->entityManager()->getConnection();
+        $this->entityManager()->clear();
+
+        // The customer accepts the raced proposal right after the cron listed it.
+        $hook = new class($racedId, $connection) {
+            private bool $fired = false;
+
+            public function __construct(private readonly ?int $id, private readonly \Doctrine\DBAL\Connection $connection)
+            {
+            }
+
+            public function postLoad(\Doctrine\ORM\Event\PostLoadEventArgs $args): void
+            {
+                $entity = $args->getObject();
+                if (!$this->fired && $entity instanceof QuoteRequestInterface && $entity->getId() === $this->id) {
+                    $this->fired = true;
+                    $this->connection->executeStatement('UPDATE tmonier_quote_request SET status = ?, version = version + 1 WHERE id = ?', [QuoteRequestStatuses::ACCEPTED, $this->id]);
+                }
+            }
+        };
+        $this->entityManager()->getEventManager()->addEventListener([\Doctrine\ORM\Events::postLoad], $hook);
 
         $tester = $this->commandTester();
         $tester->execute([], ['verbosity' => \Symfony\Component\Console\Output\OutputInterface::VERBOSITY_VERBOSE]);
+        $this->entityManager()->getEventManager()->removeEventListener([\Doctrine\ORM\Events::postLoad], $hook);
 
         $tester->assertCommandIsSuccessful();
         self::assertStringContainsString((string) $other->getNumber(), $tester->getDisplay());
         self::assertStringNotContainsString((string) $raced->getNumber(), $tester->getDisplay());
-        $statuses = $this->entityManager()->getConnection()->fetchAllKeyValue('SELECT id, status FROM tmonier_quote_request WHERE id IN (?, ?)', [$raced->getId(), $other->getId()]);
-        self::assertSame(QuoteRequestStatuses::ACCEPTED, $statuses[$raced->getId() ?? 0]);
-        self::assertSame(QuoteRequestStatuses::EXPIRED, $statuses[$other->getId() ?? 0]);
+        self::assertSame(QuoteRequestStatuses::ACCEPTED, $connection->fetchOne('SELECT status FROM tmonier_quote_request WHERE id = ?', [$racedId]), 'Listed, then skipped by the per-quote check.');
+        self::assertSame(QuoteRequestStatuses::EXPIRED, $connection->fetchOne('SELECT status FROM tmonier_quote_request WHERE id = ?', [$other->getId()]));
     }
 
     private function proposal(\DateTimeImmutable $validUntil): QuoteRequestInterface
