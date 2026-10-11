@@ -74,17 +74,19 @@ final class QuoteRequestMailerTest extends TestCase
 
     private function mailer(?string $adminEmail): QuoteRequestMailer
     {
-        $sender = new class($this->sent) implements SenderInterface {
-            /** @param list<array{string, list<string>, list<string>}> $sent */
-            public function __construct(private array &$sent)
+        $record = function (string $code, array $recipients, array $replyTo): void {
+            /** @var list<string> $recipients */
+            /** @var list<string> $replyTo */
+            $this->sent[] = [$code, $recipients, $replyTo];
+        };
+        $sender = new class($record) implements SenderInterface {
+            public function __construct(private readonly \Closure $record)
             {
             }
 
             public function send(string $code, array $recipients, array $data = [], array $attachments = [], array $replyTo = []): void
             {
-                /** @var list<string> $recipients */
-                /** @var list<string> $replyTo */
-                $this->sent[] = [$code, array_values($recipients), array_values($replyTo)];
+                ($this->record)($code, array_values($recipients), array_values($replyTo));
             }
         };
 

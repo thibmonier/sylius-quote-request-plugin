@@ -47,7 +47,11 @@ final class QuoteRequestController extends AbstractController
         QuoteRequestTransitions::TRANSITION_CANCEL,
     ];
 
-    /** @param FactoryInterface<AddressInterface> $addressFactory */
+    /**
+     * @param ShippingMethodRepositoryInterface<ShippingMethodInterface> $shippingMethodRepository
+     * @param PaymentMethodRepositoryInterface<PaymentMethodInterface> $paymentMethodRepository
+     * @param FactoryInterface<AddressInterface> $addressFactory
+     */
     public function __construct(
         private readonly QuoteRequestRepositoryInterface $quoteRequestRepository,
         private readonly QuoteRequestFactoryInterface $quoteRequestFactory,
@@ -144,14 +148,8 @@ final class QuoteRequestController extends AbstractController
         $address = $this->defaultAddress($quoteRequest);
 
         $form = $this->createForm(ConvertQuoteToOrderType::class, ['address' => $address], [
-            'shipping_methods' => array_values(array_filter(
-                $this->shippingMethodRepository->findEnabledForChannel($channel),
-                static fn (mixed $method): bool => $method instanceof ShippingMethodInterface,
-            )),
-            'payment_methods' => array_values(array_filter(
-                $this->paymentMethodRepository->findEnabledForChannel($channel),
-                static fn (mixed $method): bool => $method instanceof PaymentMethodInterface,
-            )),
+            'shipping_methods' => array_values($this->shippingMethodRepository->findEnabledForChannel($channel)),
+            'payment_methods' => array_values($this->paymentMethodRepository->findEnabledForChannel($channel)),
         ]);
         $form->handleRequest($request);
 

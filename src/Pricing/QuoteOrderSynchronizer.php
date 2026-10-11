@@ -114,8 +114,8 @@ final class QuoteOrderSynchronizer implements QuoteOrderSynchronizerInterface
     {
         $items = [];
         $itemTotals = [];
+        /** @var OrderItemInterface $item */
         foreach ($order->getItems() as $item) {
-            /** @var OrderItemInterface $item */
             foreach ($item->getUnits() as $unit) {
                 foreach ($unit->getAdjustments(AdjustmentInterface::ORDER_PROMOTION_ADJUSTMENT) as $adjustment) {
                     if (QuoteRequestInterface::DISCOUNT_ADJUSTMENT_ORIGIN === $adjustment->getOriginCode()) {

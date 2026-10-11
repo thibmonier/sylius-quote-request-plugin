@@ -9,7 +9,6 @@ use Sylius\Component\Core\Model\Order;
 use Sylius\Component\Core\Model\Promotion;
 use Sylius\Component\Core\Model\PromotionCoupon;
 use Sylius\Component\Order\Model\OrderInterface;
-use Sylius\Component\Order\Processor\OrderProcessorInterface;
 use Tmonier\SyliusQuoteRequestPlugin\Entity\QuoteRequest;
 use Tmonier\SyliusQuoteRequestPlugin\Entity\QuoteRequestInterface;
 use Tmonier\SyliusQuoteRequestPlugin\OrderProcessing\QuoteAwarePromotionProcessor;
@@ -47,16 +46,9 @@ final class QuoteAwarePromotionProcessorTest extends TestCase
         self::assertSame(1, $inner->calls);
     }
 
-    private function inner(): OrderProcessorInterface
+    private function inner(): CountingOrderProcessor
     {
-        return new class() implements OrderProcessorInterface {
-            public int $calls = 0;
-
-            public function process(OrderInterface $order): void
-            {
-                ++$this->calls;
-            }
-        };
+        return new CountingOrderProcessor();
     }
 
     private function resolver(?QuoteRequestInterface $quote): QuoteOrderResolverInterface

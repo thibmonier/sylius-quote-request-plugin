@@ -22,7 +22,7 @@ class QuoteRequestRepository extends EntityRepository implements QuoteRequestRep
         $quoteRequest = $this->findOneBy(['token' => $token]);
 
         // The database comparison may be case-insensitive (MySQL collations): compare again.
-        if (null === $quoteRequest || !hash_equals((string) $quoteRequest->getToken(), $token)) {
+        if (!$quoteRequest instanceof QuoteRequestInterface || !hash_equals((string) $quoteRequest->getToken(), $token)) {
             return null;
         }
 
@@ -31,7 +31,9 @@ class QuoteRequestRepository extends EntityRepository implements QuoteRequestRep
 
     public function findOneByNumberAndCustomer(string $number, CustomerInterface $customer): ?QuoteRequestInterface
     {
-        return $this->findOneBy(['number' => $number, 'customer' => $customer]);
+        $quoteRequest = $this->findOneBy(['number' => $number, 'customer' => $customer]);
+
+        return $quoteRequest instanceof QuoteRequestInterface ? $quoteRequest : null;
     }
 
     public function findOneByOrder(OrderInterface $order): ?QuoteRequestInterface
@@ -40,7 +42,9 @@ class QuoteRequestRepository extends EntityRepository implements QuoteRequestRep
             return null;
         }
 
-        return $this->findOneBy(['order' => $order]);
+        $quoteRequest = $this->findOneBy(['order' => $order]);
+
+        return $quoteRequest instanceof QuoteRequestInterface ? $quoteRequest : null;
     }
 
     public function findByCustomer(CustomerInterface $customer): array

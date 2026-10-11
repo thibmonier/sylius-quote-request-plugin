@@ -286,7 +286,10 @@ final class QuoteToOrderTest extends KernelTestCase
         ;
         $variants = [];
         foreach ($candidates as $variant) {
-            $variants[(int) $variant->getProduct()?->getId()] ??= $variant;
+            $productId = $variant->getProduct()?->getId();
+            if (is_int($productId)) {
+                $variants[$productId] ??= $variant;
+            }
         }
         $variants = array_slice(array_values($variants), 0, 2);
         if (count($variants) < 2) {

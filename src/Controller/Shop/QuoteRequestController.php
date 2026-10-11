@@ -85,13 +85,17 @@ final class QuoteRequestController extends AbstractController
 
         /** @var array{variant: ProductVariantInterface, quantity: int} $data */
         $data = $form->getData();
-        if ($this->basket->count($channel) >= $this->maxLines && !isset($this->basket->all($channel)[(int) $data['variant']->getId()])) {
+        $variantId = $data['variant']->getId();
+        if (!is_int($variantId)) {
+            throw new NotFoundHttpException('Variant not found.');
+        }
+        if ($this->basket->count($channel) >= $this->maxLines && !isset($this->basket->all($channel)[$variantId])) {
             $this->addFlash('error', 'tmonier_quote_request.flash.too_many_lines');
 
             return $this->redirectToRoute('tmonier_quote_request_shop_new');
         }
 
-        $this->basket->add($channel, (int) $data['variant']->getId(), $data['quantity']);
+        $this->basket->add($channel, $variantId, $data['quantity']);
         $this->addFlash('success', 'tmonier_quote_request.flash.added_to_quote');
 
         return $this->redirectToRoute('tmonier_quote_request_shop_new');

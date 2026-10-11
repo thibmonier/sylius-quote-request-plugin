@@ -18,8 +18,9 @@ use Sylius\Component\Core\Model\ProductVariant;
 use Sylius\Component\Order\Factory\AdjustmentFactory;
 use Sylius\Component\Order\Factory\OrderItemUnitFactory;
 use Sylius\Component\Order\Modifier\OrderItemQuantityModifier;
-use Sylius\Resource\Factory\Factory;
+use Sylius\Resource\Factory\FactoryInterface;
 use Symfony\Component\Translation\IdentityTranslator;
+use Tests\Tmonier\SyliusQuoteRequestPlugin\Unit\CallbackFactory;
 use Tmonier\SyliusQuoteRequestPlugin\Entity\QuoteRequest;
 use Tmonier\SyliusQuoteRequestPlugin\Entity\QuoteRequestInterface;
 use Tmonier\SyliusQuoteRequestPlugin\Entity\QuoteRequestLine;
@@ -35,10 +36,12 @@ final class QuoteOrderSynchronizerTest extends TestCase
     protected function setUp(): void
     {
         $this->quantityModifier = new OrderItemQuantityModifier(new OrderItemUnitFactory(OrderItemUnit::class));
+        /** @var AdjustmentFactory<AdjustmentInterface> $adjustments */
+        $adjustments = new AdjustmentFactory($this->adjustmentFactory());
         $this->synchronizer = new QuoteOrderSynchronizer(
-            new Factory(OrderItem::class),
+            $this->orderItemFactory(),
             $this->quantityModifier,
-            new AdjustmentFactory(new Factory(Adjustment::class)),
+            $adjustments,
             new ProportionalIntegerDistributor(),
             new IntegerDistributor(),
             new QuoteDiscountCalculator(),
@@ -145,6 +148,28 @@ final class QuoteOrderSynchronizerTest extends TestCase
         $this->synchronizer->synchronize($quote, $order);
 
         self::assertCount(1, $order->getItems());
+    }
+
+    /** @return FactoryInterface<OrderItemInterface> */
+    private function orderItemFactory(): FactoryInterface
+    {
+        return new CallbackFactory(self::newOrderItem(...));
+    }
+
+    private static function newOrderItem(): OrderItemInterface
+    {
+        return new OrderItem();
+    }
+
+    private static function newAdjustment(): AdjustmentInterface
+    {
+        return new Adjustment();
+    }
+
+    /** @return FactoryInterface<AdjustmentInterface> */
+    private function adjustmentFactory(): FactoryInterface
+    {
+        return new CallbackFactory(self::newAdjustment(...));
     }
 
     /** @param list<array{0: ProductVariant, 1: int, 2: int, 3: int|null}> $lines */

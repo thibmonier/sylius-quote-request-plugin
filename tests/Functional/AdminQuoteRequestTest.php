@@ -59,7 +59,7 @@ final class AdminQuoteRequestTest extends WebTestCase
         $quote = $this->createQuote([[$first, 10], [$second, 5]], $customer);
         $this->loginAdmin();
 
-        $crawler = $this->client->request('GET', sprintf('/admin/quote-requests/%d', (int) $quote->getId()));
+        $crawler = $this->client->request('GET', sprintf('/admin/quote-requests/%d', $this->idOf($quote)));
         self::assertResponseIsSuccessful();
         self::assertCount(2, $crawler->filter('[data-test-tmonier-quote-line]'));
 
@@ -74,12 +74,14 @@ final class AdminQuoteRequestTest extends WebTestCase
         ]);
         // The autocomplete field is filled by JavaScript in the browser.
         $values = $form->getPhpValues();
-        $values['tmonier_quote_request_admin']['newVariant'] = (string) $third->getId();
-        $values['tmonier_quote_request_admin']['newQuantity'] = '7';
-        $values['tmonier_quote_request_admin']['propose'] = '';
-        $this->client->request('POST', (string) $form->getUri(), $values);
+        $fields = $values['tmonier_quote_request_admin'] ?? null;
+        self::assertIsArray($fields);
+        $fields['newVariant'] = (string) $this->idOf($third);
+        $fields['newQuantity'] = '7';
+        $fields['propose'] = '';
+        $this->client->request('POST', $form->getUri(), ['tmonier_quote_request_admin' => $fields]);
 
-        self::assertResponseRedirects(sprintf('/admin/quote-requests/%d', (int) $quote->getId()));
+        self::assertResponseRedirects(sprintf('/admin/quote-requests/%d', $this->idOf($quote)));
         self::assertEmailCount(1);
         $email = self::getMailerMessage();
         self::assertNotNull($email);
@@ -113,7 +115,7 @@ final class AdminQuoteRequestTest extends WebTestCase
         $quote = $this->createQuote([[$variant, 10]]);
         $this->loginAdmin();
 
-        $crawler = $this->client->request('GET', sprintf('/admin/quote-requests/%d', (int) $quote->getId()));
+        $crawler = $this->client->request('GET', sprintf('/admin/quote-requests/%d', $this->idOf($quote)));
         $this->client->submit($crawler->filter('#tmonier_quote_request_admin_save')->form([
             'tmonier_quote_request_admin[lines][0][unitPrice]' => '9.99',
         ]));
@@ -123,7 +125,7 @@ final class AdminQuoteRequestTest extends WebTestCase
         self::assertSame(QuoteRequestStatuses::NEW, $quote->getStatus());
         self::assertSame(999, $quote->getLines()->first() ? $quote->getLines()->first()->getUnitPrice() : null);
 
-        $crawler = $this->client->request('GET', sprintf('/admin/quote-requests/%d', (int) $quote->getId()));
+        $crawler = $this->client->request('GET', sprintf('/admin/quote-requests/%d', $this->idOf($quote)));
         $this->client->submit($crawler->filter('[data-test-tmonier-quote-send-message]')->form([
             'tmonier_quote_request_message[body]' => 'Which delivery address?',
         ]));
@@ -138,7 +140,7 @@ final class AdminQuoteRequestTest extends WebTestCase
         $quote = $this->createQuote([[$variant, 10]]);
         $this->loginAdmin();
 
-        $crawler = $this->client->request('GET', sprintf('/admin/quote-requests/%d', (int) $quote->getId()));
+        $crawler = $this->client->request('GET', sprintf('/admin/quote-requests/%d', $this->idOf($quote)));
         self::assertCount(0, $crawler->filter('[data-test-tmonier-quote-transition="expire"]'));
         $this->client->submit($crawler->filter('[data-test-tmonier-quote-transition="review"]')->form());
         self::assertSame(QuoteRequestStatuses::IN_REVIEW, $this->reloadQuote($quote)->getStatus());
@@ -157,14 +159,14 @@ final class AdminQuoteRequestTest extends WebTestCase
         [$variant] = $this->sellableVariants(1);
         $quote = $this->createQuote([[$variant, 10]]);
 
-        $this->client->request('GET', sprintf('/admin/quote-requests/%d', (int) $quote->getId()));
+        $this->client->request('GET', sprintf('/admin/quote-requests/%d', $this->idOf($quote)));
         self::assertResponseRedirects('http://localhost/admin/login');
 
         $this->loginAdmin();
-        $this->client->request('POST', sprintf('/admin/quote-requests/%d/transition/decline', (int) $quote->getId()), ['_csrf_token' => 'forged']);
+        $this->client->request('POST', sprintf('/admin/quote-requests/%d/transition/decline', $this->idOf($quote)), ['_csrf_token' => 'forged']);
         self::assertResponseStatusCodeSame(403);
 
-        $this->client->request('POST', sprintf('/admin/quote-requests/%d/transition/order', (int) $quote->getId()), ['_csrf_token' => 'forged']);
+        $this->client->request('POST', sprintf('/admin/quote-requests/%d/transition/order', $this->idOf($quote)), ['_csrf_token' => 'forged']);
         self::assertResponseStatusCodeSame(404);
 
         self::assertSame(QuoteRequestStatuses::NEW, $this->reloadQuote($quote)->getStatus());
@@ -179,7 +181,7 @@ final class AdminQuoteRequestTest extends WebTestCase
         $paymentMethod = $this->firstEnabled($this->paymentMethods());
         $this->loginAdmin();
 
-        $crawler = $this->client->request('GET', sprintf('/admin/quote-requests/%d', (int) $quote->getId()));
+        $crawler = $this->client->request('GET', sprintf('/admin/quote-requests/%d', $this->idOf($quote)));
         $crawler = $this->client->click($crawler->filter('[data-test-tmonier-quote-convert]')->link());
         self::assertResponseIsSuccessful();
 
@@ -198,7 +200,7 @@ final class AdminQuoteRequestTest extends WebTestCase
         $quote = $this->reloadQuote($quote);
         $order = $quote->getOrder();
         self::assertInstanceOf(OrderInterface::class, $order);
-        self::assertResponseRedirects(sprintf('/admin/orders/%d', (int) $order->getId()));
+        self::assertResponseRedirects(sprintf('/admin/orders/%d', $this->idOf($order)));
         self::assertSame(QuoteRequestStatuses::ORDERED, $quote->getStatus());
         self::assertSame(OrderInterface::STATE_NEW, $order->getState());
         self::assertNotNull($order->getNumber());
@@ -206,7 +208,7 @@ final class AdminQuoteRequestTest extends WebTestCase
         self::assertSame([1111, 2222], array_map(static fn (OrderItemInterface $item): int => $item->getUnitPrice(), array_values($order->getItems()->toArray())));
         self::assertSame(3 * 1111 + 2 * 2222, $order->getItemsSubtotal());
 
-        $crawler = $this->client->request('GET', sprintf('/admin/quote-requests/%d', (int) $quote->getId()));
+        $crawler = $this->client->request('GET', sprintf('/admin/quote-requests/%d', $this->idOf($quote)));
         self::assertCount(1, $crawler->filter('[data-test-tmonier-quote-order]'));
         self::assertCount(0, $crawler->filter('[data-test-tmonier-quote-convert]'));
     }

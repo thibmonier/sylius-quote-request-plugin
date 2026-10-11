@@ -6,6 +6,7 @@ namespace Tmonier\SyliusQuoteRequestPlugin\Pricing;
 
 use Sylius\Component\Core\Model\AdjustmentInterface;
 use Sylius\Component\Core\Model\OrderInterface;
+use Sylius\Component\Order\Model\AdjustmentInterface as BaseAdjustmentInterface;
 use Sylius\Component\Order\Processor\OrderProcessorInterface;
 use Sylius\Resource\Factory\FactoryInterface;
 use Tmonier\SyliusQuoteRequestPlugin\Entity\QuoteRequestInterface;
@@ -74,7 +75,7 @@ final class QuoteTotalsCalculator implements QuoteTotalsCalculatorInterface
         );
     }
 
-    /** @return iterable<AdjustmentInterface> */
+    /** @return iterable<BaseAdjustmentInterface> */
     private function taxAdjustments(OrderInterface $order): iterable
     {
         foreach ($order->getItems() as $item) {

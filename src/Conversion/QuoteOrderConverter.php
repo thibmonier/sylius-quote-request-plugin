@@ -41,8 +41,8 @@ final class QuoteOrderConverter implements QuoteOrderConverterInterface
 
     public function canConvert(QuoteRequestInterface $quoteRequest): bool
     {
-        return QuoteRequestStatuses::ACCEPTED === $quoteRequest->getStatus()
-            || $this->quoteRequestManager->can($quoteRequest, QuoteRequestTransitions::TRANSITION_ACCEPT);
+        return QuoteRequestStatuses::ACCEPTED === $quoteRequest->getStatus() ||
+            $this->quoteRequestManager->can($quoteRequest, QuoteRequestTransitions::TRANSITION_ACCEPT);
     }
 
     public function convert(

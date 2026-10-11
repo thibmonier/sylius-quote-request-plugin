@@ -11,6 +11,7 @@ use Sylius\Component\Core\Model\ChannelInterface;
 use Sylius\Component\Core\Model\CustomerInterface;
 use Sylius\Component\Core\Model\ProductVariantInterface;
 use Sylius\Component\Core\Model\ShopUserInterface;
+use Sylius\Resource\Model\ResourceInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Component\DomCrawler\Crawler;
 use Tmonier\SyliusQuoteRequestPlugin\Entity\QuoteMessageInterface;
@@ -197,6 +198,14 @@ trait QuoteRequestTestTrait
     private function shopUrl(string $path): string
     {
         return sprintf('/%s%s', $this->localeCode(), $path);
+    }
+
+    private function idOf(ResourceInterface $resource): int
+    {
+        $id = $resource->getId();
+        self::assertIsInt($id);
+
+        return $id;
     }
 
     /** @return list<string> */

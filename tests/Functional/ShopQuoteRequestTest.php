@@ -42,8 +42,8 @@ final class ShopQuoteRequestTest extends WebTestCase
         self::assertCount(1, $crawler->filter('[data-test-tmonier-add-to-quote]'));
 
         $form = $crawler->filter('[data-test-tmonier-add-to-quote-button]')->form();
-        $form['tmonier_quote_request_add[variant]']->setValue((string) $variant->getId());
-        $form['tmonier_quote_request_add[quantity]']->setValue('40');
+        $form['tmonier_quote_request_add[variant]'] = (string) $this->idOf($variant);
+        $form['tmonier_quote_request_add[quantity]'] = '40';
         $this->client->submit($form);
         self::assertResponseRedirects($this->shopUrl('/quote-request'));
 
@@ -108,8 +108,8 @@ final class ShopQuoteRequestTest extends WebTestCase
         $crawler = $this->client->followRedirect();
         self::assertCount(2, $crawler->filter('[data-test-tmonier-quote-line]'));
         $form = $crawler->filter('[data-test-tmonier-quote-submit]')->form();
-        self::assertSame($customer->getFirstName() ?? '', $form['tmonier_quote_request[firstName]']->getValue());
-        self::assertTrue($crawler->filter('#tmonier_quote_request_email')->getNode(0)?->hasAttribute('disabled'));
+        self::assertSame($customer->getFirstName() ?? '', $form->getValues()['tmonier_quote_request[firstName]'] ?? null);
+        self::assertNotNull($crawler->filter('#tmonier_quote_request_email')->attr('disabled'));
 
         $form['tmonier_quote_request[firstName]'] = 'Bob';
         $form['tmonier_quote_request[lastName]'] = 'Builder';
@@ -154,8 +154,8 @@ final class ShopQuoteRequestTest extends WebTestCase
         $product = $variant->getProduct();
         self::assertNotNull($product);
 
-        $this->client->request('POST', $this->shopUrl(sprintf('/quote-request/products/%d', (int) $product->getId())), [
-            'tmonier_quote_request_add' => ['variant' => (string) $variant->getId(), 'quantity' => '5', '_token' => 'forged'],
+        $this->client->request('POST', $this->shopUrl(sprintf('/quote-request/products/%d', $this->idOf($product))), [
+            'tmonier_quote_request_add' => ['variant' => (string) $this->idOf($variant), 'quantity' => '5', '_token' => 'forged'],
         ]);
 
         self::assertResponseRedirects($this->shopUrl('/products/' . $product->getSlug()));
@@ -176,8 +176,8 @@ final class ShopQuoteRequestTest extends WebTestCase
         self::assertNotNull($product);
         $crawler = $this->client->request('GET', $this->shopUrl('/products/' . $product->getSlug()));
         $form = $crawler->filter('[data-test-tmonier-add-to-quote-button]')->form();
-        $form['tmonier_quote_request_add[variant]']->setValue((string) $variant->getId());
-        $form['tmonier_quote_request_add[quantity]']->setValue((string) $quantity);
+        $form['tmonier_quote_request_add[variant]'] = (string) $this->idOf($variant);
+        $form['tmonier_quote_request_add[quantity]'] = (string) $quantity;
         $this->client->submit($form);
     }
 
