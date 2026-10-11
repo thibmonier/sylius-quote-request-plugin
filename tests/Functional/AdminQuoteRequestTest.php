@@ -178,7 +178,7 @@ final class AdminQuoteRequestTest extends WebTestCase
         $customer = $this->shopCustomer();
         [$first, $second] = $this->sellableVariants(2);
         $quote = $this->createQuote([[$first, 3, 1111], [$second, 2, 2222]], $customer, QuoteRequestStatuses::PROPOSED);
-        $shippingMethod = $this->firstEnabled($this->shippingMethods());
+        $shippingMethod = $this->shippingMethodOfZone('US');
         $paymentMethod = $this->firstEnabled($this->paymentMethods());
         $this->loginAdmin();
 
@@ -308,6 +308,34 @@ final class AdminQuoteRequestTest extends WebTestCase
         self::assertSame(QuoteRequestStatuses::ACCEPTED, $this->reloadQuote($quote)->getStatus());
     }
 
+    public function testAnIneligibleShippingMethodIsRefusedAndTheQuoteIsUnchanged(): void
+    {
+        $customer = $this->shopCustomer();
+        [$variant] = $this->sellableVariants(1);
+        $quote = $this->createQuote([[$variant, 3, 1111]], $customer, QuoteRequestStatuses::PROPOSED);
+        $this->loginAdmin();
+
+        $crawler = $this->client->request('GET', sprintf('/admin/quote-requests/%d/convert', $this->idOf($quote)));
+        $this->client->submit($crawler->filter('[data-test-tmonier-quote-convert-submit]')->form([
+            'tmonier_quote_request_admin_convert[address][firstName]' => 'Ada',
+            'tmonier_quote_request_admin_convert[address][lastName]' => 'Buyer',
+            'tmonier_quote_request_admin_convert[address][street]' => '1 Main Street',
+            'tmonier_quote_request_admin_convert[address][city]' => 'New York',
+            'tmonier_quote_request_admin_convert[address][postcode]' => '10001',
+            'tmonier_quote_request_admin_convert[address][countryCode]' => 'US',
+            'tmonier_quote_request_admin_convert[shippingMethod]' => (string) $this->shippingMethodOfZone('WORLD')->getCode(),
+            'tmonier_quote_request_admin_convert[paymentMethod]' => (string) $this->firstEnabled($this->paymentMethods())->getCode(),
+        ]));
+
+        self::assertResponseStatusCodeSame(422);
+        self::assertStringContainsString('is not available for this address', (string) $this->client->getResponse()->getContent());
+        // Atomic: the quote is not accepted on the customer's behalf, no e-mail, no cart.
+        $quote = $this->reloadQuote($quote);
+        self::assertSame(QuoteRequestStatuses::PROPOSED, $quote->getStatus());
+        self::assertNull($quote->getOrder());
+        self::assertEmailCount(0);
+    }
+
     /** @return list<ShippingMethodInterface> */
     private function shippingMethods(): array
     {
@@ -318,6 +346,17 @@ final class AdminQuoteRequestTest extends WebTestCase
         $methods = $repository->findEnabledForChannel($this->channel());
 
         return $methods;
+    }
+
+    private function shippingMethodOfZone(string $zoneCode): ShippingMethodInterface
+    {
+        foreach ($this->shippingMethods() as $method) {
+            if ($zoneCode === $method->getZone()?->getCode()) {
+                return $method;
+            }
+        }
+
+        self::markTestSkipped(sprintf('No shipping method of the "%s" zone in the fixtures.', $zoneCode));
     }
 
     /** @return list<PaymentMethodInterface> */

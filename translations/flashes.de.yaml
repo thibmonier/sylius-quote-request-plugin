@@ -30,3 +30,6 @@ tmonier_quote_request:
             cancel: 'Das Angebot wurde storniert.'
             converted: 'Die Bestellung wurde aus dem Angebot aufgegeben.'
         no_default_address: 'Der Kunde hat keine Standardadresse: Geben Sie die Adresse ein, um das Angebot umzuwandeln.'
+        pdf_failed: 'Das PDF des Angebots konnte nicht erstellt werden: Die E-Mail wurde ohne PDF gesendet.'
+        too_many_requests: 'Zu viele Anfragen: Bitte versuchen Sie es später erneut.'
+        cart_of_another_customer: 'Der Warenkorb dieses Angebots gehört einem anderen Kunden.'

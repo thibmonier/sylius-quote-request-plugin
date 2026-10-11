@@ -82,6 +82,7 @@ interface QuoteRequestInterface extends ResourceInterface
 
     public function getValidUntil(): ?\DateTimeImmutable;
 
+    /** Normalised to 23:59:59 of that day (PHP default timezone). */
     public function setValidUntil(?\DateTimeImmutable $validUntil): void;
 
     public function isValidAt(\DateTimeInterface $date): bool;

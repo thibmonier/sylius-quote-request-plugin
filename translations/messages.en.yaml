@@ -81,6 +81,7 @@ tmonier_quote_request:
         convert_now: 'Convert to order now'
         download_pdf: 'Download the PDF'
         pdf_shipping_note: 'Prices without shipping costs, chosen at checkout. Taxes are computed with the delivery address.'
+        unavailable_products: 'Some products of this quote can no longer be ordered as proposed (not sold any more or out of stock): contact us.'
     status:
         new: New
         in_review: 'In review'

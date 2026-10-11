@@ -30,3 +30,6 @@ tmonier_quote_request:
             cancel: 'The quote was cancelled.'
             converted: 'The order was placed from the quote.'
         no_default_address: 'The customer has no default address: enter the address to convert the quote.'
+        pdf_failed: 'The PDF of the quote could not be generated: the e-mail was sent without it.'
+        too_many_requests: 'Too many requests: please try again later.'
+        cart_of_another_customer: 'The cart of this quote belongs to another customer.'

@@ -81,6 +81,7 @@ tmonier_quote_request:
         convert_now: 'Nu omzetten in bestelling'
         download_pdf: 'PDF downloaden'
         pdf_shipping_note: 'Prijzen zonder verzendkosten, die bij het afrekenen worden gekozen. Belastingen worden berekend op basis van het afleveradres.'
+        unavailable_products: 'Sommige producten van deze offerte kunnen niet meer zoals voorgesteld worden besteld (niet meer verkocht of niet op voorraad): neem contact met ons op.'
     status:
         new: Nieuw
         in_review: 'In beoordeling'

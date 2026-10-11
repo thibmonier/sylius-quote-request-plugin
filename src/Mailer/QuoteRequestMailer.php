@@ -4,8 +4,12 @@ declare(strict_types=1);
 
 namespace Tmonier\SyliusQuoteRequestPlugin\Mailer;
 
+use Psr\Log\LoggerInterface;
 use Sylius\Component\Mailer\Sender\SenderInterface;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
+use Symfony\Component\HttpFoundation\Exception\SessionNotFoundException;
+use Symfony\Component\HttpFoundation\RequestStack;
+use Symfony\Component\HttpFoundation\Session\FlashBagAwareSessionInterface;
 use Tmonier\SyliusQuoteRequestPlugin\Entity\QuoteRequestInterface;
 use Tmonier\SyliusQuoteRequestPlugin\Event\QuoteRequestEvent;
 use Tmonier\SyliusQuoteRequestPlugin\Event\QuoteRequestEvents;
@@ -13,10 +17,15 @@ use Tmonier\SyliusQuoteRequestPlugin\Pdf\QuotePdfGeneratorInterface;
 
 final class QuoteRequestMailer implements EventSubscriberInterface
 {
+    public const ATTACHMENT_TTL = 172800;
+
     public function __construct(
         private readonly SenderInterface $sender,
         private readonly QuotePdfGeneratorInterface $pdfGenerator,
         private readonly ?string $adminEmail,
+        private readonly LoggerInterface $logger,
+        private readonly RequestStack $requestStack,
+        private readonly string $attachmentDirectory,
     ) {
     }
 
@@ -41,25 +50,67 @@ final class QuoteRequestMailer implements EventSubscriberInterface
     public function onProposed(QuoteRequestEvent $event): void
     {
         $quoteRequest = $event->getQuoteRequest();
-        if (!$this->pdfGenerator->isAvailable()) {
-            $this->sendToCustomer(QuoteRequestEmails::CUSTOMER_PROPOSAL, $quoteRequest);
+        $attachment = $this->writePdf($quoteRequest);
 
-            return;
+        $this->sendToCustomer(QuoteRequestEmails::CUSTOMER_PROPOSAL, $quoteRequest, null === $attachment ? [] : [$attachment]);
+    }
+
+    /**
+     * The Sylius mailer attaches files by path, possibly read later by an async worker: the PDF
+     * is kept in a dedicated directory and removed after ATTACHMENT_TTL. A PDF failure never
+     * prevents the proposal e-mail: it is sent without attachment and the merchant is warned.
+     */
+    private function writePdf(QuoteRequestInterface $quoteRequest): ?string
+    {
+        if (!$this->pdfGenerator->isAvailable()) {
+            return null;
         }
 
-        // The Sylius mailer attaches files by path: the PDF lives in a temporary directory.
-        $directory = sprintf('%s/tmonier_quote_%s', sys_get_temp_dir(), bin2hex(random_bytes(8)));
-        $path = $directory . '/' . $this->pdfGenerator->getFilename($quoteRequest);
-        mkdir($directory, 0700);
-
         try {
-            file_put_contents($path, $this->pdfGenerator->generate($quoteRequest));
-            $this->sendToCustomer(QuoteRequestEmails::CUSTOMER_PROPOSAL, $quoteRequest, [$path]);
-        } finally {
-            if (is_file($path)) {
-                unlink($path);
+            $content = $this->pdfGenerator->generate($quoteRequest);
+            $this->removeOldAttachments();
+            $directory = sprintf('%s/%s', $this->attachmentDirectory, bin2hex(random_bytes(8)));
+            if (!is_dir($directory) && !mkdir($directory, 0700, true) && !is_dir($directory)) {
+                throw new \RuntimeException(sprintf('Cannot create "%s".', $directory));
             }
-            rmdir($directory);
+            $path = $directory . '/' . $this->pdfGenerator->getFilename($quoteRequest);
+            if (false === file_put_contents($path, $content)) {
+                throw new \RuntimeException(sprintf('Cannot write "%s".', $path));
+            }
+
+            return $path;
+        } catch (\Throwable $exception) {
+            $this->logger->warning('The PDF of quote {number} could not be generated: {message}', [
+                'number' => $quoteRequest->getNumber(),
+                'message' => $exception->getMessage(),
+                'exception' => $exception,
+            ]);
+            $this->warn('tmonier_quote_request.flash.pdf_failed');
+
+            return null;
+        }
+    }
+
+    private function removeOldAttachments(): void
+    {
+        $limit = time() - self::ATTACHMENT_TTL;
+        foreach (glob($this->attachmentDirectory . '/*/*.pdf') ?: [] as $file) {
+            if (filemtime($file) < $limit) {
+                @unlink($file);
+                @rmdir(dirname($file));
+            }
+        }
+    }
+
+    private function warn(string $message): void
+    {
+        try {
+            $session = $this->requestStack->getSession();
+        } catch (SessionNotFoundException) {
+            return;
+        }
+        if ($session instanceof FlashBagAwareSessionInterface) {
+            $session->getFlashBag()->add('warning', $message);
         }
     }
 

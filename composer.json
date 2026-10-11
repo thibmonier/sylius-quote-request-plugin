@@ -15,7 +15,8 @@
     "license": "MIT",
     "require": {
         "php": "^8.2",
-        "sylius/sylius": "^2.2"
+        "sylius/sylius": "^2.2",
+        "symfony/rate-limiter": "^6.4 || ^7.4 || ^8.0"
     },
     "require-dev": {
         "knplabs/knp-snappy": "^1.5",
@@ -35,7 +36,8 @@
         "symfony/intl": "^6.4 || ^7.4 || ^8.0",
         "symfony/runtime": "^6.4 || ^7.4 || ^8.0",
         "symfony/web-profiler-bundle": "^6.4 || ^7.4 || ^8.0",
-        "symfony/webpack-encore-bundle": "^2.2"
+        "symfony/webpack-encore-bundle": "^2.2",
+        "winzou/state-machine-bundle": "^0.6"
     },
     "suggest": {
         "knplabs/knp-snappy-bundle": "Quote PDF (download and proposal e-mail attachment) with wkhtmltopdf"

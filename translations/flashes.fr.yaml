@@ -30,3 +30,6 @@ tmonier_quote_request:
             cancel: 'Le devis a été annulé.'
             converted: 'La commande a été passée à partir du devis.'
         no_default_address: "Le client n'a pas d'adresse par défaut : saisissez l'adresse pour convertir le devis."
+        pdf_failed: "Le PDF du devis n'a pas pu être généré : l'e-mail a été envoyé sans."
+        too_many_requests: 'Trop de demandes : veuillez réessayer plus tard.'
+        cart_of_another_customer: 'Le panier de ce devis appartient à un autre client.'

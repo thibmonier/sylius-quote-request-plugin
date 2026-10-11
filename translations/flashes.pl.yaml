@@ -30,3 +30,6 @@ tmonier_quote_request:
             cancel: 'Oferta została anulowana.'
             converted: 'Zamówienie zostało złożone na podstawie oferty.'
         no_default_address: 'Klient nie ma domyślnego adresu: wpisz adres, aby zamienić ofertę na zamówienie.'
+        pdf_failed: 'Nie udało się wygenerować PDF oferty: e-mail wysłano bez załącznika.'
+        too_many_requests: 'Zbyt wiele żądań: spróbuj ponownie później.'
+        cart_of_another_customer: 'Koszyk tej oferty należy do innego klienta.'

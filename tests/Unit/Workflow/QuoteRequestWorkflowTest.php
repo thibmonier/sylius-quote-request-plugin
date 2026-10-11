@@ -6,6 +6,7 @@ namespace Tests\Tmonier\SyliusQuoteRequestPlugin\Unit\Workflow;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use Sylius\Component\Core\Model\ChannelInterface;
 use Sylius\Component\Core\Model\ProductVariant;
 use Symfony\Component\Clock\MockClock;
 use Symfony\Component\EventDispatcher\EventDispatcher;
@@ -14,8 +15,11 @@ use Symfony\Component\Workflow\MarkingStore\MethodMarkingStore;
 use Symfony\Component\Workflow\StateMachine;
 use Symfony\Component\Workflow\Transition;
 use Symfony\Component\Yaml\Yaml;
+use Tmonier\SyliusQuoteRequestPlugin\Checkout\QuoteOrderabilityCheckerInterface;
 use Tmonier\SyliusQuoteRequestPlugin\Entity\QuoteRequest;
+use Tmonier\SyliusQuoteRequestPlugin\Entity\QuoteRequestInterface;
 use Tmonier\SyliusQuoteRequestPlugin\Entity\QuoteRequestLine;
+use Tmonier\SyliusQuoteRequestPlugin\Entity\QuoteRequestLineInterface;
 use Tmonier\SyliusQuoteRequestPlugin\EventListener\QuoteRequestGuardListener;
 use Tmonier\SyliusQuoteRequestPlugin\Workflow\QuoteRequestStatuses;
 use Tmonier\SyliusQuoteRequestPlugin\Workflow\QuoteRequestTransitions;
@@ -43,7 +47,22 @@ final class QuoteRequestWorkflowTest extends TestCase
         }
 
         $this->clock = new MockClock('2026-10-11 12:00:00');
-        $guard = new QuoteRequestGuardListener($this->clock);
+        $guard = new QuoteRequestGuardListener($this->clock, new class() implements QuoteOrderabilityCheckerInterface {
+            public function isSellable(QuoteRequestLineInterface $line, ?ChannelInterface $channel): bool
+            {
+                return null !== $line->getVariant();
+            }
+
+            public function isOrderable(QuoteRequestLineInterface $line, ?ChannelInterface $channel): bool
+            {
+                return null !== $line->getVariant() && 'OUT' !== $line->getVariantCode();
+            }
+
+            public function getUnorderableLines(QuoteRequestInterface $quoteRequest): array
+            {
+                return array_values(array_filter($quoteRequest->getLines()->toArray(), fn (QuoteRequestLineInterface $line): bool => !$this->isOrderable($line, null)));
+            }
+        });
         $dispatcher = new EventDispatcher();
         $dispatcher->addListener('workflow.tmonier_quote_request.guard.propose', $guard->guardPropose(...));
         $dispatcher->addListener('workflow.tmonier_quote_request.guard.accept', $guard->guardAccept(...));
@@ -135,5 +154,26 @@ final class QuoteRequestWorkflowTest extends TestCase
         $quote->addLine($line);
 
         return $quote;
+    }
+
+    public function testAProposalWithAnUnorderableLineCannotBeAccepted(): void
+    {
+        $quote = $this->quoteWithLine();
+        $quote->setStatus(QuoteRequestStatuses::PROPOSED);
+        $this->assertCanAccept($quote, true);
+
+        $line = new QuoteRequestLine();
+        $line->setVariant(new ProductVariant());
+        $line->setVariantCode('OUT');
+        $quote->addLine($line);
+
+        $this->assertCanAccept($quote, false);
+        $blockers = iterator_to_array($this->stateMachine->buildTransitionBlockerList($quote, QuoteRequestTransitions::TRANSITION_ACCEPT));
+        self::assertSame(QuoteRequestGuardListener::CODE_UNAVAILABLE, $blockers[0]->getCode());
+    }
+
+    private function assertCanAccept(QuoteRequest $quote, bool $expected): void
+    {
+        self::assertSame($expected, $this->stateMachine->can($quote, QuoteRequestTransitions::TRANSITION_ACCEPT));
     }
 }

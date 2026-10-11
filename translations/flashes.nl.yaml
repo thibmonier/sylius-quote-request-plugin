@@ -30,3 +30,6 @@ tmonier_quote_request:
             cancel: 'De offerte is geannuleerd.'
             converted: 'De bestelling is geplaatst op basis van de offerte.'
         no_default_address: 'De klant heeft geen standaardadres: vul het adres in om de offerte om te zetten.'
+        pdf_failed: 'De pdf van de offerte kon niet worden gemaakt: de e-mail is zonder pdf verstuurd.'
+        too_many_requests: 'Te veel verzoeken: probeer het later opnieuw.'
+        cart_of_another_customer: 'De winkelwagen van deze offerte is van een andere klant.'

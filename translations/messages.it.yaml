@@ -81,6 +81,7 @@ tmonier_quote_request:
         convert_now: 'Converti subito in ordine'
         download_pdf: 'Scarica il PDF'
         pdf_shipping_note: "Prezzi senza spese di spedizione, scelte al checkout. Le imposte sono calcolate in base all'indirizzo di consegna."
+        unavailable_products: 'Alcuni prodotti di questo preventivo non possono più essere ordinati come proposto (non più in vendita o esauriti): contattaci.'
     status:
         new: Nuovo
         in_review: 'In esame'

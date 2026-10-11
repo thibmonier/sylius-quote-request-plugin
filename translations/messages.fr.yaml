@@ -81,6 +81,7 @@ tmonier_quote_request:
         convert_now: 'Convertir en commande maintenant'
         download_pdf: 'Télécharger le PDF'
         pdf_shipping_note: "Prix hors frais de livraison, choisis lors de la commande. Les taxes sont calculées selon l'adresse de livraison."
+        unavailable_products: 'Certains produits de ce devis ne peuvent plus être commandés tels que proposés (plus vendus ou en rupture de stock) : contactez-nous.'
     status:
         new: Nouveau
         in_review: "En cours d'étude"

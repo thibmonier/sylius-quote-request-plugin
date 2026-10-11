@@ -14,6 +14,7 @@ use Sylius\Component\Order\Factory\AdjustmentFactoryInterface;
 use Sylius\Component\Order\Modifier\OrderItemQuantityModifierInterface;
 use Sylius\Resource\Factory\FactoryInterface;
 use Symfony\Contracts\Translation\TranslatorInterface;
+use Tmonier\SyliusQuoteRequestPlugin\Checkout\QuoteOrderabilityCheckerInterface;
 use Tmonier\SyliusQuoteRequestPlugin\Entity\QuoteRequestInterface;
 use Tmonier\SyliusQuoteRequestPlugin\Entity\QuoteRequestLineInterface;
 
@@ -31,12 +32,13 @@ final class QuoteOrderSynchronizer implements QuoteOrderSynchronizerInterface
         private readonly IntegerDistributorInterface $integerDistributor,
         private readonly QuoteDiscountCalculatorInterface $discountCalculator,
         private readonly TranslatorInterface $translator,
+        private readonly QuoteOrderabilityCheckerInterface $orderabilityChecker,
     ) {
     }
 
     public function synchronize(QuoteRequestInterface $quoteRequest, OrderInterface $order): void
     {
-        $lines = $this->orderableLines($quoteRequest);
+        $lines = $this->orderableLines($quoteRequest, $order);
 
         if (!$this->itemsMatch($lines, $order)) {
             foreach ($order->getItems()->toArray() as $item) {
@@ -57,11 +59,14 @@ final class QuoteOrderSynchronizer implements QuoteOrderSynchronizerInterface
     }
 
     /** @return list<QuoteRequestLineInterface> */
-    private function orderableLines(QuoteRequestInterface $quoteRequest): array
+    private function orderableLines(QuoteRequestInterface $quoteRequest, OrderInterface $order): array
     {
+        // A product disabled or removed from the channel after the acceptance is left out of the
+        // cart (the checkout would refuse it and the customer could not remove it).
+        $channel = $order->getChannel() ?? $quoteRequest->getChannel();
         $lines = [];
         foreach ($quoteRequest->getLines() as $line) {
-            if (null !== $line->getVariant() && $line->getQuantity() > 0) {
+            if ($this->orderabilityChecker->isSellable($line, $channel)) {
                 $lines[] = $line;
             }
         }
@@ -127,7 +132,18 @@ final class QuoteOrderSynchronizer implements QuoteOrderSynchronizerInterface
             $itemTotals[] = $item->getUnitPrice() * $item->getQuantity();
         }
 
-        $discount = $this->discountCalculator->calculate($quoteRequest, array_sum($itemTotals));
+        // The global discount is the one of the whole proposal; when lines are left out (product
+        // deleted or no longer sold), only their share of it is lost.
+        $quoteSubtotal = 0;
+        foreach ($quoteRequest->getLines() as $line) {
+            $quoteSubtotal += $line->getSubtotal();
+        }
+        $cartSubtotal = array_sum($itemTotals);
+        $discount = $this->discountCalculator->calculate($quoteRequest, max($quoteSubtotal, $cartSubtotal));
+        if ($quoteSubtotal > $cartSubtotal && $quoteSubtotal > 0) {
+            $discount = (int) round($discount * $cartSubtotal / $quoteSubtotal);
+        }
+        $discount = min($discount, $cartSubtotal);
         if (0 === $discount) {
             return;
         }

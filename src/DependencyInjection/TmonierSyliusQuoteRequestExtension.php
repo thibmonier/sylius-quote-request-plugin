@@ -10,6 +10,7 @@ use Symfony\Component\Config\FileLocator;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Extension\PrependExtensionInterface;
 use Symfony\Component\DependencyInjection\Loader\PhpFileLoader;
+use Tmonier\SyliusQuoteRequestPlugin\Workflow\QuoteRequestTransitions;
 
 final class TmonierSyliusQuoteRequestExtension extends AbstractResourceExtension implements PrependExtensionInterface
 {
@@ -57,6 +58,12 @@ final class TmonierSyliusQuoteRequestExtension extends AbstractResourceExtension
                     ],
                 ],
             ],
+        ]);
+
+        // The quote graph is a Symfony Workflow whatever the default adapter of the shop
+        // (default_adapter: winzou_state_machine keeps the Sylius graphs on Winzou).
+        $container->prependExtensionConfig('sylius_state_machine_abstraction', [
+            'graphs_to_adapters_mapping' => [QuoteRequestTransitions::GRAPH => 'symfony_workflow'],
         ]);
 
         $this->prependDoctrineMigrations($container);

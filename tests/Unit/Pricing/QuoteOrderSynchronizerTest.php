@@ -9,18 +9,23 @@ use Sylius\Component\Core\Distributor\IntegerDistributor;
 use Sylius\Component\Core\Distributor\ProportionalIntegerDistributor;
 use Sylius\Component\Core\Model\Adjustment;
 use Sylius\Component\Core\Model\AdjustmentInterface;
+use Sylius\Component\Core\Model\Channel;
+use Sylius\Component\Core\Model\ChannelPricing;
 use Sylius\Component\Core\Model\Order;
 use Sylius\Component\Core\Model\OrderItem;
 use Sylius\Component\Core\Model\OrderItemInterface;
 use Sylius\Component\Core\Model\OrderItemUnit;
 use Sylius\Component\Core\Model\Product;
 use Sylius\Component\Core\Model\ProductVariant;
+use Sylius\Component\Inventory\Checker\AvailabilityCheckerInterface;
+use Sylius\Component\Inventory\Model\StockableInterface;
 use Sylius\Component\Order\Factory\AdjustmentFactory;
 use Sylius\Component\Order\Factory\OrderItemUnitFactory;
 use Sylius\Component\Order\Modifier\OrderItemQuantityModifier;
 use Sylius\Resource\Factory\FactoryInterface;
 use Symfony\Component\Translation\IdentityTranslator;
 use Tests\Tmonier\SyliusQuoteRequestPlugin\Unit\CallbackFactory;
+use Tmonier\SyliusQuoteRequestPlugin\Checkout\QuoteOrderabilityChecker;
 use Tmonier\SyliusQuoteRequestPlugin\Entity\QuoteRequest;
 use Tmonier\SyliusQuoteRequestPlugin\Entity\QuoteRequestInterface;
 use Tmonier\SyliusQuoteRequestPlugin\Entity\QuoteRequestLine;
@@ -31,10 +36,14 @@ final class QuoteOrderSynchronizerTest extends TestCase
 {
     private QuoteOrderSynchronizer $synchronizer;
 
+    private Channel $channel;
+
     private OrderItemQuantityModifier $quantityModifier;
 
     protected function setUp(): void
     {
+        $this->channel = new Channel();
+        $this->channel->setCode('WEB');
         $this->quantityModifier = new OrderItemQuantityModifier(new OrderItemUnitFactory(OrderItemUnit::class));
         /** @var AdjustmentFactory<AdjustmentInterface> $adjustments */
         $adjustments = new AdjustmentFactory($this->adjustmentFactory());
@@ -46,6 +55,17 @@ final class QuoteOrderSynchronizerTest extends TestCase
             new IntegerDistributor(),
             new QuoteDiscountCalculator(),
             new IdentityTranslator(),
+            new QuoteOrderabilityChecker(new class() implements AvailabilityCheckerInterface {
+                public function isStockAvailable(StockableInterface $stockable): bool
+                {
+                    return true;
+                }
+
+                public function isStockSufficient(StockableInterface $stockable, int $quantity): bool
+                {
+                    return true;
+                }
+            }),
         );
     }
 
@@ -53,7 +73,7 @@ final class QuoteOrderSynchronizerTest extends TestCase
     {
         [$first, $second] = [$this->variant('A'), $this->variant('B')];
         $quote = $this->quote([[$first, 3, 2000, 1500], [$second, 2, 1000, null]]);
-        $order = new Order();
+        $order = $this->order();
 
         $this->synchronizer->synchronize($quote, $order);
 
@@ -75,7 +95,7 @@ final class QuoteOrderSynchronizerTest extends TestCase
         self::assertNotFalse($line);
         $line->setDiscountType(QuoteRequestLine::DISCOUNT_PERCENTAGE);
         $line->setDiscountTiers([['min_quantity' => 50, 'value' => 10.0]]);
-        $order = new Order();
+        $order = $this->order();
 
         $this->synchronizer->synchronize($quote, $order);
 
@@ -91,7 +111,7 @@ final class QuoteOrderSynchronizerTest extends TestCase
         $quote = $this->quote([[$this->variant('A'), 3, 2000, 1999], [$this->variant('B'), 7, 1500, 1234]]);
         $quote->setDiscountPercentage(10.0);
         $quote->setNumber('Q000042');
-        $order = new Order();
+        $order = $this->order();
 
         $this->synchronizer->synchronize($quote, $order);
 
@@ -116,7 +136,7 @@ final class QuoteOrderSynchronizerTest extends TestCase
     {
         $quote = $this->quote([[$this->variant('A'), 4, 2000, 1500]]);
         $quote->setDiscountAmount(300);
-        $order = new Order();
+        $order = $this->order();
 
         $this->synchronizer->synchronize($quote, $order);
         $item = $this->items($order)[0];
@@ -132,7 +152,7 @@ final class QuoteOrderSynchronizerTest extends TestCase
     {
         $variant = $this->variant('A');
         $quote = $this->quote([[$variant, 4, 2000, 1500]]);
-        $order = new Order();
+        $order = $this->order();
         $this->synchronizer->synchronize($quote, $order);
 
         $item = $this->items($order)[0];
@@ -154,6 +174,23 @@ final class QuoteOrderSynchronizerTest extends TestCase
         self::assertTrue($items[0]->isImmutable());
     }
 
+    public function testUnsellableLinesAreLeftOutWithTheirShareOfAFixedDiscount(): void
+    {
+        $sold = $this->variant('A');
+        $disabled = $this->variant('B');
+        $quote = $this->quote([[$sold, 1, 400, null], [$disabled, 1, 600, null]]);
+        $quote->setDiscountAmount(500);
+        $disabled->setEnabled(false);
+        $order = $this->order();
+
+        $this->synchronizer->synchronize($quote, $order);
+
+        self::assertCount(1, $order->getItems());
+        // 500 on a 1000 proposal: the 400 line keeps 40 % of it, not the whole 500.
+        self::assertSame(-200, $order->getAdjustmentsTotalRecursively(AdjustmentInterface::ORDER_PROMOTION_ADJUSTMENT));
+        self::assertSame(200, $order->getItemsTotal());
+    }
+
     public function testLinesOfDeletedVariantsAreSkipped(): void
     {
         $quote = $this->quote([[$this->variant('A'), 1, 2000, null]]);
@@ -161,7 +198,7 @@ final class QuoteOrderSynchronizerTest extends TestCase
         $orphan->setQuantity(5);
         $orphan->setCatalogUnitPrice(999);
         $quote->addLine($orphan);
-        $order = new Order();
+        $order = $this->order();
 
         $this->synchronizer->synchronize($quote, $order);
 
@@ -217,8 +254,21 @@ final class QuoteOrderSynchronizerTest extends TestCase
         $variant->setCurrentLocale('en_US');
         $variant->setFallbackLocale('en_US');
         $product->addVariant($variant);
+        $product->addChannel($this->channel);
+        $pricing = new ChannelPricing();
+        $pricing->setChannelCode('WEB');
+        $pricing->setPrice(1000);
+        $variant->addChannelPricing($pricing);
 
         return $variant;
+    }
+
+    private function order(): Order
+    {
+        $order = new Order();
+        $order->setChannel($this->channel);
+
+        return $order;
     }
 
     /** @return list<OrderItemInterface> */

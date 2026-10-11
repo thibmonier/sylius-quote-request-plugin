@@ -62,6 +62,14 @@ final class QuoteAwarePromotionProcessorTest extends TestCase
             {
                 return $this->quote;
             }
+
+            public function remember(OrderInterface $order, QuoteRequestInterface $quoteRequest): void
+            {
+            }
+
+            public function forget(OrderInterface $order): void
+            {
+            }
         };
     }
 }

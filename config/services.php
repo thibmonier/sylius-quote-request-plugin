@@ -8,6 +8,8 @@ use Tmonier\SyliusQuoteRequestPlugin\Basket\QuoteBasketInterface;
 use Tmonier\SyliusQuoteRequestPlugin\Basket\SessionQuoteBasket;
 use Tmonier\SyliusQuoteRequestPlugin\Checkout\QuoteCartManager;
 use Tmonier\SyliusQuoteRequestPlugin\Checkout\QuoteCartManagerInterface;
+use Tmonier\SyliusQuoteRequestPlugin\Checkout\QuoteOrderabilityChecker;
+use Tmonier\SyliusQuoteRequestPlugin\Checkout\QuoteOrderabilityCheckerInterface;
 use Tmonier\SyliusQuoteRequestPlugin\Command\ExpireQuoteRequestsCommand;
 use Tmonier\SyliusQuoteRequestPlugin\Controller\Admin\QuoteRequestController as AdminQuoteRequestController;
 use Tmonier\SyliusQuoteRequestPlugin\Controller\Shop\QuoteRequestController as ShopQuoteRequestController;
@@ -107,6 +109,12 @@ return static function (ContainerConfigurator $container): void {
     ;
 
     // Pricing and order processing
+    $services
+        ->set('tmonier_quote_request.orderability_checker', QuoteOrderabilityChecker::class)
+        ->args([service('sylius.checker.inventory.availability')])
+    ;
+    $services->alias(QuoteOrderabilityCheckerInterface::class, 'tmonier_quote_request.orderability_checker');
+
     $services->set('tmonier_quote_request.discount_calculator', QuoteDiscountCalculator::class);
     $services->alias(QuoteDiscountCalculatorInterface::class, 'tmonier_quote_request.discount_calculator');
 
@@ -120,6 +128,7 @@ return static function (ContainerConfigurator $container): void {
             service('sylius.distributor.integer'),
             service('tmonier_quote_request.discount_calculator'),
             service('translator'),
+            service('tmonier_quote_request.orderability_checker'),
         ])
     ;
     $services->alias(QuoteOrderSynchronizerInterface::class, 'tmonier_quote_request.order_synchronizer');
@@ -167,6 +176,7 @@ return static function (ContainerConfigurator $container): void {
             service('sylius.order_processing.order_processor'),
             service('sylius.manager.order'),
             service('sylius_shop.storage.cart_session'),
+            service('tmonier_quote_request.order_resolver'),
         ])
     ;
     $services->alias(QuoteCartManagerInterface::class, 'tmonier_quote_request.cart_manager');
@@ -181,6 +191,7 @@ return static function (ContainerConfigurator $container): void {
             service('sylius.repository.customer'),
             service('sylius.factory.customer'),
             service('sylius.manager.order'),
+            service('validator'),
         ])
     ;
     $services->alias(QuoteOrderConverterInterface::class, 'tmonier_quote_request.order_converter');
@@ -192,7 +203,9 @@ return static function (ContainerConfigurator $container): void {
             service('twig'),
             service('knp_snappy.pdf')->nullOnInvalid(),
             param('tmonier_quote_request.pdf_binary'),
+            service('logger'),
         ])
+        ->tag('monolog.logger', ['channel' => 'tmonier_quote_request'])
     ;
     $services->alias('tmonier_quote_request.pdf_generator', 'tmonier_quote_request.pdf_generator.snappy');
     $services->alias(QuotePdfGeneratorInterface::class, 'tmonier_quote_request.pdf_generator');
@@ -200,7 +213,7 @@ return static function (ContainerConfigurator $container): void {
     // Workflow and events
     $services
         ->set('tmonier_quote_request.listener.guard', QuoteRequestGuardListener::class)
-        ->args([service('clock')])
+        ->args([service('clock'), service('tmonier_quote_request.orderability_checker')])
         ->tag('kernel.event_listener', ['event' => sprintf('workflow.%s.guard.%s', $graph, QuoteRequestTransitions::TRANSITION_PROPOSE), 'method' => 'guardPropose'])
         ->tag('kernel.event_listener', ['event' => sprintf('workflow.%s.guard.%s', $graph, QuoteRequestTransitions::TRANSITION_ACCEPT), 'method' => 'guardAccept'])
     ;
@@ -217,8 +230,9 @@ return static function (ContainerConfigurator $container): void {
     // Same outcome whatever the state machine adapter (Winzou included): checkout state flushed as completed.
     $services
         ->set('tmonier_quote_request.listener.order_checkout_completed_doctrine', OrderCheckoutCompletedDoctrineListener::class)
-        ->args([service('tmonier_quote_request.manager')])
+        ->args([service('event_dispatcher'), service('clock')])
         ->tag('doctrine.event_listener', ['event' => 'onFlush'])
+        ->tag('doctrine.event_listener', ['event' => 'postFlush'])
     ;
 
     $services
@@ -227,7 +241,11 @@ return static function (ContainerConfigurator $container): void {
             service('sylius.email_sender'),
             service('tmonier_quote_request.pdf_generator'),
             param('tmonier_quote_request.admin_email'),
+            service('logger'),
+            service('request_stack'),
+            sprintf('%s/tmonier_quote_request_pdf', sys_get_temp_dir()),
         ])
+        ->tag('monolog.logger', ['channel' => 'tmonier_quote_request'])
         ->tag('kernel.event_subscriber')
     ;
 

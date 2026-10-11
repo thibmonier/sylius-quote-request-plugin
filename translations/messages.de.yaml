@@ -81,6 +81,7 @@ tmonier_quote_request:
         convert_now: 'Jetzt in Bestellung umwandeln'
         download_pdf: 'PDF herunterladen'
         pdf_shipping_note: 'Preise ohne Versandkosten, die beim Checkout gewählt werden. Steuern werden nach der Lieferadresse berechnet.'
+        unavailable_products: 'Einige Produkte dieses Angebots können nicht mehr wie angeboten bestellt werden (nicht mehr verkauft oder nicht vorrätig): Kontaktieren Sie uns.'
     status:
         new: Neu
         in_review: 'In Prüfung'

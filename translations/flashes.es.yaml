@@ -30,3 +30,6 @@ tmonier_quote_request:
             cancel: 'El presupuesto ha sido cancelado.'
             converted: 'El pedido se ha realizado a partir del presupuesto.'
         no_default_address: 'El cliente no tiene dirección predeterminada: introduzca la dirección para convertir el presupuesto.'
+        pdf_failed: 'No se ha podido generar el PDF del presupuesto: el correo se ha enviado sin él.'
+        too_many_requests: 'Demasiadas solicitudes: inténtelo de nuevo más tarde.'
+        cart_of_another_customer: 'El carrito de este presupuesto pertenece a otro cliente.'

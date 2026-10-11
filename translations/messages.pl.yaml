@@ -81,6 +81,7 @@ tmonier_quote_request:
         convert_now: 'Zamień na zamówienie teraz'
         download_pdf: 'Pobierz PDF'
         pdf_shipping_note: 'Ceny bez kosztów dostawy, wybieranych przy składaniu zamówienia. Podatki są naliczane według adresu dostawy.'
+        unavailable_products: 'Niektórych produktów z tej oferty nie można już zamówić zgodnie z propozycją (wycofane lub brak w magazynie): skontaktuj się z nami.'
     status:
         new: Nowe
         in_review: 'W analizie'

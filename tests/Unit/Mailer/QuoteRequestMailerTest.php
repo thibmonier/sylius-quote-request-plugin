@@ -5,8 +5,13 @@ declare(strict_types=1);
 namespace Tests\Tmonier\SyliusQuoteRequestPlugin\Unit\Mailer;
 
 use PHPUnit\Framework\TestCase;
+use Psr\Log\NullLogger;
 use Sylius\Component\Core\Model\Channel;
 use Sylius\Component\Mailer\Sender\SenderInterface;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\RequestStack;
+use Symfony\Component\HttpFoundation\Session\Session;
+use Symfony\Component\HttpFoundation\Session\Storage\MockArraySessionStorage;
 use Tmonier\SyliusQuoteRequestPlugin\Entity\QuoteMessage;
 use Tmonier\SyliusQuoteRequestPlugin\Entity\QuoteMessageInterface;
 use Tmonier\SyliusQuoteRequestPlugin\Entity\QuoteRequest;
@@ -21,6 +26,13 @@ final class QuoteRequestMailerTest extends TestCase
 
     /** @var array<string, string> content of the attachments at sending time, by path */
     private array $attachments = [];
+
+    private RequestStack $requestStack;
+
+    protected function setUp(): void
+    {
+        $this->requestStack = new RequestStack();
+    }
 
     public function testANewRequestNotifiesTheConfiguredAdminAndTheCustomer(): void
     {
@@ -87,10 +99,28 @@ final class QuoteRequestMailerTest extends TestCase
         $path = (string) array_key_first($this->attachments);
         self::assertStringEndsWith('/quote-Q000042.pdf', $path);
         self::assertSame('%PDF-fake Q000042', $this->attachments[$path]);
-        self::assertFileDoesNotExist($path, 'The temporary file is removed once sent.');
+        self::assertFileExists($path, 'The file stays for an async mailer worker.');
+        unlink($path);
+        rmdir(dirname($path));
     }
 
-    private function mailer(?string $adminEmail, bool $pdf = false): QuoteRequestMailer
+    public function testAPdfFailureDoesNotPreventTheProposalEmail(): void
+    {
+        $quote = $this->quote();
+        $quote->setNumber('Q000043');
+        $session = new Session(new MockArraySessionStorage());
+        $request = new Request();
+        $request->setSession($session);
+        $this->requestStack->push($request);
+
+        $this->mailer(null, true, true)->onProposed(new QuoteRequestEvent($quote));
+
+        self::assertSame([[QuoteRequestEmails::CUSTOMER_PROPOSAL, ['buyer@example.com'], []]], $this->sent);
+        self::assertSame([], $this->attachments);
+        self::assertSame(['tmonier_quote_request.flash.pdf_failed'], $session->getFlashBag()->get('warning'));
+    }
+
+    private function mailer(?string $adminEmail, bool $pdf = false, bool $pdfFails = false): QuoteRequestMailer
     {
         $record = function (string $code, array $recipients, array $replyTo, array $attachments): void {
             /** @var list<string> $recipients */
@@ -113,7 +143,14 @@ final class QuoteRequestMailerTest extends TestCase
             }
         };
 
-        return new QuoteRequestMailer($sender, new FakePdfGenerator($pdf), $adminEmail);
+        return new QuoteRequestMailer(
+            $sender,
+            new FakePdfGenerator($pdf, $pdfFails),
+            $adminEmail,
+            new NullLogger(),
+            $this->requestStack,
+            sys_get_temp_dir() . '/tmonier_quote_request_pdf_test',
+        );
     }
 
     private function quote(): QuoteRequest

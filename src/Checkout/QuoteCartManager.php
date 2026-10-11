@@ -13,6 +13,8 @@ use Sylius\Component\Order\Processor\OrderProcessorInterface;
 use Sylius\Resource\Factory\FactoryInterface;
 use Symfony\Component\HttpFoundation\Exception\SessionNotFoundException;
 use Tmonier\SyliusQuoteRequestPlugin\Entity\QuoteRequestInterface;
+use Tmonier\SyliusQuoteRequestPlugin\Manager\QuoteTransitionException;
+use Tmonier\SyliusQuoteRequestPlugin\OrderProcessing\QuoteOrderResolverInterface;
 use Webmozart\Assert\Assert;
 
 final class QuoteCartManager implements QuoteCartManagerInterface
@@ -23,6 +25,7 @@ final class QuoteCartManager implements QuoteCartManagerInterface
         private readonly OrderProcessorInterface $orderProcessor,
         private readonly ObjectManager $objectManager,
         private readonly CartStorageInterface $cartStorage,
+        private readonly QuoteOrderResolverInterface $quoteOrderResolver,
     ) {
     }
 
@@ -32,6 +35,9 @@ final class QuoteCartManager implements QuoteCartManagerInterface
         Assert::notNull($channel);
 
         $cart = $quoteRequest->getOrder();
+        if (null !== $cart && OrderInterface::STATE_CART === $cart->getState() && !$this->mayResume($cart, $customer)) {
+            throw QuoteTransitionException::cartOfAnotherCustomer();
+        }
         if (null === $cart || OrderInterface::STATE_CART !== $cart->getState()) {
             $cart = $this->orderFactory->createNew();
             $cart->setChannel($channel);
@@ -53,6 +59,7 @@ final class QuoteCartManager implements QuoteCartManagerInterface
 
         // The cart needs an id before processing: the price lock processor finds the quote by order.
         $this->objectManager->flush();
+        $this->quoteOrderResolver->remember($cart, $quoteRequest);
         $this->orderProcessor->process($cart);
         $this->objectManager->flush();
 
@@ -77,7 +84,7 @@ final class QuoteCartManager implements QuoteCartManagerInterface
         }
 
         $quoteRequest->setOrder(null);
-        // The price lock processor finds the quote by order in the database.
+        $this->quoteOrderResolver->forget($cart);
         $this->objectManager->flush();
 
         foreach ($cart->getItems() as $item) {
@@ -86,5 +93,19 @@ final class QuoteCartManager implements QuoteCartManagerInterface
         }
         $this->orderProcessor->process($cart);
         $this->objectManager->flush();
+    }
+
+    /**
+     * The cart of a quote stays with the customer who started it: a registered customer's cart
+     * is never handed to somebody else (forwarded link), a guest cart only to another guest.
+     */
+    private function mayResume(OrderInterface $cart, ?CustomerInterface $customer): bool
+    {
+        $owner = $cart->getCustomer();
+        if (null === $owner || $owner === $customer) {
+            return true;
+        }
+
+        return null === $customer && $owner instanceof CustomerInterface && null === $owner->getUser();
     }
 }

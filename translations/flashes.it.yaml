@@ -30,3 +30,6 @@ tmonier_quote_request:
             cancel: 'Il preventivo è stato annullato.'
             converted: "L'ordine è stato effettuato a partire dal preventivo."
         no_default_address: "Il cliente non ha un indirizzo predefinito: inserisci l'indirizzo per convertire il preventivo."
+        pdf_failed: "Non è stato possibile generare il PDF del preventivo: l'e-mail è stata inviata senza."
+        too_many_requests: 'Troppe richieste: riprova più tardi.'
+        cart_of_another_customer: 'Il carrello di questo preventivo appartiene a un altro cliente.'

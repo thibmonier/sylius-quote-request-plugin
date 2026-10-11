@@ -240,7 +240,8 @@ class QuoteRequest implements QuoteRequestInterface
 
     public function setValidUntil(?\DateTimeImmutable $validUntil): void
     {
-        $this->validUntil = $validUntil;
+        // A quote is valid until the end of the day shown to the customer.
+        $this->validUntil = $validUntil?->setTime(23, 59, 59);
     }
 
     public function isValidAt(\DateTimeInterface $date): bool

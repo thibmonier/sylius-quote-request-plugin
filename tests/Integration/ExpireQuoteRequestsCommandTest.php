@@ -35,7 +35,7 @@ final class ExpireQuoteRequestsCommandTest extends KernelTestCase
 
     public function testItExpiresTheProposalsPastTheirValidity(): void
     {
-        $past = $this->proposal(new \DateTimeImmutable('-1 hour'));
+        $past = $this->proposal(new \DateTimeImmutable('-1 day'));
         $future = $this->proposal(new \DateTimeImmutable('+1 day'));
         $notProposed = $this->quote();
         $notProposed->setValidUntil(new \DateTimeImmutable('-3 days'));

@@ -7,10 +7,12 @@ namespace Tmonier\SyliusQuoteRequestPlugin\EventListener;
 use Psr\Clock\ClockInterface;
 use Symfony\Component\Workflow\Event\GuardEvent;
 use Symfony\Component\Workflow\TransitionBlocker;
+use Tmonier\SyliusQuoteRequestPlugin\Checkout\QuoteOrderabilityCheckerInterface;
 use Tmonier\SyliusQuoteRequestPlugin\Entity\QuoteRequestInterface;
 
 /**
- * A proposal needs at least one line that can be ordered; it can be accepted only while valid.
+ * A proposal needs at least one line with a product; it can be accepted only while valid and
+ * when every line can still be ordered (product sold in the channel, stock sufficient).
  */
 final class QuoteRequestGuardListener
 {
@@ -18,8 +20,12 @@ final class QuoteRequestGuardListener
 
     public const CODE_EXPIRED = 'tmonier_quote_request.expired';
 
-    public function __construct(private readonly ClockInterface $clock)
-    {
+    public const CODE_UNAVAILABLE = 'tmonier_quote_request.unavailable';
+
+    public function __construct(
+        private readonly ClockInterface $clock,
+        private readonly QuoteOrderabilityCheckerInterface $orderabilityChecker,
+    ) {
     }
 
     public function guardPropose(GuardEvent $event): void
@@ -36,6 +42,10 @@ final class QuoteRequestGuardListener
 
         if (!$quoteRequest->isValidAt($this->clock->now())) {
             $event->addTransitionBlocker(new TransitionBlocker('The proposal is no longer valid.', self::CODE_EXPIRED));
+        }
+
+        if ([] !== $this->orderabilityChecker->getUnorderableLines($quoteRequest)) {
+            $event->addTransitionBlocker(new TransitionBlocker('A product of the quote can no longer be ordered.', self::CODE_UNAVAILABLE));
         }
 
         $this->blockWithoutLines($event);

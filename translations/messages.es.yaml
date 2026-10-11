@@ -81,6 +81,7 @@ tmonier_quote_request:
         convert_now: 'Convertir en pedido ahora'
         download_pdf: 'Descargar el PDF'
         pdf_shipping_note: 'Precios sin gastos de envío, que se eligen al pagar. Los impuestos se calculan según la dirección de entrega.'
+        unavailable_products: 'Algunos productos de este presupuesto ya no se pueden pedir tal como se propusieron (ya no se venden o sin stock): contáctenos.'
     status:
         new: Nuevo
         in_review: 'En estudio'
