@@ -17,6 +17,7 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\Form\FormError;
 use Symfony\Component\Form\FormInterface;
 use Symfony\Component\Form\SubmitButton;
+use Symfony\Component\HttpFoundation\HeaderUtils;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
@@ -31,6 +32,7 @@ use Tmonier\SyliusQuoteRequestPlugin\Form\Type\Admin\QuoteRequestAdminType;
 use Tmonier\SyliusQuoteRequestPlugin\Form\Type\Shop\QuoteMessageType;
 use Tmonier\SyliusQuoteRequestPlugin\Manager\QuoteRequestManagerInterface;
 use Tmonier\SyliusQuoteRequestPlugin\Manager\QuoteTransitionException;
+use Tmonier\SyliusQuoteRequestPlugin\Pdf\QuotePdfGeneratorInterface;
 use Tmonier\SyliusQuoteRequestPlugin\Repository\QuoteRequestRepositoryInterface;
 use Tmonier\SyliusQuoteRequestPlugin\Workflow\QuoteRequestStatuses;
 use Tmonier\SyliusQuoteRequestPlugin\Workflow\QuoteRequestTransitions;
@@ -51,6 +53,7 @@ final class QuoteRequestController extends AbstractController
      * @param ShippingMethodRepositoryInterface<ShippingMethodInterface> $shippingMethodRepository
      * @param PaymentMethodRepositoryInterface<PaymentMethodInterface> $paymentMethodRepository
      * @param FactoryInterface<AddressInterface> $addressFactory
+     * @param array<string, float> $customerGroupDiscounts
      */
     public function __construct(
         private readonly QuoteRequestRepositoryInterface $quoteRequestRepository,
@@ -61,7 +64,9 @@ final class QuoteRequestController extends AbstractController
         private readonly PaymentMethodRepositoryInterface $paymentMethodRepository,
         private readonly FactoryInterface $addressFactory,
         private readonly TranslatorInterface $translator,
+        private readonly QuotePdfGeneratorInterface $pdfGenerator,
         private readonly int $maxLines,
+        private readonly array $customerGroupDiscounts = [],
     ) {
     }
 
@@ -72,6 +77,7 @@ final class QuoteRequestController extends AbstractController
 
         $form = $this->createForm(QuoteRequestAdminType::class, $quoteRequest, [
             'currency' => (string) $quoteRequest->getCurrencyCode(),
+            'group_discount' => $editable ? $this->groupDiscount($quoteRequest) : null,
             'disabled' => !$editable,
             'action' => $this->generateUrl('tmonier_quote_request_admin_quote_request_show', ['id' => $id]),
         ]);
@@ -94,6 +100,7 @@ final class QuoteRequestController extends AbstractController
             ])->createView(),
             'transitions' => self::TRANSITIONS,
             'can_convert' => $this->converter->canConvert($quoteRequest),
+            'group_discount' => $this->groupDiscount($quoteRequest),
         ], new Response(null, $form->isSubmitted() ? Response::HTTP_UNPROCESSABLE_ENTITY : Response::HTTP_OK));
     }
 
@@ -173,6 +180,54 @@ final class QuoteRequestController extends AbstractController
         return $this->renderConvert($quoteRequest, $form, $form->isSubmitted() ? Response::HTTP_UNPROCESSABLE_ENTITY : Response::HTTP_OK);
     }
 
+    /** Places the order at once with the customer's default address and the default methods. */
+    public function convertNowAction(Request $request, int $id): Response
+    {
+        $quoteRequest = $this->find($id);
+        if (!$this->isCsrfTokenValid(sprintf('tmonier_quote_request_admin_convert_now_%d', $id), (string) $request->request->get('_csrf_token'))) {
+            throw new AccessDeniedHttpException('Invalid CSRF token.');
+        }
+
+        $address = $quoteRequest->getCustomer()?->getDefaultAddress();
+        if (!$this->converter->canConvert($quoteRequest) || null === $address) {
+            $this->addFlash('error', null === $address ? 'tmonier_quote_request.flash.no_default_address' : 'tmonier_quote_request.flash.cannot_convert');
+
+            return $this->redirectToRoute('tmonier_quote_request_admin_quote_request_convert', ['id' => $id]);
+        }
+
+        try {
+            $order = $this->converter->convert($quoteRequest, $address, null, null);
+        } catch (QuoteTransitionException|\RuntimeException $exception) {
+            $this->addFlash('error', ['message' => 'tmonier_quote_request.flash.conversion_failed', 'parameters' => ['%reason%' => $exception->getMessage()]]);
+
+            return $this->redirectToRoute('tmonier_quote_request_admin_quote_request_convert', ['id' => $id]);
+        }
+
+        $this->addFlash('success', 'tmonier_quote_request.flash.admin.converted');
+
+        return $this->redirectToRoute('sylius_admin_order_show', ['id' => $order->getId()]);
+    }
+
+    public function pdfAction(int $id): Response
+    {
+        $quoteRequest = $this->find($id);
+        if (!$this->pdfGenerator->isAvailable() || $quoteRequest->getLines()->isEmpty()) {
+            throw new NotFoundHttpException('No PDF for this quote.');
+        }
+
+        return new Response($this->pdfGenerator->generate($quoteRequest), Response::HTTP_OK, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => HeaderUtils::makeDisposition(HeaderUtils::DISPOSITION_ATTACHMENT, $this->pdfGenerator->getFilename($quoteRequest)),
+        ]);
+    }
+
+    private function groupDiscount(QuoteRequestInterface $quoteRequest): ?float
+    {
+        $code = $quoteRequest->getCustomer()?->getGroup()?->getCode();
+
+        return null === $code ? null : ($this->customerGroupDiscounts[$code] ?? null);
+    }
+
     private function renderConvert(QuoteRequestInterface $quoteRequest, FormInterface $form, int $status): Response
     {
         return $this->render('@TmonierSyliusQuoteRequestPlugin/admin/quote_request/convert.html.twig', [
@@ -230,6 +285,18 @@ final class QuoteRequestController extends AbstractController
         /** @var string|null $body */
         $body = $form->get('message')->getData();
         $message = null !== $body && '' !== trim($body) ? $this->adminMessage(trim($body)) : null;
+
+        if ($form->has('applyGroupDiscount')) {
+            $apply = $form->get('applyGroupDiscount');
+            if ($apply instanceof SubmitButton && $apply->isClicked()) {
+                $quoteRequest->setDiscountAmount(null);
+                $quoteRequest->setDiscountPercentage($this->groupDiscount($quoteRequest));
+                $this->quoteRequestManager->save($quoteRequest);
+                $this->addFlash('success', 'tmonier_quote_request.flash.admin.saved');
+
+                return $this->redirectToQuote($quoteRequest);
+            }
+        }
 
         $propose = $form->get('propose');
         if ($propose instanceof SubmitButton && $propose->isClicked()) {

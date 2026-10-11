@@ -41,3 +41,19 @@ tmonier_quote_request_admin_quote_request_convert:
         id: '\d+'
     defaults:
         _controller: tmonier_quote_request.controller.admin::convertAction
+
+tmonier_quote_request_admin_quote_request_convert_now:
+    path: /quote-requests/{id}/convert-now
+    methods: [POST]
+    requirements:
+        id: '\d+'
+    defaults:
+        _controller: tmonier_quote_request.controller.admin::convertNowAction
+
+tmonier_quote_request_admin_quote_request_pdf:
+    path: /quote-requests/{id}/pdf
+    methods: [GET]
+    requirements:
+        id: '\d+'
+    defaults:
+        _controller: tmonier_quote_request.controller.admin::pdfAction

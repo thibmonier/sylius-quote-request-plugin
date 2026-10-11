@@ -87,6 +87,7 @@ final class AdminQuoteRequestTest extends WebTestCase
         self::assertNotNull($email);
         self::assertEmailAddressContains($email, 'To', (string) $customer->getEmail());
         self::assertEmailHtmlBodyContains($email, 'Here is our best offer.');
+        self::assertEmailAttachmentCount($email, 1);
 
         $quote = $this->reloadQuote($quote);
         self::assertSame(QuoteRequestStatuses::PROPOSED, $quote->getStatus());
@@ -211,6 +212,100 @@ final class AdminQuoteRequestTest extends WebTestCase
         $crawler = $this->client->request('GET', sprintf('/admin/quote-requests/%d', $this->idOf($quote)));
         self::assertCount(1, $crawler->filter('[data-test-tmonier-quote-order]'));
         self::assertCount(0, $crawler->filter('[data-test-tmonier-quote-convert]'));
+    }
+
+    public function testTheMerchantSetsAVolumeDiscountAndAppliesTheGroupSuggestion(): void
+    {
+        $customer = $this->shopCustomer();
+        $group = $this->entityManager()->getRepository(\Sylius\Component\Customer\Model\CustomerGroupInterface::class)->findOneBy(['code' => 'wholesale']);
+        self::assertInstanceOf(\Sylius\Component\Customer\Model\CustomerGroupInterface::class, $group);
+        $customer->setGroup($group);
+        [$variant] = $this->sellableVariants(1);
+        $quote = $this->createQuote([[$variant, 60, 2000]], $customer);
+        $this->loginAdmin();
+
+        $crawler = $this->client->request('GET', sprintf('/admin/quote-requests/%d', $this->idOf($quote)));
+        self::assertStringContainsString('12.5', $crawler->filter('[data-test-tmonier-quote-group-discount]')->text());
+
+        $this->client->submit($crawler->filter('#tmonier_quote_request_admin_save')->form([
+            'tmonier_quote_request_admin[lines][0][discountType]' => 'percentage',
+            'tmonier_quote_request_admin[lines][0][discountTiers]' => '10: 5; 50: 10',
+        ]));
+        self::assertResponseRedirects();
+        $line = $this->reloadQuote($quote)->getLines()->first();
+        self::assertNotFalse($line);
+        self::assertSame([['min_quantity' => 10, 'value' => 5.0], ['min_quantity' => 50, 'value' => 10.0]], $line->getDiscountTiers());
+        self::assertSame(1800, $line->getEffectiveUnitPrice());
+
+        $crawler = $this->client->request('GET', sprintf('/admin/quote-requests/%d', $this->idOf($quote)));
+        $this->client->submit($crawler->filter('#tmonier_quote_request_admin_applyGroupDiscount')->form());
+        self::assertSame(12.5, $this->reloadQuote($quote)->getDiscountPercentage());
+
+        $crawler = $this->client->request('GET', sprintf('/admin/quote-requests/%d', $this->idOf($quote)));
+        $this->client->submit($crawler->filter('#tmonier_quote_request_admin_save')->form([
+            'tmonier_quote_request_admin[lines][0][discountTiers]' => 'ten percent',
+        ]));
+        self::assertResponseStatusCodeSame(422);
+    }
+
+    public function testTheMerchantDownloadsTheQuotePdf(): void
+    {
+        [$variant] = $this->sellableVariants(1);
+        $quote = $this->createQuote([[$variant, 10, 1000]]);
+        $this->loginAdmin();
+
+        $crawler = $this->client->request('GET', sprintf('/admin/quote-requests/%d', $this->idOf($quote)));
+        $this->client->click($crawler->filter('[data-test-tmonier-quote-pdf]')->link());
+
+        self::assertResponseIsSuccessful();
+        self::assertResponseHeaderSame('Content-Type', 'application/pdf');
+        self::assertStringContainsString(sprintf('quote-%s.pdf', (string) $quote->getNumber()), (string) $this->client->getResponse()->headers->get('Content-Disposition'));
+        $content = (string) $this->client->getResponse()->getContent();
+        self::assertStringStartsWith('%PDF-', $content);
+        self::assertStringContainsString(sprintf('Quote %s', (string) $quote->getNumber()), $content);
+    }
+
+    public function testTheMerchantConvertsAnAcceptedQuoteInOneClick(): void
+    {
+        $customer = $this->shopCustomer();
+        if (null === $customer->getDefaultAddress()) {
+            $address = new \Sylius\Component\Core\Model\Address();
+            $address->setFirstName('Ada');
+            $address->setLastName('Buyer');
+            $address->setStreet('1 Main Street');
+            $address->setCity('New York');
+            $address->setPostcode('10001');
+            $address->setCountryCode('US');
+            $customer->setDefaultAddress($address);
+            $this->entityManager()->flush();
+        }
+        [$variant] = $this->sellableVariants(1);
+        $quote = $this->createQuote([[$variant, 4, 1500]], $customer, QuoteRequestStatuses::ACCEPTED);
+        $this->loginAdmin();
+
+        $crawler = $this->client->request('GET', sprintf('/admin/quote-requests/%d', $this->idOf($quote)));
+        $this->client->submit($crawler->filter('[data-test-tmonier-quote-convert-now]')->form());
+
+        $quote = $this->reloadQuote($quote);
+        $order = $quote->getOrder();
+        self::assertInstanceOf(OrderInterface::class, $order);
+        self::assertResponseRedirects(sprintf('/admin/orders/%d', $this->idOf($order)));
+        self::assertSame(QuoteRequestStatuses::ORDERED, $quote->getStatus());
+        self::assertSame(OrderInterface::STATE_NEW, $order->getState());
+        self::assertSame('awaiting_payment', $order->getPaymentState());
+        self::assertSame([1500], array_map(static fn (OrderItemInterface $item): int => $item->getUnitPrice(), array_values($order->getItems()->toArray())));
+    }
+
+    public function testOneClickConversionRequiresAValidCsrfToken(): void
+    {
+        [$variant] = $this->sellableVariants(1);
+        $quote = $this->createQuote([[$variant, 4, 1500]], $this->shopCustomer(), QuoteRequestStatuses::ACCEPTED);
+        $this->loginAdmin();
+
+        $this->client->request('POST', sprintf('/admin/quote-requests/%d/convert-now', $this->idOf($quote)), ['_csrf_token' => 'forged']);
+
+        self::assertResponseStatusCodeSame(403);
+        self::assertSame(QuoteRequestStatuses::ACCEPTED, $this->reloadQuote($quote)->getStatus());
     }
 
     /** @return list<ShippingMethodInterface> */

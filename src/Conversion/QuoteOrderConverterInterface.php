@@ -16,7 +16,8 @@ interface QuoteOrderConverterInterface
 
     /**
      * Places an order from a proposed (accepted on the customer's behalf) or accepted quote: the
-     * quote cart goes through the checkout steps with the given address and methods.
+     * quote cart goes through the checkout steps with the given address and methods (null: the
+     * default method resolved by the Sylius order processing). The payment stays awaiting.
      *
      * @throws \Tmonier\SyliusQuoteRequestPlugin\Manager\QuoteTransitionException
      * @throws \RuntimeException when a checkout step cannot be applied
@@ -25,6 +26,6 @@ interface QuoteOrderConverterInterface
         QuoteRequestInterface $quoteRequest,
         AddressInterface $address,
         ?ShippingMethodInterface $shippingMethod,
-        PaymentMethodInterface $paymentMethod,
+        ?PaymentMethodInterface $paymentMethod,
     ): OrderInterface;
 }

@@ -2,6 +2,7 @@
 {% set shows_prices = tmonier_quote_request_shows_prices(quote_request) %}
 {% set currency = quote_request.currencyCode %}
 {% set locale = quote_request.localeCode %}
+{% set has_volume_discount = shows_prices and tmonier_quote_request_has_volume_discount(quote_request) %}
 
 <div class="table-responsive">
     <table class="table align-middle" {{ sylius_test_html_attribute('tmonier-quote-lines') }}>
@@ -10,6 +11,7 @@
                 <th>{{ 'sylius.ui.product'|trans }}</th>
                 <th class="text-end">{{ 'sylius.ui.quantity'|trans }}</th>
                 <th class="text-end">{{ shows_prices ? 'tmonier_quote_request.ui.proposed_unit_price'|trans : 'tmonier_quote_request.ui.catalog_price'|trans }}</th>
+                {% if has_volume_discount %}<th class="text-end">{{ 'tmonier_quote_request.form.volume_discount'|trans }}</th>{% endif %}
                 <th class="text-end">{{ 'sylius.ui.total'|trans }}</th>
             </tr>
         </thead>
@@ -28,11 +30,14 @@
                     </td>
                     {% if shows_prices %}
                         <td class="text-end text-nowrap" {{ sylius_test_html_attribute('tmonier-quote-line-price') }}>
-                            {% if line.effectiveUnitPrice < line.catalogUnitPrice %}
+                            {% if line.baseUnitPrice < line.catalogUnitPrice %}
                                 <del class="small text-body-secondary">{{ line.catalogUnitPrice|sylius_format_money(currency, locale) }}</del>
                             {% endif %}
-                            {{ line.effectiveUnitPrice|sylius_format_money(currency, locale) }}
+                            {{ line.baseUnitPrice|sylius_format_money(currency, locale) }}
                         </td>
+                        {% if has_volume_discount %}
+                            <td class="text-end text-nowrap" {{ sylius_test_html_attribute('tmonier-quote-line-volume-discount') }}>{% if line.unitDiscount > 0 %}-{{ line.unitDiscount|sylius_format_money(currency, locale) }} / {{ 'tmonier_quote_request.ui.unit'|trans }}{% endif %}</td>
+                        {% endif %}
                         <td class="text-end text-nowrap">{{ line.subtotal|sylius_format_money(currency, locale) }}</td>
                     {% else %}
                         <td class="text-end text-nowrap">{{ line.catalogUnitPrice|sylius_format_money(currency, locale) }}</td>
@@ -44,15 +49,15 @@
         {% if shows_prices %}
             {% set totals = tmonier_quote_request_totals(quote_request) %}
             <tfoot>
-                <tr><td colspan="3" class="text-end">{{ 'tmonier_quote_request.ui.subtotal'|trans }}</td><td class="text-end text-nowrap">{{ totals.subtotal|sylius_format_money(currency, locale) }}</td></tr>
+                <tr><td colspan="{{ has_volume_discount ? 4 : 3 }}" class="text-end">{{ 'tmonier_quote_request.ui.subtotal'|trans }}</td><td class="text-end text-nowrap">{{ totals.subtotal|sylius_format_money(currency, locale) }}</td></tr>
                 {% if totals.discount > 0 %}
-                    <tr><td colspan="3" class="text-end">{{ 'tmonier_quote_request.ui.discount'|trans }}</td><td class="text-end text-nowrap" {{ sylius_test_html_attribute('tmonier-quote-discount') }}>-{{ totals.discount|sylius_format_money(currency, locale) }}</td></tr>
+                    <tr><td colspan="{{ has_volume_discount ? 4 : 3 }}" class="text-end">{{ 'tmonier_quote_request.ui.discount'|trans }}</td><td class="text-end text-nowrap" {{ sylius_test_html_attribute('tmonier-quote-discount') }}>-{{ totals.discount|sylius_format_money(currency, locale) }}</td></tr>
                 {% endif %}
                 <tr>
-                    <td colspan="3" class="text-end">{{ 'sylius.ui.taxes'|trans }}{% if totals.hasIncludedTaxes %} <span class="small text-body-secondary">({{ 'tmonier_quote_request.ui.included_in_price'|trans }})</span>{% endif %}</td>
+                    <td colspan="{{ has_volume_discount ? 4 : 3 }}" class="text-end">{{ 'sylius.ui.taxes'|trans }}{% if totals.hasIncludedTaxes %} <span class="small text-body-secondary">({{ 'tmonier_quote_request.ui.included_in_price'|trans }})</span>{% endif %}</td>
                     <td class="text-end text-nowrap">{{ totals.taxTotal|sylius_format_money(currency, locale) }}</td>
                 </tr>
-                <tr class="fw-bold"><td colspan="3" class="text-end">{{ 'tmonier_quote_request.ui.total_without_shipping'|trans }}</td><td class="text-end text-nowrap" {{ sylius_test_html_attribute('tmonier-quote-total') }}>{{ totals.total|sylius_format_money(currency, locale) }}</td></tr>
+                <tr class="fw-bold"><td colspan="{{ has_volume_discount ? 4 : 3 }}" class="text-end">{{ 'tmonier_quote_request.ui.total_without_shipping'|trans }}</td><td class="text-end text-nowrap" {{ sylius_test_html_attribute('tmonier-quote-total') }}>{{ totals.total|sylius_format_money(currency, locale) }}</td></tr>
             </tfoot>
         {% else %}
             <tfoot>

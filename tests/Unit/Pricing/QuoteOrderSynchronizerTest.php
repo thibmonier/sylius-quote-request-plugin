@@ -68,6 +68,24 @@ final class QuoteOrderSynchronizerTest extends TestCase
         self::assertSame(3 * 1500 + 2 * 1000, $order->getItemsTotal());
     }
 
+    public function testTheVolumeDiscountIsLockedInTheUnitPrice(): void
+    {
+        $quote = $this->quote([[$this->variant('A'), 60, 2000, 1800]]);
+        $line = $quote->getLines()->first();
+        self::assertNotFalse($line);
+        $line->setDiscountType(QuoteRequestLine::DISCOUNT_PERCENTAGE);
+        $line->setDiscountTiers([['min_quantity' => 50, 'value' => 10.0]]);
+        $order = new Order();
+
+        $this->synchronizer->synchronize($quote, $order);
+
+        $item = $this->items($order)[0];
+        self::assertSame(1620, $item->getUnitPrice());
+        self::assertSame(2000, $item->getOriginalUnitPrice());
+        self::assertTrue($item->isImmutable());
+        self::assertSame(60 * 1620, $order->getItemsTotal());
+    }
+
     public function testItSpreadsTheGlobalDiscountOnTheUnits(): void
     {
         $quote = $this->quote([[$this->variant('A'), 3, 2000, 1999], [$this->variant('B'), 7, 1500, 1234]]);

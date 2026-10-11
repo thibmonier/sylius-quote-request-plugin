@@ -28,6 +28,11 @@ class QuoteRequestLine implements QuoteRequestLineInterface
 
     protected ?int $unitPrice = null;
 
+    protected ?string $discountType = null;
+
+    /** @var list<array{min_quantity: int, value: float}>|null */
+    protected ?array $discountTiers = [];
+
     public function getId(): ?int
     {
         return $this->id;
@@ -123,9 +128,70 @@ class QuoteRequestLine implements QuoteRequestLineInterface
         $this->unitPrice = $unitPrice;
     }
 
-    public function getEffectiveUnitPrice(): int
+    public function getDiscountType(): ?string
+    {
+        return $this->discountType;
+    }
+
+    public function setDiscountType(?string $discountType): void
+    {
+        $this->discountType = $discountType;
+    }
+
+    public function getDiscountTiers(): array
+    {
+        // JSON columns may come back with other key orders or integer values.
+        return array_map(
+            static fn (array $tier): array => ['min_quantity' => (int) $tier['min_quantity'], 'value' => (float) $tier['value']],
+            $this->discountTiers ?? [],
+        );
+    }
+
+    public function setDiscountTiers(array $discountTiers): void
+    {
+        usort($discountTiers, static fn (array $a, array $b): int => $a['min_quantity'] <=> $b['min_quantity']);
+        $this->discountTiers = $discountTiers;
+    }
+
+    public function getApplicableDiscountTier(): ?array
+    {
+        if (null === $this->discountType) {
+            return null;
+        }
+
+        $applicable = null;
+        foreach ($this->getDiscountTiers() as $tier) {
+            if ($tier['min_quantity'] <= $this->quantity && $tier['value'] > 0) {
+                $applicable = $tier;
+            }
+        }
+
+        return $applicable;
+    }
+
+    public function getBaseUnitPrice(): int
     {
         return $this->unitPrice ?? $this->catalogUnitPrice;
+    }
+
+    public function getUnitDiscount(): int
+    {
+        $tier = $this->getApplicableDiscountTier();
+        if (null === $tier) {
+            return 0;
+        }
+
+        $base = $this->getBaseUnitPrice();
+        $discount = self::DISCOUNT_PERCENTAGE === $this->discountType
+            ? (int) round($base * min($tier['value'], 100.0) / 100)
+            : (int) round($tier['value'] * 100);
+
+        return max(0, min($discount, $base));
+    }
+
+    public function getEffectiveUnitPrice(): int
+    {
+        return $this->getBaseUnitPrice() - $this->getUnitDiscount();
     }
 
     public function getSubtotal(): int

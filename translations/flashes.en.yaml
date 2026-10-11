@@ -29,3 +29,4 @@ tmonier_quote_request:
             expire: 'The quote was marked as expired.'
             cancel: 'The quote was cancelled.'
             converted: 'The order was placed from the quote.'
+        no_default_address: 'The customer has no default address: enter the address to convert the quote.'

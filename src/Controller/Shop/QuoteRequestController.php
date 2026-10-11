@@ -17,6 +17,7 @@ use Sylius\Component\Order\Context\CartContextInterface;
 use Sylius\Component\Order\Context\CartNotFoundException;
 use Sylius\Resource\Doctrine\Persistence\RepositoryInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\HeaderUtils;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
@@ -31,6 +32,7 @@ use Tmonier\SyliusQuoteRequestPlugin\Form\Type\Shop\QuoteMessageType;
 use Tmonier\SyliusQuoteRequestPlugin\Form\Type\Shop\QuoteRequestType;
 use Tmonier\SyliusQuoteRequestPlugin\Manager\QuoteRequestManagerInterface;
 use Tmonier\SyliusQuoteRequestPlugin\Manager\QuoteTransitionException;
+use Tmonier\SyliusQuoteRequestPlugin\Pdf\QuotePdfGeneratorInterface;
 use Tmonier\SyliusQuoteRequestPlugin\Repository\QuoteRequestRepositoryInterface;
 use Tmonier\SyliusQuoteRequestPlugin\Workflow\QuoteRequestStatuses;
 use Tmonier\SyliusQuoteRequestPlugin\Workflow\QuoteRequestTransitions;
@@ -64,6 +66,7 @@ final class QuoteRequestController extends AbstractController
         private readonly bool $fromProductPage,
         private readonly bool $fromCart,
         private readonly int $maxLines,
+        private readonly QuotePdfGeneratorInterface $pdfGenerator,
     ) {
     }
 
@@ -192,6 +195,20 @@ final class QuoteRequestController extends AbstractController
     public function showByTokenAction(Request $request, string $token): Response
     {
         return $this->renderQuote($request, $this->findByToken($token), false);
+    }
+
+    /** PDF of the proposal (from the proposal on: proposed, accepted, ordered, expired). */
+    public function pdfAction(string $token): Response
+    {
+        $quoteRequest = $this->findByToken($token);
+        if (!$this->pdfGenerator->isAvailable() || !in_array($quoteRequest->getStatus(), QuoteRequestStatuses::WITH_PROPOSAL, true)) {
+            throw new NotFoundHttpException('No PDF for this quote.');
+        }
+
+        return new Response($this->pdfGenerator->generate($quoteRequest), Response::HTTP_OK, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => HeaderUtils::makeDisposition(HeaderUtils::DISPOSITION_ATTACHMENT, $this->pdfGenerator->getFilename($quoteRequest)),
+        ]);
     }
 
     public function accountIndexAction(): Response

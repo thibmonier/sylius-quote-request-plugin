@@ -14,7 +14,7 @@ final class TranslationsTest extends TestCase
 {
     private const LOCALES = ['en', 'fr', 'de', 'es', 'it', 'nl', 'pl'];
 
-    private const DOMAINS = ['messages', 'flashes'];
+    private const DOMAINS = ['messages', 'flashes', 'validators'];
 
     /** @return iterable<string, array{string, string}> */
     public static function catalogues(): iterable
@@ -61,7 +61,7 @@ final class TranslationsTest extends TestCase
 
     public function testEveryKeyUsedInTheCodeExists(): void
     {
-        $known = array_keys($this->flatten($this->parse('messages', 'en')) + $this->flatten($this->parse('flashes', 'en')));
+        $known = array_keys($this->flatten($this->parse('messages', 'en')) + $this->flatten($this->parse('flashes', 'en')) + $this->flatten($this->parse('validators', 'en')));
         $root = dirname(__DIR__, 2);
         $used = [];
         foreach (['src', 'templates', 'config'] as $directory) {

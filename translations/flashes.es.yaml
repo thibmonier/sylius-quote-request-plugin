@@ -29,3 +29,4 @@ tmonier_quote_request:
             expire: 'El presupuesto se ha marcado como caducado.'
             cancel: 'El presupuesto ha sido cancelado.'
             converted: 'El pedido se ha realizado a partir del presupuesto.'
+        no_default_address: 'El cliente no tiene dirección predeterminada: introduzca la dirección para convertir el presupuesto.'

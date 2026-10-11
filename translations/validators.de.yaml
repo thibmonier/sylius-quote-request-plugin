@@ -1,0 +1,3 @@
+tmonier_quote_request:
+    form:
+        invalid_discount_tiers: 'Verwenden Sie Paare „Mindestmenge: Rabatt“, getrennt durch „;“, z. B. „1: 5; 50: 10“.'

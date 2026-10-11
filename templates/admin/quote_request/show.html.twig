@@ -3,5 +3,5 @@
 {% block title %}{{ 'tmonier_quote_request.ui.quote_number'|trans({'%number%': quote_request.number}) }} | {{ parent() }}{% endblock %}
 
 {% block body %}
-    {% hook 'tmonier_quote_request.admin.quote_request.show' with { quote_request, form, editable, message_form, transitions, can_convert } %}
+    {% hook 'tmonier_quote_request.admin.quote_request.show' with { quote_request, form, editable, message_form, transitions, can_convert, group_discount } %}
 {% endblock %}

@@ -93,6 +93,29 @@ Ordered: `workflow.sylius_order_checkout.completed.complete` → the accepted qu
 goes to *ordered* (no flush, the checkout flushes). Works for the shop checkout, the API
 checkout and the admin conversion.
 
+## 2b. v1 additions (user spec)
+
+- **PDF**: `QuotePdfGeneratorInterface` (isAvailable / generate / getFilename), default
+  `SnappyQuotePdfGenerator` using `knp_snappy.pdf` when KnpSnappyBundle is installed or a
+  `pdf_binary` path with `knplabs/knp-snappy` (suggested, not required). Unavailable engine =
+  no link, no attachment, 404 on the routes. Downloads: admin at any time once there are lines,
+  customer from the proposal on (token route). Attached to the proposal e-mail (the Sylius
+  mailer attaches by path: temporary file removed after sending). Tests use
+  `FakeQuotePdfGenerator` (renders the real template, returns a minimal PDF), as the Factur-X
+  plugin does; `WKHTMLTOPDF_PATH` switches the dev/test app to the real engine.
+- **Volume discounts per line**: type (percentage of the unit price, or amount per unit in
+  major units) and tiers `min quantity: value`; the highest reached tier applies. The
+  discounted unit price is what is locked in the order item (catalog price kept as original
+  price), so taxes, promotions and totals see it like any negotiated price.
+- **Customer group suggestion**: `customer_group_discounts` (group code → %), shown on the
+  admin quote with an *Apply* button setting the global percentage discount.
+- **One-click conversion**: `convert-now` reuses `QuoteOrderConverter` with the customer's
+  default address and null methods (Sylius default shipping / payment method resolution),
+  payment awaiting. Falls back to the conversion form when the customer has no default
+  address or a checkout step fails.
+- **Adapter-agnostic "ordered"**: Doctrine `onFlush` listener on orders whose `checkoutState`
+  changes to `completed` (works with Winzou), in addition to the Symfony Workflow listener.
+
 ## 3. Model
 
 - `QuoteRequest` (`tmonier_quote_request`): number (`Q000042`, from the id), status, token,
@@ -101,7 +124,7 @@ checkout and the admin conversion.
   validity date, internal note, order, dates (created, updated, proposed, accepted, ordered).
 - `QuoteRequestLine`: variant (nullable when deleted), product / variant names and code
   (snapshot), quantity, requested quantity, catalog unit price (snapshot), negotiated unit
-  price (null = catalog price).
+  price (null = catalog price), volume discount type and tiers (JSON).
 - `QuoteMessage`: author type (customer / admin), author name, body, date.
 
 ## 4. Workflow

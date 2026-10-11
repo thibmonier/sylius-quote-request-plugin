@@ -1,0 +1,3 @@
+tmonier_quote_request:
+    form:
+        invalid_discount_tiers: 'Use "min. quantity: discount" pairs separated by ";", e.g. "1: 5; 50: 10".'

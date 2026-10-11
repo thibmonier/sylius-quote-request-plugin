@@ -14,6 +14,8 @@
         <field name="requestedQuantity" column="requested_quantity" type="integer" nullable="true" />
         <field name="catalogUnitPrice" column="catalog_unit_price" type="integer" />
         <field name="unitPrice" column="unit_price" type="integer" nullable="true" />
+        <field name="discountType" column="discount_type" type="string" length="16" nullable="true" />
+        <field name="discountTiers" column="discount_tiers" type="json" nullable="true" />
 
         <many-to-one field="quoteRequest" target-entity="Tmonier\SyliusQuoteRequestPlugin\Entity\QuoteRequestInterface" inversed-by="lines">
             <join-column name="quote_request_id" referenced-column-name="id" nullable="false" on-delete="CASCADE" />

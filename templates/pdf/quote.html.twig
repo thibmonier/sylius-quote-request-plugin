@@ -1,0 +1,95 @@
+{#- Standalone HTML rendered by wkhtmltopdf: no shop layout, inline styles only. -#}
+{% set channel = quote_request.channel %}
+{% set seller = channel.shopBillingData %}
+{% set currency = quote_request.currencyCode %}
+{% set locale = quote_request.localeCode %}
+{% set totals = tmonier_quote_request_totals(quote_request) %}
+{% set has_volume_discount = quote_request.lines|filter(line => line.unitDiscount > 0)|length > 0 %}
+<!DOCTYPE html>
+<html lang="{{ locale|split('_')|first }}">
+<head>
+    <meta charset="utf-8">
+    <title>{{ 'tmonier_quote_request.ui.quote_number'|trans({'%number%': quote_request.number}, null, locale) }}</title>
+    <style>
+        body { font-family: DejaVu Sans, Arial, sans-serif; font-size: 11px; color: #222; }
+        h1 { font-size: 20px; margin: 0 0 4px 0; }
+        .parties { width: 100%; margin: 20px 0; }
+        .parties td { vertical-align: top; width: 50%; }
+        table.lines { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        table.lines th { text-align: left; border-bottom: 2px solid #333; padding: 5px 4px; }
+        table.lines td { border-bottom: 1px solid #ddd; padding: 5px 4px; }
+        .num { text-align: right; white-space: nowrap; }
+        .totals td { padding: 3px 4px; }
+        .muted { color: #777; }
+        .box { margin-top: 20px; padding: 8px; background: #f4f4f4; }
+    </style>
+</head>
+<body>
+    <h1>{{ 'tmonier_quote_request.ui.quote_number'|trans({'%number%': quote_request.number}, null, locale) }}</h1>
+    <div class="muted">
+        {{ 'tmonier_quote_request.ui.requested_at'|trans({}, null, locale) }} {{ quote_request.createdAt|date('Y-m-d') }}
+        {% if quote_request.proposedAt %} · {{ 'tmonier_quote_request.ui.proposed_at'|trans({}, null, locale) }} {{ quote_request.proposedAt|date('Y-m-d') }}{% endif %}
+    </div>
+
+    <table class="parties">
+        <tr>
+            <td>
+                <strong>{{ seller.company|default(channel.name) }}</strong><br>
+                {% if seller %}
+                    {% if seller.street %}{{ seller.street }}<br>{% endif %}
+                    {% if seller.postcode or seller.city %}{{ seller.postcode }} {{ seller.city }}<br>{% endif %}
+                    {% if seller.countryCode %}{{ seller.countryCode|sylius_country_name|default(seller.countryCode) }}<br>{% endif %}
+                    {% if seller.taxId %}{{ 'tmonier_quote_request.form.vat_number'|trans({}, null, locale) }}: {{ seller.taxId }}<br>{% endif %}
+                {% endif %}
+                {% if channel.contactEmail %}{{ channel.contactEmail }}{% endif %}
+            </td>
+            <td>
+                {% if quote_request.company %}<strong>{{ quote_request.company }}</strong><br>{% endif %}
+                {{ quote_request.fullName }}<br>
+                {{ quote_request.email }}
+                {% if quote_request.phoneNumber %}<br>{{ quote_request.phoneNumber }}{% endif %}
+                {% if quote_request.vatNumber %}<br>{{ 'tmonier_quote_request.form.vat_number'|trans({}, null, locale) }}: {{ quote_request.vatNumber }}{% endif %}
+            </td>
+        </tr>
+    </table>
+
+    <table class="lines">
+        <thead>
+            <tr>
+                <th>{{ 'sylius.ui.product'|trans({}, null, locale) }}</th>
+                <th class="num">{{ 'sylius.ui.quantity'|trans({}, null, locale) }}</th>
+                <th class="num">{{ 'tmonier_quote_request.ui.catalog_price'|trans({}, null, locale) }}</th>
+                <th class="num">{{ 'tmonier_quote_request.ui.negotiated_price'|trans({}, null, locale) }}</th>
+                {% if has_volume_discount %}<th class="num">{{ 'tmonier_quote_request.form.volume_discount'|trans({}, null, locale) }}</th>{% endif %}
+                <th class="num">{{ 'sylius.ui.total'|trans({}, null, locale) }}</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for line in quote_request.lines %}
+                <tr>
+                    <td>{{ line.productName }}{% if line.variantName and line.variantName != line.productName %} – {{ line.variantName }}{% endif %}<br><span class="muted">{{ line.variantCode }}</span></td>
+                    <td class="num">{{ line.quantity }}</td>
+                    <td class="num">{{ line.catalogUnitPrice|sylius_format_money(currency, locale) }}</td>
+                    <td class="num">{{ line.baseUnitPrice|sylius_format_money(currency, locale) }}</td>
+                    {% if has_volume_discount %}<td class="num">{% if line.unitDiscount > 0 %}-{{ line.unitDiscount|sylius_format_money(currency, locale) }}{% endif %}</td>{% endif %}
+                    <td class="num">{{ line.subtotal|sylius_format_money(currency, locale) }}</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <table class="totals" style="width: 50%; margin-left: 50%; margin-top: 10px;">
+        <tr><td>{{ 'tmonier_quote_request.ui.subtotal'|trans({}, null, locale) }}</td><td class="num">{{ totals.subtotal|sylius_format_money(currency, locale) }}</td></tr>
+        {% if totals.discount > 0 %}
+            <tr><td>{{ 'tmonier_quote_request.ui.discount'|trans({}, null, locale) }}</td><td class="num">-{{ totals.discount|sylius_format_money(currency, locale) }}</td></tr>
+        {% endif %}
+        <tr><td>{{ 'sylius.ui.taxes'|trans({}, null, locale) }}{% if totals.hasIncludedTaxes %} ({{ 'tmonier_quote_request.ui.included_in_price'|trans({}, null, locale) }}){% endif %}</td><td class="num">{{ totals.taxTotal|sylius_format_money(currency, locale) }}</td></tr>
+        <tr><td><strong>{{ 'tmonier_quote_request.ui.total_without_shipping'|trans({}, null, locale) }}</strong></td><td class="num"><strong>{{ totals.total|sylius_format_money(currency, locale) }}</strong></td></tr>
+    </table>
+
+    <div class="box">
+        {% if quote_request.validUntil %}<strong>{{ 'tmonier_quote_request.ui.valid_until_date'|trans({'%date%': quote_request.validUntil|date('Y-m-d')}, null, locale) }}</strong><br>{% endif %}
+        {{ 'tmonier_quote_request.ui.pdf_shipping_note'|trans({}, null, locale) }}
+    </div>
+</body>
+</html>

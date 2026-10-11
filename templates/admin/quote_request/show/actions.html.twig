@@ -13,8 +13,23 @@
             </form>
         {% endif %}
     {% endfor %}
+    {% if tmonier_quote_request_pdf_available() and quote_request.lines is not empty %}
+        <a class="btn" href="{{ path('tmonier_quote_request_admin_quote_request_pdf', {'id': quote_request.id}) }}" {{ sylius_test_html_attribute('tmonier-quote-pdf') }}>
+            {{ ux_icon('tabler:file-type-pdf', {'class': 'icon'}) }}
+            PDF
+        </a>
+    {% endif %}
+    {% if hookable_metadata.context.can_convert and quote_request.customer is not null and quote_request.customer.defaultAddress is not null %}
+        <form method="post" action="{{ path('tmonier_quote_request_admin_quote_request_convert_now', {'id': quote_request.id}) }}" class="d-inline">
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token('tmonier_quote_request_admin_convert_now_' ~ quote_request.id) }}">
+            <button type="submit" class="btn btn-primary" {{ sylius_test_html_attribute('tmonier-quote-convert-now') }}>
+                {{ ux_icon('tabler:bolt', {'class': 'icon'}) }}
+                {{ 'tmonier_quote_request.ui.convert_now'|trans }}
+            </button>
+        </form>
+    {% endif %}
     {% if hookable_metadata.context.can_convert %}
-        <a class="btn btn-primary" href="{{ path('tmonier_quote_request_admin_quote_request_convert', {'id': quote_request.id}) }}" {{ sylius_test_html_attribute('tmonier-quote-convert') }}>
+        <a class="btn" href="{{ path('tmonier_quote_request_admin_quote_request_convert', {'id': quote_request.id}) }}" {{ sylius_test_html_attribute('tmonier-quote-convert') }}>
             {{ ux_icon('tabler:shopping-cart-check', {'class': 'icon'}) }}
             {{ 'tmonier_quote_request.ui.convert_to_order'|trans }}
         </a>

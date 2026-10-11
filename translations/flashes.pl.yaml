@@ -29,3 +29,4 @@ tmonier_quote_request:
             expire: 'Oferta została oznaczona jako wygasła.'
             cancel: 'Oferta została anulowana.'
             converted: 'Zamówienie zostało złożone na podstawie oferty.'
+        no_default_address: 'Klient nie ma domyślnego adresu: wpisz adres, aby zamienić ofertę na zamówienie.'

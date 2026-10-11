@@ -75,6 +75,12 @@ tmonier_quote_request:
             declined: 'Deze offerte is afgewezen.'
             expired: 'Dit voorstel is verlopen. Neem contact met ons op of verstuur een nieuwe aanvraag.'
             cancelled: 'Deze offerteaanvraag is geannuleerd.'
+        unit: stuk
+        group_discount_suggestion: 'Klantgroep %group%: voorgestelde totale korting %percentage% %.'
+        apply_group_discount: '%percentage% % toepassen'
+        convert_now: 'Nu omzetten in bestelling'
+        download_pdf: 'PDF downloaden'
+        pdf_shipping_note: 'Prijzen zonder verzendkosten, die bij het afrekenen worden gekozen. Belastingen worden berekend op basis van het afleveradres.'
     status:
         new: Nieuw
         in_review: 'In beoordeling'
@@ -104,6 +110,12 @@ tmonier_quote_request:
         internal_note_help: 'Wordt nooit aan de klant getoond.'
         message_to_customer: 'Bericht aan de klant'
         no_shipping: 'Geen verzending'
+        volume_discount: Staffelkorting
+        no_volume_discount: 'Geen staffelkorting'
+        discount_type:
+            percentage: 'Percentage per stuk'
+            amount: 'Bedrag per stuk'
+        discount_tiers: 'Staffels (min. aantal: korting)'
     email:
         view_quote: 'Offerte bekijken'
         open_in_admin: 'Offerte openen'

@@ -29,3 +29,4 @@ tmonier_quote_request:
             expire: 'Le devis a été marqué comme expiré.'
             cancel: 'Le devis a été annulé.'
             converted: 'La commande a été passée à partir du devis.'
+        no_default_address: "Le client n'a pas d'adresse par défaut : saisissez l'adresse pour convertir le devis."

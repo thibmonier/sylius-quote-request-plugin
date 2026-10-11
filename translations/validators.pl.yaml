@@ -1,0 +1,3 @@
+tmonier_quote_request:
+    form:
+        invalid_discount_tiers: 'Użyj par „min. ilość: rabat” oddzielonych „;”, np. „1: 5; 50: 10”.'

@@ -75,6 +75,12 @@ tmonier_quote_request:
             declined: 'Ta oferta została odrzucona.'
             expired: 'Ta propozycja wygasła. Skontaktuj się z nami lub wyślij nowe zapytanie.'
             cancelled: 'To zapytanie ofertowe zostało anulowane.'
+        unit: szt.
+        group_discount_suggestion: 'Grupa klientów %group%: sugerowany rabat całkowity %percentage% %.'
+        apply_group_discount: 'Zastosuj %percentage% %'
+        convert_now: 'Zamień na zamówienie teraz'
+        download_pdf: 'Pobierz PDF'
+        pdf_shipping_note: 'Ceny bez kosztów dostawy, wybieranych przy składaniu zamówienia. Podatki są naliczane według adresu dostawy.'
     status:
         new: Nowe
         in_review: 'W analizie'
@@ -104,6 +110,12 @@ tmonier_quote_request:
         internal_note_help: 'Nigdy nie jest pokazywana klientowi.'
         message_to_customer: 'Wiadomość do klienta'
         no_shipping: 'Bez dostawy'
+        volume_discount: 'Rabat ilościowy'
+        no_volume_discount: 'Bez rabatu ilościowego'
+        discount_type:
+            percentage: 'Procent za sztukę'
+            amount: 'Kwota za sztukę'
+        discount_tiers: 'Progi (min. ilość: rabat)'
     email:
         view_quote: 'Zobacz ofertę'
         open_in_admin: 'Otwórz ofertę'

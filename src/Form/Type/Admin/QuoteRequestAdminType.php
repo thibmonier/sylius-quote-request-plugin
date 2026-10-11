@@ -88,6 +88,13 @@ final class QuoteRequestAdminType extends AbstractType
             ->add('save', SubmitType::class, ['label' => 'sylius.ui.save_changes'])
             ->add('propose', SubmitType::class, ['label' => 'tmonier_quote_request.ui.save_and_send_proposal'])
         ;
+
+        if (null !== $options['group_discount']) {
+            $builder->add('applyGroupDiscount', SubmitType::class, [
+                'label' => 'tmonier_quote_request.ui.apply_group_discount',
+                'label_translation_parameters' => ['%percentage%' => $options['group_discount']],
+            ]);
+        }
     }
 
     public function configureOptions(OptionsResolver $resolver): void
@@ -95,9 +102,11 @@ final class QuoteRequestAdminType extends AbstractType
         $resolver->setDefaults([
             'data_class' => QuoteRequestInterface::class,
             'currency' => 'USD',
+            'group_discount' => null,
             'csrf_token_id' => 'tmonier_quote_request_admin_edit',
         ]);
         $resolver->setAllowedTypes('currency', 'string');
+        $resolver->setAllowedTypes('group_discount', ['null', 'float', 'int']);
     }
 
     public function getBlockPrefix(): string

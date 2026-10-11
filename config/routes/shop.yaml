@@ -70,3 +70,11 @@ tmonier_quote_request_shop_account_show:
         number: '[A-Za-z0-9_-]{1,32}'
     defaults:
         _controller: tmonier_quote_request.controller.shop::accountShowAction
+
+tmonier_quote_request_shop_pdf:
+    path: /quotes/{token}/pdf
+    methods: [GET]
+    requirements:
+        token: '[A-Za-z0-9_-]{20,64}'
+    defaults:
+        _controller: tmonier_quote_request.controller.shop::pdfAction

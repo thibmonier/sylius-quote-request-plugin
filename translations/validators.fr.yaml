@@ -1,0 +1,3 @@
+tmonier_quote_request:
+    form:
+        invalid_discount_tiers: 'Utilisez des paires « quantité min. : remise » séparées par « ; », par ex. « 1: 5; 50: 10 ».'

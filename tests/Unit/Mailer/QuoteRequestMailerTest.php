@@ -19,6 +19,9 @@ final class QuoteRequestMailerTest extends TestCase
     /** @var list<array{string, list<string>, list<string>}> */
     private array $sent = [];
 
+    /** @var array<string, string> content of the attachments at sending time, by path */
+    private array $attachments = [];
+
     public function testANewRequestNotifiesTheConfiguredAdminAndTheCustomer(): void
     {
         $this->mailer('sales@example.com')->onCreated(new QuoteRequestEvent($this->quote()));
@@ -72,12 +75,32 @@ final class QuoteRequestMailerTest extends TestCase
         ], $this->sent);
     }
 
-    private function mailer(?string $adminEmail): QuoteRequestMailer
+    public function testTheProposalHasThePdfAttachedWhenAnEngineIsAvailable(): void
     {
-        $record = function (string $code, array $recipients, array $replyTo): void {
+        $quote = $this->quote();
+        $quote->setNumber('Q000042');
+
+        $this->mailer(null, true)->onProposed(new QuoteRequestEvent($quote));
+
+        self::assertSame([[QuoteRequestEmails::CUSTOMER_PROPOSAL, ['buyer@example.com'], []]], $this->sent);
+        self::assertCount(1, $this->attachments);
+        $path = (string) array_key_first($this->attachments);
+        self::assertStringEndsWith('/quote-Q000042.pdf', $path);
+        self::assertSame('%PDF-fake Q000042', $this->attachments[$path]);
+        self::assertFileDoesNotExist($path, 'The temporary file is removed once sent.');
+    }
+
+    private function mailer(?string $adminEmail, bool $pdf = false): QuoteRequestMailer
+    {
+        $record = function (string $code, array $recipients, array $replyTo, array $attachments): void {
             /** @var list<string> $recipients */
             /** @var list<string> $replyTo */
             $this->sent[] = [$code, $recipients, $replyTo];
+            foreach ($attachments as $attachment) {
+                if (is_string($attachment)) {
+                    $this->attachments[$attachment] = (string) file_get_contents($attachment);
+                }
+            }
         };
         $sender = new class($record) implements SenderInterface {
             public function __construct(private readonly \Closure $record)
@@ -86,11 +109,11 @@ final class QuoteRequestMailerTest extends TestCase
 
             public function send(string $code, array $recipients, array $data = [], array $attachments = [], array $replyTo = []): void
             {
-                ($this->record)($code, array_values($recipients), array_values($replyTo));
+                ($this->record)($code, array_values($recipients), array_values($replyTo), $attachments);
             }
         };
 
-        return new QuoteRequestMailer($sender, $adminEmail);
+        return new QuoteRequestMailer($sender, new FakePdfGenerator($pdf), $adminEmail);
     }
 
     private function quote(): QuoteRequest

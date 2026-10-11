@@ -29,3 +29,4 @@ tmonier_quote_request:
             expire: 'De offerte is als verlopen gemarkeerd.'
             cancel: 'De offerte is geannuleerd.'
             converted: 'De bestelling is geplaatst op basis van de offerte.'
+        no_default_address: 'De klant heeft geen standaardadres: vul het adres in om de offerte om te zetten.'

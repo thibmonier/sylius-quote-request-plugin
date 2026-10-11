@@ -17,12 +17,12 @@ final class TmonierSyliusQuoteRequestExtension extends AbstractResourceExtension
 
     public function load(array $configs, ContainerBuilder $container): void
     {
-        /** @var array{allow_guests: bool, default_validity_days: int, admin_email: string|null, from_product_page: bool, from_cart: bool, allow_promotions: bool, max_lines: int, driver: string, resources: array<string, mixed>} $config */
+        /** @var array{allow_guests: bool, default_validity_days: int, admin_email: string|null, from_product_page: bool, from_cart: bool, allow_promotions: bool, max_lines: int, customer_group_discounts: array<string, float>, pdf_binary: string|null, driver: string, resources: array<string, mixed>} $config */
         $config = $this->processConfiguration(new Configuration(), $configs);
 
         $this->registerResources('tmonier_quote_request', $config['driver'], $config['resources'], $container);
 
-        foreach (['allow_guests', 'default_validity_days', 'admin_email', 'from_product_page', 'from_cart', 'allow_promotions', 'max_lines'] as $key) {
+        foreach (['allow_guests', 'default_validity_days', 'admin_email', 'from_product_page', 'from_cart', 'allow_promotions', 'max_lines', 'customer_group_discounts', 'pdf_binary'] as $key) {
             $container->setParameter('tmonier_quote_request.' . $key, $config[$key]);
         }
 
@@ -34,8 +34,14 @@ final class TmonierSyliusQuoteRequestExtension extends AbstractResourceExtension
     {
         // Grids are processed before this extension is loaded, so the model class parameters
         // have to exist at prepend time.
+        // Only the resources are needed here; other values may still be env placeholders
+        // (e.g. allow_guests: '%env(bool:...)%') that the config tree cannot validate yet.
+        $configs = array_map(
+            static fn (array $config): array => isset($config['resources']) ? ['resources' => $config['resources']] : [],
+            $container->getExtensionConfig($this->getAlias()),
+        );
         /** @var array{resources: array<string, array{classes: array{model: string}}>} $config */
-        $config = $this->processConfiguration(new Configuration(), $container->getExtensionConfig($this->getAlias()));
+        $config = $this->processConfiguration(new Configuration(), $configs);
         foreach ($config['resources'] as $name => $resource) {
             $container->setParameter(sprintf('tmonier_quote_request.model.%s.class', $name), $resource['classes']['model']);
         }

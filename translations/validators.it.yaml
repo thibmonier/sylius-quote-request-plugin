@@ -1,0 +1,3 @@
+tmonier_quote_request:
+    form:
+        invalid_discount_tiers: 'Usa coppie «quantità min.: sconto» separate da «;», ad es. «1: 5; 50: 10».'

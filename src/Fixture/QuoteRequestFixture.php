@@ -14,6 +14,7 @@ use Sylius\Resource\Doctrine\Persistence\RepositoryInterface;
 use Symfony\Component\Config\Definition\Builder\ArrayNodeDefinition;
 use Tmonier\SyliusQuoteRequestPlugin\Entity\QuoteMessageInterface;
 use Tmonier\SyliusQuoteRequestPlugin\Entity\QuoteRequestInterface;
+use Tmonier\SyliusQuoteRequestPlugin\Entity\QuoteRequestLineInterface;
 use Tmonier\SyliusQuoteRequestPlugin\Factory\QuoteRequestFactoryInterface;
 use Tmonier\SyliusQuoteRequestPlugin\Manager\QuoteRequestManagerInterface;
 use Tmonier\SyliusQuoteRequestPlugin\Workflow\QuoteRequestStatuses;
@@ -141,6 +142,10 @@ final class QuoteRequestFixture extends AbstractFixture
 
         foreach ($quote->getLines() as $quoteLine) {
             $quoteLine->setUnitPrice((int) round($quoteLine->getCatalogUnitPrice() * 0.85));
+            if (0 === $index % 3) {
+                $quoteLine->setDiscountType(QuoteRequestLineInterface::DISCOUNT_PERCENTAGE);
+                $quoteLine->setDiscountTiers([['min_quantity' => 20, 'value' => 3.0], ['min_quantity' => 50, 'value' => 6.0]]);
+            }
         }
         $quote->setDiscountPercentage(0 === $index % 2 ? 5.0 : null);
         $quote->setInternalNote('Strategic account: keep the margin above 20%.');

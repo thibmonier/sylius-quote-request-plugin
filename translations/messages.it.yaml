@@ -75,6 +75,12 @@ tmonier_quote_request:
             declined: 'Questo preventivo è stato rifiutato.'
             expired: 'Questa proposta è scaduta. Contattaci o invia una nuova richiesta.'
             cancelled: 'Questa richiesta di preventivo è stata annullata.'
+        unit: unità
+        group_discount_suggestion: 'Gruppo clienti %group%: sconto globale suggerito del %percentage% %.'
+        apply_group_discount: 'Applica %percentage% %'
+        convert_now: 'Converti subito in ordine'
+        download_pdf: 'Scarica il PDF'
+        pdf_shipping_note: "Prezzi senza spese di spedizione, scelte al checkout. Le imposte sono calcolate in base all'indirizzo di consegna."
     status:
         new: Nuovo
         in_review: 'In esame'
@@ -104,6 +110,12 @@ tmonier_quote_request:
         internal_note_help: 'Mai mostrata al cliente.'
         message_to_customer: 'Messaggio al cliente'
         no_shipping: 'Nessuna spedizione'
+        volume_discount: 'Sconto quantità'
+        no_volume_discount: 'Nessuno sconto quantità'
+        discount_type:
+            percentage: 'Percentuale per unità'
+            amount: 'Importo per unità'
+        discount_tiers: 'Scaglioni (quantità min.: sconto)'
     email:
         view_quote: 'Vedi il preventivo'
         open_in_admin: 'Apri il preventivo'

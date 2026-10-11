@@ -7,13 +7,16 @@ namespace Tmonier\SyliusQuoteRequestPlugin\Form\Type\Admin;
 use Sylius\Bundle\MoneyBundle\Form\Type\MoneyType;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\Extension\Core\Type\CheckboxType;
+use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
 use Symfony\Component\Form\Extension\Core\Type\IntegerType;
+use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 use Symfony\Component\Validator\Constraints\NotBlank;
 use Symfony\Component\Validator\Constraints\Range;
 use Tmonier\SyliusQuoteRequestPlugin\Basket\SessionQuoteBasket;
 use Tmonier\SyliusQuoteRequestPlugin\Entity\QuoteRequestLineInterface;
+use Tmonier\SyliusQuoteRequestPlugin\Form\DataTransformer\DiscountTiersTransformer;
 
 final class QuoteRequestLineAdminType extends AbstractType
 {
@@ -32,12 +35,29 @@ final class QuoteRequestLineAdminType extends AbstractType
                 'help' => 'tmonier_quote_request.form.empty_for_catalog_price',
                 'constraints' => [new Range(min: 0)],
             ])
+            ->add('discountType', ChoiceType::class, [
+                'label' => 'tmonier_quote_request.form.volume_discount',
+                'required' => false,
+                'placeholder' => 'tmonier_quote_request.form.no_volume_discount',
+                'choices' => [
+                    'tmonier_quote_request.form.discount_type.percentage' => QuoteRequestLineInterface::DISCOUNT_PERCENTAGE,
+                    'tmonier_quote_request.form.discount_type.amount' => QuoteRequestLineInterface::DISCOUNT_AMOUNT,
+                ],
+            ])
+            ->add('discountTiers', TextType::class, [
+                'label' => 'tmonier_quote_request.form.discount_tiers',
+                'required' => false,
+                'attr' => ['placeholder' => '1: 5; 50: 10'],
+                'invalid_message' => 'tmonier_quote_request.form.invalid_discount_tiers',
+            ])
             ->add('remove', CheckboxType::class, [
                 'label' => 'sylius.ui.delete',
                 'mapped' => false,
                 'required' => false,
             ])
         ;
+
+        $builder->get('discountTiers')->addModelTransformer(new DiscountTiersTransformer());
     }
 
     public function configureOptions(OptionsResolver $resolver): void

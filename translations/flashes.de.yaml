@@ -29,3 +29,4 @@ tmonier_quote_request:
             expire: 'Das Angebot wurde als abgelaufen markiert.'
             cancel: 'Das Angebot wurde storniert.'
             converted: 'Die Bestellung wurde aus dem Angebot aufgegeben.'
+        no_default_address: 'Der Kunde hat keine Standardadresse: Geben Sie die Adresse ein, um das Angebot umzuwandeln.'

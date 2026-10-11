@@ -75,6 +75,12 @@ tmonier_quote_request:
             declined: 'Dieses Angebot wurde abgelehnt.'
             expired: 'Dieses Angebot ist abgelaufen. Kontaktieren Sie uns oder senden Sie eine neue Anfrage.'
             cancelled: 'Diese Angebotsanfrage wurde storniert.'
+        unit: Stück
+        group_discount_suggestion: 'Kundengruppe %group%: empfohlener Gesamtrabatt %percentage% %.'
+        apply_group_discount: '%percentage% % anwenden'
+        convert_now: 'Jetzt in Bestellung umwandeln'
+        download_pdf: 'PDF herunterladen'
+        pdf_shipping_note: 'Preise ohne Versandkosten, die beim Checkout gewählt werden. Steuern werden nach der Lieferadresse berechnet.'
     status:
         new: Neu
         in_review: 'In Prüfung'
@@ -104,6 +110,12 @@ tmonier_quote_request:
         internal_note_help: 'Wird dem Kunden nie angezeigt.'
         message_to_customer: 'Nachricht an den Kunden'
         no_shipping: 'Kein Versand'
+        volume_discount: Mengenrabatt
+        no_volume_discount: 'Kein Mengenrabatt'
+        discount_type:
+            percentage: 'Prozent pro Stück'
+            amount: 'Betrag pro Stück'
+        discount_tiers: 'Staffeln (Mindestmenge: Rabatt)'
     email:
         view_quote: 'Angebot ansehen'
         open_in_admin: 'Angebot öffnen'

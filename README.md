@@ -36,12 +36,26 @@ open source.
 **Admin** (*Sales → Quote requests*)
 
 - Grid with filters: status, number, customer (e-mail, company, name), channel, date.
-- Quote page: edit quantities, **override unit prices**, remove lines, add products
-  (autocomplete), **global discount** (amount or percentage), validity date, internal note,
-  message to the customer, totals with the channel taxes.
+- Quote page: edit quantities, **override unit prices**, **volume discounts per line**
+  (percentage or amount per unit, by quantity tiers such as `10: 5; 50: 10`), remove lines,
+  add products (autocomplete), **global discount** (amount or percentage) with an optional
+  **customer group suggestion** (one click to apply), validity date, internal note, message to
+  the customer, totals with the channel taxes.
 - Actions: *Save*, *Save and send the proposal* (e-mail), start the review, revise a sent
-  proposal, decline, mark as expired, cancel, **convert to order** (address, shipping and
-  payment method chosen by the merchant: the order is placed for the customer).
+  proposal, decline, mark as expired, cancel, **PDF**, and two ways to place the order for the
+  customer: **Convert to order now** (one click: customer's default address, default shipping
+  and payment methods, payment awaiting) or **Convert to order** (address and methods chosen
+  by the merchant).
+
+**Quote PDF** (optional engine)
+
+- Admin and customer download a PDF of the proposal: number, seller billing data (channel
+  shop billing data), customer, lines with catalog price, negotiated price, volume discount,
+  global discount, taxes, totals and validity date. It is attached to the *proposal* e-mail.
+- Default engine: wkhtmltopdf through `knplabs/knp-snappy` (`knp_snappy.pdf` of
+  KnpSnappyBundle, or `pdf_binary`). Without engine, PDF links and attachments are simply
+  hidden. Replace the `tmonier_quote_request.pdf_generator` service
+  (`QuotePdfGeneratorInterface`) to use another engine.
 - Messages thread shared with the customer.
 
 **Under the hood**
@@ -68,7 +82,7 @@ promotions, shipping, taxes. The plugin plugs into this pipeline instead of figh
    the Sylius prices recalculator skips them.
 2. A processor at priority 45 (after the prices recalculator, before shipping, promotions and
    taxes) re-applies the quote on every processing: same variants and quantities, unit price
-   = negotiated price, global discount spread on the units as an order promotion adjustment
+   = negotiated price minus the volume discount of the reached tier, global discount spread on the units as an order promotion adjustment
    (origin code `tmonier_quote_request`). If the customer changes the cart, the quote content
    comes back.
 3. The promotion processor is decorated: by default, **cart promotions and coupons are not
@@ -94,8 +108,11 @@ Screenshots go in `docs/images/`.
 | Sylius | 2.2, 2.3 |
 | Symfony | 6.4, 7.4, 8.0 |
 
-The `sylius_order_checkout` graph must use the Symfony Workflow adapter (the Sylius 2 default):
-the quote becomes *ordered* on `workflow.sylius_order_checkout.completed.complete`.
+The quote becomes *ordered* on `workflow.sylius_order_checkout.completed.complete` (Symfony
+Workflow adapter, the Sylius 2 default) and, whatever the adapter (Winzou included), when an
+order whose checkout state becomes `completed` is flushed (Doctrine `onFlush` listener).
+
+Optional: `knplabs/knp-snappy-bundle` and wkhtmltopdf for the quote PDF.
 
 ## Installation
 
@@ -150,7 +167,13 @@ tmonier_sylius_quote_request:
     from_cart: true             # "Request a quote for this cart" on the cart page
     allow_promotions: false     # cart promotions on top of the negotiated prices
     max_lines: 100              # lines of one request
+    customer_group_discounts:   # global discount (%) suggested by customer group code
+        wholesale: 12.5
+    pdf_binary: ~               # wkhtmltopdf path, when KnpSnappyBundle is not installed
 ```
+
+`allow_guests` (like the other flags) accepts an env variable, e.g.
+`'%env(bool:QUOTE_ALLOW_GUESTS)%'`.
 
 The models, repository and factories are Sylius resources
 (`tmonier_quote_request.quote_request`, `.quote_request_line`, `.quote_message`) and can be
@@ -189,6 +212,9 @@ Symfony Workflow events of `tmonier_quote_request` are available too.
 - One currency per quote: the base currency of the channel.
 - Shipping costs are not part of the quote; they are chosen and charged at checkout.
 - Lines are product variants of the catalog (no free-text line, no attachment).
+- Amount volume discounts assume a currency with 2 decimals.
+- The PDF layout is a single Twig template (`templates/pdf/quote.html.twig`), override it in
+  your theme or templates directory.
 - A quote cart cannot be mixed with other products: leaving the quote prices brings the cart
   back to the catalog prices, the quote stays accepted and can start a new cart later.
 - Guests who accept a quote check out as guests (e-mail asked by the checkout).

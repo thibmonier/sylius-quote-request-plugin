@@ -9,11 +9,13 @@ use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Tmonier\SyliusQuoteRequestPlugin\Entity\QuoteRequestInterface;
 use Tmonier\SyliusQuoteRequestPlugin\Event\QuoteRequestEvent;
 use Tmonier\SyliusQuoteRequestPlugin\Event\QuoteRequestEvents;
+use Tmonier\SyliusQuoteRequestPlugin\Pdf\QuotePdfGeneratorInterface;
 
 final class QuoteRequestMailer implements EventSubscriberInterface
 {
     public function __construct(
         private readonly SenderInterface $sender,
+        private readonly QuotePdfGeneratorInterface $pdfGenerator,
         private readonly ?string $adminEmail,
     ) {
     }
@@ -38,7 +40,27 @@ final class QuoteRequestMailer implements EventSubscriberInterface
 
     public function onProposed(QuoteRequestEvent $event): void
     {
-        $this->sendToCustomer(QuoteRequestEmails::CUSTOMER_PROPOSAL, $event->getQuoteRequest());
+        $quoteRequest = $event->getQuoteRequest();
+        if (!$this->pdfGenerator->isAvailable()) {
+            $this->sendToCustomer(QuoteRequestEmails::CUSTOMER_PROPOSAL, $quoteRequest);
+
+            return;
+        }
+
+        // The Sylius mailer attaches files by path: the PDF lives in a temporary directory.
+        $directory = sprintf('%s/tmonier_quote_%s', sys_get_temp_dir(), bin2hex(random_bytes(8)));
+        $path = $directory . '/' . $this->pdfGenerator->getFilename($quoteRequest);
+        mkdir($directory, 0700);
+
+        try {
+            file_put_contents($path, $this->pdfGenerator->generate($quoteRequest));
+            $this->sendToCustomer(QuoteRequestEmails::CUSTOMER_PROPOSAL, $quoteRequest, [$path]);
+        } finally {
+            if (is_file($path)) {
+                unlink($path);
+            }
+            rmdir($directory);
+        }
     }
 
     public function onAccepted(QuoteRequestEvent $event): void
@@ -73,14 +95,15 @@ final class QuoteRequestMailer implements EventSubscriberInterface
         $this->sender->send($code, [$recipient], $this->data($quoteRequest), [], array_filter([$quoteRequest->getEmail()]));
     }
 
-    private function sendToCustomer(string $code, QuoteRequestInterface $quoteRequest): void
+    /** @param list<string> $attachments */
+    private function sendToCustomer(string $code, QuoteRequestInterface $quoteRequest, array $attachments = []): void
     {
         $recipient = $quoteRequest->getEmail();
         if (null === $recipient || '' === $recipient) {
             return;
         }
 
-        $this->sender->send($code, [$recipient], $this->data($quoteRequest));
+        $this->sender->send($code, [$recipient], $this->data($quoteRequest), $attachments);
     }
 
     /** @return array<string, mixed> */

@@ -75,6 +75,12 @@ tmonier_quote_request:
             declined: 'Ce devis a été refusé.'
             expired: 'Cette proposition a expiré. Contactez-nous ou envoyez une nouvelle demande.'
             cancelled: 'Cette demande de devis a été annulée.'
+        unit: unité
+        group_discount_suggestion: 'Groupe client %group% : remise globale suggérée de %percentage% %.'
+        apply_group_discount: 'Appliquer %percentage% %'
+        convert_now: 'Convertir en commande maintenant'
+        download_pdf: 'Télécharger le PDF'
+        pdf_shipping_note: "Prix hors frais de livraison, choisis lors de la commande. Les taxes sont calculées selon l'adresse de livraison."
     status:
         new: Nouveau
         in_review: "En cours d'étude"
@@ -104,6 +110,12 @@ tmonier_quote_request:
         internal_note_help: 'Jamais affichée au client.'
         message_to_customer: 'Message au client'
         no_shipping: 'Pas de livraison'
+        volume_discount: 'Remise sur volume'
+        no_volume_discount: 'Pas de remise sur volume'
+        discount_type:
+            percentage: 'Pourcentage par unité'
+            amount: 'Montant par unité'
+        discount_tiers: 'Paliers (quantité min. : remise)'
     email:
         view_quote: 'Voir le devis'
         open_in_admin: 'Ouvrir le devis'

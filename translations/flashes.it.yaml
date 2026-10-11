@@ -29,3 +29,4 @@ tmonier_quote_request:
             expire: 'Il preventivo è stato segnato come scaduto.'
             cancel: 'Il preventivo è stato annullato.'
             converted: "L'ordine è stato effettuato a partire dal preventivo."
+        no_default_address: "Il cliente non ha un indirizzo predefinito: inserisci l'indirizzo per convertire il preventivo."

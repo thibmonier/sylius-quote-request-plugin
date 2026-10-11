@@ -171,6 +171,24 @@ final class QuoteToOrderTest extends KernelTestCase
         self::assertNotSame([1], $this->unitPrices($cart));
     }
 
+    public function testTheQuoteIsOrderedWhateverTheStateMachineAdapter(): void
+    {
+        [$first] = $this->variants();
+        $quote = $this->proposedQuote([[$first, 2, 1000]]);
+        $cart = $this->manager()->accept($quote, $this->customer(), false);
+
+        // No workflow transition (e.g. Winzou adapter): only the checkout state is flushed.
+        $cart->setCheckoutState(\Sylius\Component\Core\OrderCheckoutStates::STATE_COMPLETED);
+        $this->entityManager()->flush();
+
+        self::assertSame(QuoteRequestStatuses::ORDERED, $quote->getStatus());
+        $this->entityManager()->clear();
+        $reloaded = $this->entityManager()->find(\Tmonier\SyliusQuoteRequestPlugin\Entity\QuoteRequest::class, $quote->getId());
+        self::assertInstanceOf(QuoteRequestInterface::class, $reloaded);
+        self::assertSame(QuoteRequestStatuses::ORDERED, $reloaded->getStatus());
+        self::assertNotNull($reloaded->getOrderedAt());
+    }
+
     /**
      * @param list<array{0: ProductVariantInterface, 1: int, 2: int}> $lines
      */

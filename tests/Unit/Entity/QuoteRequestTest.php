@@ -79,4 +79,44 @@ final class QuoteRequestTest extends TestCase
         $quote->setLastName('Lovelace');
         self::assertSame('Ada Lovelace', $quote->getFullName());
     }
+
+    public function testTheVolumeDiscountOfTheReachedTierApplies(): void
+    {
+        $line = new QuoteRequestLine();
+        $line->setCatalogUnitPrice(2000);
+        $line->setUnitPrice(1800);
+        $line->setDiscountTiers([['min_quantity' => 50, 'value' => 10.0], ['min_quantity' => 10, 'value' => 5.0]]);
+        $line->setQuantity(30);
+
+        self::assertNull($line->getApplicableDiscountTier(), 'No discount type: tiers are ignored.');
+        self::assertSame(1800, $line->getEffectiveUnitPrice());
+
+        $line->setDiscountType(QuoteRequestLine::DISCOUNT_PERCENTAGE);
+        self::assertSame(['min_quantity' => 10, 'value' => 5.0], $line->getApplicableDiscountTier());
+        self::assertSame(90, $line->getUnitDiscount());
+        self::assertSame(1710, $line->getEffectiveUnitPrice());
+        self::assertSame(1800, $line->getBaseUnitPrice());
+        self::assertSame(30 * 1710, $line->getSubtotal());
+
+        $line->setQuantity(50);
+        self::assertSame(1620, $line->getEffectiveUnitPrice());
+
+        $line->setQuantity(5);
+        self::assertSame(1800, $line->getEffectiveUnitPrice());
+    }
+
+    public function testAnAmountVolumeDiscountIsPerUnitAndNeverNegative(): void
+    {
+        $line = new QuoteRequestLine();
+        $line->setCatalogUnitPrice(1000);
+        $line->setQuantity(20);
+        $line->setDiscountType(QuoteRequestLine::DISCOUNT_AMOUNT);
+        $line->setDiscountTiers([['min_quantity' => 1, 'value' => 1.5]]);
+
+        self::assertSame(150, $line->getUnitDiscount());
+        self::assertSame(850, $line->getEffectiveUnitPrice());
+
+        $line->setDiscountTiers([['min_quantity' => 1, 'value' => 25.0]]);
+        self::assertSame(0, $line->getEffectiveUnitPrice());
+    }
 }

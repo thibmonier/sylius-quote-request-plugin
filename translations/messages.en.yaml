@@ -75,6 +75,12 @@ tmonier_quote_request:
             declined: 'This quote has been declined.'
             expired: 'This proposal has expired. Contact us or send a new request.'
             cancelled: 'This quote request has been cancelled.'
+        unit: unit
+        group_discount_suggestion: 'Customer group %group%: suggested global discount %percentage%%.'
+        apply_group_discount: 'Apply %percentage%%'
+        convert_now: 'Convert to order now'
+        download_pdf: 'Download the PDF'
+        pdf_shipping_note: 'Prices without shipping costs, chosen at checkout. Taxes are computed with the delivery address.'
     status:
         new: New
         in_review: 'In review'
@@ -104,6 +110,12 @@ tmonier_quote_request:
         internal_note_help: 'Never shown to the customer.'
         message_to_customer: 'Message to the customer'
         no_shipping: 'No shipping'
+        volume_discount: 'Volume discount'
+        no_volume_discount: 'No volume discount'
+        discount_type:
+            percentage: 'Percentage per unit'
+            amount: 'Amount per unit'
+        discount_tiers: 'Tiers (min. quantity: discount)'
     email:
         view_quote: 'View the quote'
         open_in_admin: 'Open the quote'

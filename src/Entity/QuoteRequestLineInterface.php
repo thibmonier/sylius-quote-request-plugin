@@ -9,6 +9,12 @@ use Sylius\Resource\Model\ResourceInterface;
 
 interface QuoteRequestLineInterface extends ResourceInterface
 {
+    /** Volume discount: percentage of the unit price. */
+    public const DISCOUNT_PERCENTAGE = 'percentage';
+
+    /** Volume discount: amount off each unit (major units, e.g. 1.50). */
+    public const DISCOUNT_AMOUNT = 'amount';
+
     public function getId(): ?int;
 
     public function getQuoteRequest(): ?QuoteRequestInterface;
@@ -51,6 +57,31 @@ interface QuoteRequestLineInterface extends ResourceInterface
 
     public function setUnitPrice(?int $unitPrice): void;
 
+    public function getDiscountType(): ?string;
+
+    public function setDiscountType(?string $discountType): void;
+
+    /**
+     * Volume discount tiers, applied from their minimum quantity (the highest reachable tier
+     * wins). Values are percentages or amounts in major units, according to the discount type.
+     *
+     * @return list<array{min_quantity: int, value: float}>
+     */
+    public function getDiscountTiers(): array;
+
+    /** @param list<array{min_quantity: int, value: float}> $discountTiers */
+    public function setDiscountTiers(array $discountTiers): void;
+
+    /** @return array{min_quantity: int, value: float}|null */
+    public function getApplicableDiscountTier(): ?array;
+
+    /** Negotiated price before the volume discount (catalog price when not negotiated). */
+    public function getBaseUnitPrice(): int;
+
+    /** Volume discount on one unit, never more than the base unit price. */
+    public function getUnitDiscount(): int;
+
+    /** Price locked in the order: base unit price minus the volume discount. */
     public function getEffectiveUnitPrice(): int;
 
     public function getSubtotal(): int;

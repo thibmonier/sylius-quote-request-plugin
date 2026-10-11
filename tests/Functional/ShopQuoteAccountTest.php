@@ -206,4 +206,29 @@ final class ShopQuoteAccountTest extends WebTestCase
         self::assertSame(QuoteRequestStatuses::PROPOSED, $quote->getStatus());
         self::assertCount(1, $quote->getMessages());
     }
+
+    public function testTheCustomerDownloadsThePdfOnlyOnceProposed(): void
+    {
+        [$variant] = $this->sellableVariants(1);
+        $quote = $this->createQuote([[$variant, 20, 1000]], null, QuoteRequestStatuses::IN_REVIEW);
+        $line = $quote->getLines()->first();
+        self::assertNotFalse($line);
+        $line->setDiscountType('amount');
+        $line->setDiscountTiers([['min_quantity' => 10, 'value' => 1.0]]);
+        $this->entityManager()->flush();
+
+        $crawler = $this->client->request('GET', $this->tokenUrl($quote));
+        self::assertCount(0, $crawler->filter('[data-test-tmonier-quote-pdf]'));
+        $this->client->request('GET', $this->tokenUrl($quote, '/pdf'));
+        self::assertResponseStatusCodeSame(404);
+
+        $quote = $this->reloadQuote($quote);
+        $this->quoteManager()->apply($quote, 'propose');
+        $crawler = $this->client->request('GET', $this->tokenUrl($quote));
+        self::assertStringContainsString('-$1.00', $crawler->filter('[data-test-tmonier-quote-line-volume-discount]')->text());
+        $this->client->click($crawler->filter('[data-test-tmonier-quote-pdf]')->link());
+        self::assertResponseIsSuccessful();
+        self::assertResponseHeaderSame('Content-Type', 'application/pdf');
+        self::assertStringContainsString(sprintf('Quote %s', (string) $quote->getNumber()), (string) $this->client->getResponse()->getContent());
+    }
 }

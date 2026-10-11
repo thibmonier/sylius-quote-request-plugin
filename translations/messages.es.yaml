@@ -75,6 +75,12 @@ tmonier_quote_request:
             declined: 'Este presupuesto ha sido rechazado.'
             expired: 'Esta propuesta ha caducado. Contáctenos o envíe una nueva solicitud.'
             cancelled: 'Esta solicitud de presupuesto ha sido cancelada.'
+        unit: unidad
+        group_discount_suggestion: 'Grupo de clientes %group%: descuento global sugerido del %percentage% %.'
+        apply_group_discount: 'Aplicar %percentage% %'
+        convert_now: 'Convertir en pedido ahora'
+        download_pdf: 'Descargar el PDF'
+        pdf_shipping_note: 'Precios sin gastos de envío, que se eligen al pagar. Los impuestos se calculan según la dirección de entrega.'
     status:
         new: Nuevo
         in_review: 'En estudio'
@@ -104,6 +110,12 @@ tmonier_quote_request:
         internal_note_help: 'Nunca se muestra al cliente.'
         message_to_customer: 'Mensaje al cliente'
         no_shipping: 'Sin envío'
+        volume_discount: 'Descuento por volumen'
+        no_volume_discount: 'Sin descuento por volumen'
+        discount_type:
+            percentage: 'Porcentaje por unidad'
+            amount: 'Importe por unidad'
+        discount_tiers: 'Tramos (cantidad mín.: descuento)'
     email:
         view_quote: 'Ver el presupuesto'
         open_in_admin: 'Abrir el presupuesto'

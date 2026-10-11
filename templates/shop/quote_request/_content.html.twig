@@ -4,6 +4,11 @@
 <div class="d-flex flex-wrap align-items-center gap-3 mb-3">
     <h1 class="h2 mb-0">{{ 'tmonier_quote_request.ui.quote_number'|trans({'%number%': quote_request.number}) }}</h1>
     {% include '@TmonierSyliusQuoteRequestPlugin/shop/status.html.twig' with { status: quote_request.status } only %}
+    {% if tmonier_quote_request_pdf_available() and tmonier_quote_request_shows_prices(quote_request) %}
+        <a class="btn btn-sm btn-outline-secondary ms-auto" href="{{ path('tmonier_quote_request_shop_pdf', {'token': token}) }}" {{ sylius_test_html_attribute('tmonier-quote-pdf') }}>
+            {{ ux_icon('tabler:file-type-pdf', {'class': 'icon'}) }} {{ 'tmonier_quote_request.ui.download_pdf'|trans }}
+        </a>
+    {% endif %}
 </div>
 <p class="text-body-secondary">
     {{ ('tmonier_quote_request.ui.status_help.' ~ quote_request.status)|trans }}

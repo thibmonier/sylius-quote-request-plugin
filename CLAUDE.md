@@ -46,7 +46,16 @@ fixture (8 quotes in every status). Dev server:
 - `Checkout/QuoteCartManager`: creates / reuses the quote cart (flushes before processing, the
   resolver needs an id), stores it as the session cart; `release()` unlinks it (flushes first).
 - `EventListener/OrderCheckoutCompletedListener`: `workflow.sylius_order_checkout.completed.complete`
-  → `markOrdered()` (no flush).
+  → `markOrdered()` (no flush); `OrderCheckoutCompletedDoctrineListener` (onFlush, checkoutState
+  → completed) does the same for any state machine adapter.
+- `Pdf/QuotePdfGeneratorInterface` + `SnappyQuotePdfGenerator` (optional knp-snappy engine).
+  The test application aliases `tmonier_quote_request.pdf_generator` to
+  `tests/TestApplication/src/Pdf/FakeQuotePdfGenerator` (`tests/TestApplication/config/fake_quote_pdf.php`)
+  unless `WKHTMLTOPDF_PATH` points to a wkhtmltopdf binary.
+- Volume discounts: `QuoteRequestLine` discount type + tiers (`getEffectiveUnitPrice()` is the
+  price locked in the order), `Form/DataTransformer/DiscountTiersTransformer`.
+- The test application reads `allow_guests` from `TMONIER_QUOTE_ALLOW_GUESTS` (see
+  `ShopGuestsDisabledTest`) and suggests group discounts for `retail` / `wholesale`.
 - `Conversion/QuoteOrderConverter`: admin "convert to order" (accepts a proposal if needed,
   applies the checkout transitions with the merchant's address and methods).
 - `Basket/SessionQuoteBasket`: products collected before the request (session, per channel).

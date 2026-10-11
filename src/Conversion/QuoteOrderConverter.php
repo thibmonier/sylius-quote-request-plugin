@@ -49,7 +49,7 @@ final class QuoteOrderConverter implements QuoteOrderConverterInterface
         QuoteRequestInterface $quoteRequest,
         AddressInterface $address,
         ?ShippingMethodInterface $shippingMethod,
-        PaymentMethodInterface $paymentMethod,
+        ?PaymentMethodInterface $paymentMethod,
     ): OrderInterface {
         $customer = $this->resolveCustomer($quoteRequest);
 
@@ -76,8 +76,9 @@ final class QuoteOrderConverter implements QuoteOrderConverterInterface
         $this->applyFirstPossible($cart, [OrderCheckoutTransitions::TRANSITION_SELECT_SHIPPING, OrderCheckoutTransitions::TRANSITION_SKIP_SHIPPING]);
         $this->orderProcessor->process($cart);
 
-        $payment = $cart->getLastPayment();
-        $payment?->setMethod($paymentMethod);
+        if (null !== $paymentMethod) {
+            $cart->getLastPayment()?->setMethod($paymentMethod);
+        }
         $this->applyFirstPossible($cart, [OrderCheckoutTransitions::TRANSITION_SELECT_PAYMENT, OrderCheckoutTransitions::TRANSITION_SKIP_PAYMENT]);
 
         // Completing the checkout marks the quote "ordered" (OrderCheckoutCompletedListener).

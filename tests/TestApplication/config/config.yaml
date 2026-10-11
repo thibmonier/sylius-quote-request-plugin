@@ -1,5 +1,16 @@
 imports:
     - { resource: "@TmonierSyliusQuoteRequestPlugin/config/config.yaml" }
+    - { resource: "fake_quote_pdf.php" }
+
+parameters:
+    # Functional tests switch guests off by booting a kernel with this variable set to 0.
+    env(TMONIER_QUOTE_ALLOW_GUESTS): '1'
+
+tmonier_sylius_quote_request:
+    allow_guests: '%env(bool:TMONIER_QUOTE_ALLOW_GUESTS)%'
+    customer_group_discounts:
+        retail: 5
+        wholesale: 12.5
 
 twig:
     paths:
