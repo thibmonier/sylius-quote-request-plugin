@@ -4,3 +4,13 @@ imports:
 twig:
     paths:
         '%kernel.project_dir%/../../../tests/TestApplication/templates': ~
+
+# Demo quote requests in every status (dev and test databases).
+sylius_fixtures:
+    suites:
+        default:
+            fixtures:
+                tmonier_quote_request:
+                    priority: -100
+                    options:
+                        amount: 8

@@ -1,0 +1,61 @@
+{% set quote_request = hookable_metadata.context.quote_request %}
+{% set form = hookable_metadata.context.form %}
+{% set totals = tmonier_quote_request_totals(quote_request) %}
+
+<div class="page-body">
+    <div class="container-xl">
+        <div class="row g-3">
+            <div class="col-12 col-lg-8">
+                {{ form_start(form, {'attr': {'novalidate': 'novalidate'}}) }}
+                <div class="card" {{ sylius_test_html_attribute('tmonier-quote-convert-form') }}>
+                    <div class="card-body">
+                        <p class="text-secondary">{{ 'tmonier_quote_request.ui.convert_help'|trans }}</p>
+                        {{ form_errors(form) }}
+                        <h4>{{ 'sylius.ui.address'|trans }}</h4>
+                        <div class="row">
+                            <div class="col-md-6">{{ form_row(form.address.firstName) }}</div>
+                            <div class="col-md-6">{{ form_row(form.address.lastName) }}</div>
+                            <div class="col-md-6">{{ form_row(form.address.company) }}</div>
+                            <div class="col-md-6">{{ form_row(form.address.phoneNumber) }}</div>
+                            <div class="col-12">{{ form_row(form.address.street) }}</div>
+                            <div class="col-md-4">{{ form_row(form.address.postcode) }}</div>
+                            <div class="col-md-4">{{ form_row(form.address.city) }}</div>
+                            <div class="col-md-4">{{ form_row(form.address.countryCode) }}</div>
+                        </div>
+                        {{ form_rest(form.address) }}
+                        <div class="row">
+                            <div class="col-md-6">{{ form_row(form.shippingMethod) }}</div>
+                            <div class="col-md-6">{{ form_row(form.paymentMethod) }}</div>
+                        </div>
+                        {{ form_rest(form) }}
+                    </div>
+                    <div class="card-footer d-flex gap-2 justify-content-end">
+                        <a class="btn" href="{{ path('tmonier_quote_request_admin_quote_request_show', {'id': quote_request.id}) }}">{{ 'sylius.ui.cancel'|trans }}</a>
+                        <button type="submit" class="btn btn-primary" {{ sylius_test_html_attribute('tmonier-quote-convert-submit') }}>
+                            {{ ux_icon('tabler:shopping-cart-check', {'class': 'icon'}) }}
+                            {{ 'tmonier_quote_request.ui.place_order'|trans }}
+                        </button>
+                    </div>
+                </div>
+                {{ form_end(form) }}
+            </div>
+            <div class="col-12 col-lg-4">
+                <div class="card">
+                    <div class="card-header"><h3 class="card-title">{{ quote_request.number }}</h3></div>
+                    <div class="list-group list-group-flush">
+                        {% for line in quote_request.lines %}
+                            <div class="list-group-item d-flex justify-content-between">
+                                <span>{{ line.quantity }} × {{ line.productName }}</span>
+                                <span class="text-nowrap">{{ line.subtotal|sylius_format_money(quote_request.currencyCode, app.user.localeCode|default(quote_request.localeCode)) }}</span>
+                            </div>
+                        {% endfor %}
+                        <div class="list-group-item d-flex justify-content-between fw-bold">
+                            <span>{{ 'tmonier_quote_request.ui.total_without_shipping'|trans }}</span>
+                            <span class="text-nowrap">{{ totals.total|sylius_format_money(quote_request.currencyCode, app.user.localeCode|default(quote_request.localeCode)) }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

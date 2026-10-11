@@ -1,0 +1,16 @@
+sylius_twig_hooks:
+    hooks:
+        # Product page: "Add to quote request" form, below the add to cart form.
+        'sylius_shop.product.show.content.info.summary':
+            tmonier_quote_request:
+                template: '@TmonierSyliusQuoteRequestPlugin/shop/product/add_to_quote.html.twig'
+                priority: 50
+
+        # Cart page: notice of a quote cart, or "Request a quote for this cart".
+        'sylius_shop.cart.index.content':
+            tmonier_quote_request_notice:
+                template: '@TmonierSyliusQuoteRequestPlugin/shop/cart/quote_notice.html.twig'
+                priority: 150
+            tmonier_quote_request:
+                template: '@TmonierSyliusQuoteRequestPlugin/shop/cart/request_quote.html.twig'
+                priority: 50

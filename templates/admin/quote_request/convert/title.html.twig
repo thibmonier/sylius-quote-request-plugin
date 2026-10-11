@@ -1,0 +1,5 @@
+{% import '@SyliusAdmin/shared/helper/header.html.twig' as header %}
+
+<div class="col-12 col-md-6">
+    {{ header.h1('tmonier_quote_request.ui.convert_to_order'|trans, 'tabler:shopping-cart-check', 'tmonier_quote_request.ui.quote_number'|trans({'%number%': hookable_metadata.context.quote_request.number})) }}
+</div>

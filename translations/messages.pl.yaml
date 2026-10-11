@@ -1,0 +1,128 @@
+tmonier_quote_request:
+    ui:
+        quote_requests: 'Zapytania ofertowe'
+        my_quotes: 'Moje oferty'
+        my_quotes_help: 'Śledź swoje zapytania ofertowe i propozycje naszego działu handlowego.'
+        no_quotes: 'Nie wysłano jeszcze żadnego zapytania ofertowego.'
+        quote_number: 'Oferta %number%'
+        order_number: 'Zamówienie nr %number%'
+        quote_discount: 'Rabat oferty %number%'
+        request_a_quote: 'Poproś o ofertę'
+        request_a_quote_help: 'Podaj potrzebne ilości: nasz dział handlowy prześle propozycję z Twoimi cenami.'
+        empty_quote_request: 'Twoje zapytanie ofertowe jest puste. Dodaj produkty z ich strony lub z koszyka.'
+        products: Produkty
+        add_more_products: 'Dodaj więcej produktów'
+        your_details: 'Twoje dane'
+        guest_link_help: 'Otrzymasz e-mailem osobisty link do śledzenia zapytania, bez zakładania konta.'
+        send_request: 'Wyślij zapytanie ofertowe'
+        need_large_quantities: 'Potrzebujesz dużych ilości lub ceny dla firm?'
+        need_large_quantities_help: 'Dodaj ten produkt do zapytania ofertowego i otrzymaj propozycję od naszego działu handlowego.'
+        add_to_quote: 'Dodaj do zapytania ofertowego'
+        request_quote_for_cart: 'Poproś o ofertę na ten koszyk'
+        request_quote_for_cart_help: 'Otrzymaj propozycję naszego działu handlowego dla produktów i ilości z Twojego koszyka.'
+        cart_from_quote: 'Ten koszyk pochodzi z zaakceptowanej oferty %number%.'
+        cart_from_quote_help: 'Wynegocjowane ceny są zablokowane, a zawartości koszyka nie można zmienić. Wybierz dostawę i płatność, aby złożyć zamówienie.'
+        leave_quote: 'Zrezygnuj z cen oferty'
+        catalog_price: 'Cena katalogowa'
+        negotiated_price: 'Wynegocjowana cena jednostkowa'
+        proposed_unit_price: 'Proponowana cena jednostkowa'
+        requested_quantity: '%quantity% w zapytaniu'
+        subtotal: 'Suma częściowa'
+        discount: Rabat
+        included_in_price: 'wliczone w ceny'
+        total_without_shipping: 'Razem (bez dostawy)'
+        prices_indicative: 'Ceny katalogowe orientacyjne: Twoje ceny ustali propozycja naszego działu handlowego.'
+        lines: Pozycje
+        no_lines: 'Brak pozycji.'
+        variant_deleted: 'Produkt niedostępny'
+        messages: Wiadomości
+        no_messages: 'Brak wiadomości.'
+        send_message: 'Wyślij wiadomość'
+        request_changes: 'Poproś o zmiany'
+        accept_and_order: 'Akceptuj i zamów'
+        decline: 'Odrzuć propozycję'
+        cancel_request: 'Anuluj moje zapytanie'
+        go_to_checkout: 'Przejdź do kasy'
+        valid_until: 'Ważna do'
+        valid_until_date: 'Ważna do %date%.'
+        requested_at: 'Data zapytania'
+        proposed_at: 'Data wysłania propozycji'
+        accepted_at: 'Data akceptacji'
+        ordered_at: 'Data zamówienia'
+        history: Historia
+        conditions: Warunki
+        guest: Gość
+        view_customer: 'Zobacz klienta'
+        save_and_send_proposal: 'Zapisz i wyślij propozycję'
+        convert_to_order: 'Zamień na zamówienie'
+        convert_help: 'Składa zamówienie dla klienta po wynegocjowanych cenach: w razie potrzeby oferta zostaje zaakceptowana w imieniu klienta i wysyłane jest potwierdzenie zamówienia.'
+        place_order: 'Złóż zamówienie'
+        author:
+            customer: Klient
+            admin: 'Dział handlowy'
+        transition:
+            review: 'Rozpocznij analizę'
+            revise: 'Popraw propozycję'
+            decline: Odrzuć
+            expire: 'Oznacz jako wygasłą'
+            cancel: Anuluj
+        status_help:
+            new: 'Twoje zapytanie zostało przekazane do naszego działu handlowego.'
+            in_review: 'Nasz dział handlowy przygotowuje propozycję.'
+            proposed: 'Nasza propozycja jest gotowa: zaakceptuj ją, aby zamówić po tych cenach, lub poproś o zmiany.'
+            accepted: 'Propozycja została zaakceptowana: dokończ zamówienie po wynegocjowanych cenach.'
+            ordered: 'Ta oferta została zamówiona. Dziękujemy!'
+            declined: 'Ta oferta została odrzucona.'
+            expired: 'Ta propozycja wygasła. Skontaktuj się z nami lub wyślij nowe zapytanie.'
+            cancelled: 'To zapytanie ofertowe zostało anulowane.'
+    status:
+        new: Nowe
+        in_review: 'W analizie'
+        proposed: 'Propozycja wysłana'
+        accepted: Zaakceptowana
+        ordered: Zamówiona
+        declined: Odrzucona
+        expired: Wygasła
+        cancelled: Anulowana
+    form:
+        company: Firma
+        vat_number: 'NIP / numer firmy'
+        vat_number_help: 'Opcjonalnie: NIP, REGON lub inny identyfikator firmy.'
+        message: Wiadomość
+        your_message: 'Twoja wiadomość'
+        desired_quantity: 'Oczekiwana ilość'
+        zero_to_remove: 'Wpisz 0, aby usunąć produkt.'
+        negotiated_unit_price: 'Wynegocjowana cena jednostkowa'
+        empty_for_catalog_price: 'Puste: cena katalogowa.'
+        add_product: 'Dodaj produkt'
+        discount_amount: 'Rabat całkowity (kwota)'
+        discount_percentage: 'Rabat całkowity (%)'
+        discount_help: 'Używany, gdy nie podano kwoty. Dotyczy całej oferty, przed naliczeniem podatków.'
+        valid_until: 'Ważna do'
+        valid_until_help: 'Puste: domyślna ważność przy wysłaniu propozycji.'
+        internal_note: 'Notatka wewnętrzna'
+        internal_note_help: 'Nigdy nie jest pokazywana klientowi.'
+        message_to_customer: 'Wiadomość do klienta'
+        no_shipping: 'Bez dostawy'
+    email:
+        view_quote: 'Zobacz ofertę'
+        open_in_admin: 'Otwórz ofertę'
+        link_help: 'Ten link jest osobisty: każdy, kto go ma, może zobaczyć i zaakceptować ofertę.'
+        admin_new_request:
+            subject: 'Nowe zapytanie ofertowe %number%'
+            intro: 'Wysłano nowe zapytanie ofertowe %number% w kanale %channel%.'
+        customer_request_received:
+            subject: 'Twoje zapytanie ofertowe %number%'
+            intro: 'Dziękujemy! Otrzymaliśmy Twoje zapytanie ofertowe %number% i wkrótce prześlemy propozycję.'
+        customer_proposal:
+            subject: 'Twoja oferta %number% jest gotowa'
+            intro: 'Nasza propozycja dla zapytania ofertowego %number% jest gotowa.'
+        admin_accepted:
+            subject: 'Oferta %number% zaakceptowana'
+            intro: 'Klient zaakceptował ofertę %number%; zamówienie zostanie złożone w procesie zakupu.'
+        admin_customer_message:
+            subject: 'Nowa wiadomość dotycząca oferty %number%'
+            intro: 'Klient napisał w sprawie oferty %number%.'
+        customer_merchant_message:
+            subject: 'Nowa wiadomość dotycząca Twojej oferty %number%'
+            intro: 'Nasz dział handlowy napisał w sprawie Twojej oferty %number%.'

@@ -1,0 +1,128 @@
+tmonier_quote_request:
+    ui:
+        quote_requests: 'Quote requests'
+        my_quotes: 'My quotes'
+        my_quotes_help: 'Follow your quote requests and the proposals of our sales team.'
+        no_quotes: 'You have not requested any quote yet.'
+        quote_number: 'Quote %number%'
+        order_number: 'Order #%number%'
+        quote_discount: 'Quote %number% discount'
+        request_a_quote: 'Request a quote'
+        request_a_quote_help: 'Tell us the quantities you need: our sales team will send you a proposal with your prices.'
+        empty_quote_request: 'Your quote request is empty. Add products from their page or from your cart.'
+        products: Products
+        add_more_products: 'Add more products'
+        your_details: 'Your details'
+        guest_link_help: 'You will receive a private link by e-mail to follow your request, no account needed.'
+        send_request: 'Send my quote request'
+        need_large_quantities: 'Need large quantities or a business price?'
+        need_large_quantities_help: 'Add this product to a quote request and get a proposal from our sales team.'
+        add_to_quote: 'Add to quote request'
+        request_quote_for_cart: 'Request a quote for this cart'
+        request_quote_for_cart_help: 'Get a proposal from our sales team for the products and quantities of your cart.'
+        cart_from_quote: 'This cart comes from your accepted quote %number%.'
+        cart_from_quote_help: 'The negotiated prices are locked and the content of the cart cannot be changed. Choose your shipping and payment to place the order.'
+        leave_quote: 'Leave the quote prices'
+        catalog_price: 'Catalog price'
+        negotiated_price: 'Negotiated unit price'
+        proposed_unit_price: 'Proposed unit price'
+        requested_quantity: '%quantity% requested'
+        subtotal: Subtotal
+        discount: Discount
+        included_in_price: 'included in prices'
+        total_without_shipping: 'Total (without shipping)'
+        prices_indicative: 'Catalog prices for information: the proposal of our sales team will set your prices.'
+        lines: Lines
+        no_lines: 'No line.'
+        variant_deleted: 'Product no longer available'
+        messages: Messages
+        no_messages: 'No message yet.'
+        send_message: 'Send the message'
+        request_changes: 'Ask for changes'
+        accept_and_order: 'Accept and order'
+        decline: 'Decline the proposal'
+        cancel_request: 'Cancel my request'
+        go_to_checkout: 'Go to checkout'
+        valid_until: 'Valid until'
+        valid_until_date: 'Valid until %date%.'
+        requested_at: 'Requested on'
+        proposed_at: 'Proposal sent on'
+        accepted_at: 'Accepted on'
+        ordered_at: 'Ordered on'
+        history: History
+        conditions: Conditions
+        guest: Guest
+        view_customer: 'View the customer'
+        save_and_send_proposal: 'Save and send the proposal'
+        convert_to_order: 'Convert to order'
+        convert_help: "Places an order for the customer with the negotiated prices: the quote is accepted on the customer's behalf if needed, and the order confirmation e-mail is sent."
+        place_order: 'Place the order'
+        author:
+            customer: Customer
+            admin: 'Sales team'
+        transition:
+            review: 'Start the review'
+            revise: 'Revise the proposal'
+            decline: Decline
+            expire: 'Mark as expired'
+            cancel: Cancel
+        status_help:
+            new: 'Your request has been sent to our sales team.'
+            in_review: 'Our sales team is preparing your proposal.'
+            proposed: 'Our proposal is ready: accept it to order at these prices, or ask for changes.'
+            accepted: 'You accepted the proposal: finish your order at the negotiated prices.'
+            ordered: 'This quote has been ordered. Thank you!'
+            declined: 'This quote has been declined.'
+            expired: 'This proposal has expired. Contact us or send a new request.'
+            cancelled: 'This quote request has been cancelled.'
+    status:
+        new: New
+        in_review: 'In review'
+        proposed: 'Proposal sent'
+        accepted: Accepted
+        ordered: Ordered
+        declined: Declined
+        expired: Expired
+        cancelled: Cancelled
+    form:
+        company: Company
+        vat_number: 'VAT / company number'
+        vat_number_help: 'Optional: VAT number, SIREN or any company identifier.'
+        message: Message
+        your_message: 'Your message'
+        desired_quantity: 'Desired quantity'
+        zero_to_remove: 'Set the quantity to 0 to remove a product.'
+        negotiated_unit_price: 'Negotiated unit price'
+        empty_for_catalog_price: 'Empty: catalog price.'
+        add_product: 'Add a product'
+        discount_amount: 'Global discount (amount)'
+        discount_percentage: 'Global discount (%)'
+        discount_help: 'Used when no amount is set. Applied to the whole quote, before taxes are computed.'
+        valid_until: 'Valid until'
+        valid_until_help: 'Empty: set from the default validity when the proposal is sent.'
+        internal_note: 'Internal note'
+        internal_note_help: 'Never shown to the customer.'
+        message_to_customer: 'Message to the customer'
+        no_shipping: 'No shipping'
+    email:
+        view_quote: 'View the quote'
+        open_in_admin: 'Open the quote'
+        link_help: 'This link is personal: anyone who has it can view and accept the quote.'
+        admin_new_request:
+            subject: 'New quote request %number%'
+            intro: 'A new quote request %number% was sent on %channel%.'
+        customer_request_received:
+            subject: 'Your quote request %number%'
+            intro: 'Thank you! We received your quote request %number% and will send you a proposal soon.'
+        customer_proposal:
+            subject: 'Your quote %number% is ready'
+            intro: 'Our proposal for your quote request %number% is ready.'
+        admin_accepted:
+            subject: 'Quote %number% accepted'
+            intro: 'The customer accepted the quote %number%; the order will follow the checkout.'
+        admin_customer_message:
+            subject: 'New message on quote %number%'
+            intro: 'The customer wrote about the quote %number%.'
+        customer_merchant_message:
+            subject: 'New message about your quote %number%'
+            intro: 'Our sales team wrote about your quote %number%.'

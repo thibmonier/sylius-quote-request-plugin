@@ -1,0 +1,7 @@
+{%- set url = sylius_channel_url(path('tmonier_quote_request_shop_show_by_token', {'token': quoteRequest.token, '_locale': localeCode}), channel) -%}
+<p style="margin: 25px 0; text-align: center;">
+    <a href="{{ url|e('html_attr') }}" style="display: inline-block; text-decoration: none; padding: 12px 24px; background: #1abb9c; color: #fff; border-radius: 4px;">
+        {{ 'tmonier_quote_request.email.view_quote'|trans({}, null, localeCode)|e }}
+    </a>
+</p>
+<p style="font-size: 13px; color: #888;">{{ 'tmonier_quote_request.email.link_help'|trans({}, null, localeCode)|e }}</p>

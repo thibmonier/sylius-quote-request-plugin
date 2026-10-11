@@ -1,0 +1,128 @@
+tmonier_quote_request:
+    ui:
+        quote_requests: 'Richieste di preventivo'
+        my_quotes: 'I miei preventivi'
+        my_quotes_help: 'Segui le tue richieste di preventivo e le proposte del nostro team commerciale.'
+        no_quotes: 'Non hai ancora richiesto alcun preventivo.'
+        quote_number: 'Preventivo %number%'
+        order_number: 'Ordine n. %number%'
+        quote_discount: 'Sconto del preventivo %number%'
+        request_a_quote: 'Richiedi un preventivo'
+        request_a_quote_help: 'Indicaci le quantità di cui hai bisogno: il nostro team commerciale ti invierà una proposta con i tuoi prezzi.'
+        empty_quote_request: 'La tua richiesta di preventivo è vuota. Aggiungi prodotti dalla loro pagina o dal carrello.'
+        products: Prodotti
+        add_more_products: 'Aggiungi altri prodotti'
+        your_details: 'I tuoi dati'
+        guest_link_help: 'Riceverai via e-mail un link personale per seguire la tua richiesta, senza bisogno di un account.'
+        send_request: 'Invia la mia richiesta di preventivo'
+        need_large_quantities: 'Ti servono grandi quantità o un prezzo professionale?'
+        need_large_quantities_help: 'Aggiungi questo prodotto a una richiesta di preventivo e ricevi una proposta dal nostro team commerciale.'
+        add_to_quote: 'Aggiungi al preventivo'
+        request_quote_for_cart: 'Richiedi un preventivo per questo carrello'
+        request_quote_for_cart_help: 'Ricevi una proposta dal nostro team commerciale per i prodotti e le quantità del tuo carrello.'
+        cart_from_quote: 'Questo carrello proviene dal tuo preventivo accettato %number%.'
+        cart_from_quote_help: "I prezzi negoziati sono bloccati e il contenuto del carrello non può essere modificato. Scegli la spedizione e il pagamento per effettuare l'ordine."
+        leave_quote: 'Abbandona i prezzi del preventivo'
+        catalog_price: 'Prezzo di catalogo'
+        negotiated_price: 'Prezzo unitario negoziato'
+        proposed_unit_price: 'Prezzo unitario proposto'
+        requested_quantity: '%quantity% richiesti'
+        subtotal: Subtotale
+        discount: Sconto
+        included_in_price: 'incluse nei prezzi'
+        total_without_shipping: 'Totale (spedizione esclusa)'
+        prices_indicative: 'Prezzi di catalogo indicativi: la proposta del nostro team commerciale stabilirà i tuoi prezzi.'
+        lines: Righe
+        no_lines: 'Nessuna riga.'
+        variant_deleted: 'Prodotto non più disponibile'
+        messages: Messaggi
+        no_messages: 'Ancora nessun messaggio.'
+        send_message: 'Invia il messaggio'
+        request_changes: 'Richiedi modifiche'
+        accept_and_order: 'Accetta e ordina'
+        decline: 'Rifiuta la proposta'
+        cancel_request: 'Annulla la mia richiesta'
+        go_to_checkout: 'Vai alla cassa'
+        valid_until: 'Valido fino al'
+        valid_until_date: 'Valido fino al %date%.'
+        requested_at: 'Richiesto il'
+        proposed_at: 'Proposta inviata il'
+        accepted_at: 'Accettato il'
+        ordered_at: 'Ordinato il'
+        history: Cronologia
+        conditions: Condizioni
+        guest: Ospite
+        view_customer: 'Vedi il cliente'
+        save_and_send_proposal: 'Salva e invia la proposta'
+        convert_to_order: 'Converti in ordine'
+        convert_help: "Effettua un ordine per il cliente ai prezzi negoziati: il preventivo viene accettato per conto del cliente se necessario e viene inviata la conferma d'ordine."
+        place_order: "Effettua l'ordine"
+        author:
+            customer: Cliente
+            admin: 'Team commerciale'
+        transition:
+            review: "Inizia l'esame"
+            revise: 'Rivedi la proposta'
+            decline: Rifiuta
+            expire: 'Segna come scaduto'
+            cancel: Annulla
+        status_help:
+            new: 'La tua richiesta è stata inviata al nostro team commerciale.'
+            in_review: 'Il nostro team commerciale sta preparando la tua proposta.'
+            proposed: 'La nostra proposta è pronta: accettala per ordinare a questi prezzi oppure richiedi modifiche.'
+            accepted: 'Hai accettato la proposta: completa il tuo ordine ai prezzi negoziati.'
+            ordered: 'Questo preventivo è stato ordinato. Grazie!'
+            declined: 'Questo preventivo è stato rifiutato.'
+            expired: 'Questa proposta è scaduta. Contattaci o invia una nuova richiesta.'
+            cancelled: 'Questa richiesta di preventivo è stata annullata.'
+    status:
+        new: Nuovo
+        in_review: 'In esame'
+        proposed: 'Proposta inviata'
+        accepted: Accettato
+        ordered: Ordinato
+        declined: Rifiutato
+        expired: Scaduto
+        cancelled: Annullato
+    form:
+        company: Azienda
+        vat_number: 'Partita IVA / codice aziendale'
+        vat_number_help: 'Facoltativo: partita IVA, codice fiscale o qualsiasi identificativo aziendale.'
+        message: Messaggio
+        your_message: 'Il tuo messaggio'
+        desired_quantity: 'Quantità desiderata'
+        zero_to_remove: 'Indica 0 per rimuovere un prodotto.'
+        negotiated_unit_price: 'Prezzo unitario negoziato'
+        empty_for_catalog_price: 'Vuoto: prezzo di catalogo.'
+        add_product: 'Aggiungi un prodotto'
+        discount_amount: 'Sconto globale (importo)'
+        discount_percentage: 'Sconto globale (%)'
+        discount_help: "Usato se non è indicato un importo. Applicato all'intero preventivo, prima del calcolo delle imposte."
+        valid_until: 'Valido fino al'
+        valid_until_help: "Vuoto: validità predefinita all'invio della proposta."
+        internal_note: 'Nota interna'
+        internal_note_help: 'Mai mostrata al cliente.'
+        message_to_customer: 'Messaggio al cliente'
+        no_shipping: 'Nessuna spedizione'
+    email:
+        view_quote: 'Vedi il preventivo'
+        open_in_admin: 'Apri il preventivo'
+        link_help: 'Questo link è personale: chiunque lo possieda può vedere e accettare il preventivo.'
+        admin_new_request:
+            subject: 'Nuova richiesta di preventivo %number%'
+            intro: 'È stata inviata una nuova richiesta di preventivo %number% su %channel%.'
+        customer_request_received:
+            subject: 'La tua richiesta di preventivo %number%'
+            intro: 'Grazie! Abbiamo ricevuto la tua richiesta di preventivo %number% e ti invieremo presto una proposta.'
+        customer_proposal:
+            subject: 'Il tuo preventivo %number% è pronto'
+            intro: 'La nostra proposta per la tua richiesta di preventivo %number% è pronta.'
+        admin_accepted:
+            subject: 'Preventivo %number% accettato'
+            intro: "Il cliente ha accettato il preventivo %number%; l'ordine seguirà il checkout."
+        admin_customer_message:
+            subject: 'Nuovo messaggio sul preventivo %number%'
+            intro: 'Il cliente ha scritto riguardo al preventivo %number%.'
+        customer_merchant_message:
+            subject: 'Nuovo messaggio sul tuo preventivo %number%'
+            intro: 'Il nostro team commerciale ha scritto riguardo al tuo preventivo %number%.'

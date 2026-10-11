@@ -1,0 +1,29 @@
+{# User data is escaped explicitly: the Sylius e-mail layout disables autoescaping. #}
+{% set with_prices = with_prices|default(false) %}
+{% set currency = quoteRequest.currencyCode %}
+<p style="margin: 0 0 10px 0;">
+    {% if quoteRequest.company %}<strong>{{ quoteRequest.company|e }}</strong><br>{% endif %}
+    {{ quoteRequest.fullName|e }} &lt;{{ quoteRequest.email|e }}&gt;
+    {% if quoteRequest.phoneNumber %}<br>{{ quoteRequest.phoneNumber|e }}{% endif %}
+    {% if quoteRequest.vatNumber %}<br>{{ 'tmonier_quote_request.form.vat_number'|trans({}, null, localeCode)|e }}: {{ quoteRequest.vatNumber|e }}{% endif %}
+</p>
+<table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+    {% for line in quoteRequest.lines %}
+        <tr style="border-bottom: 1px solid #eee;">
+            <td style="padding: 6px 0;">{{ line.productName|e }}{% if line.variantName and line.variantName != line.productName %} ({{ line.variantName|e }}){% endif %}</td>
+            <td style="padding: 6px 0; text-align: right;">{{ line.quantity }}</td>
+            {% if with_prices %}
+                <td style="padding: 6px 0; text-align: right;">{{ line.effectiveUnitPrice|sylius_format_money(currency, localeCode) }}</td>
+                <td style="padding: 6px 0; text-align: right;">{{ line.subtotal|sylius_format_money(currency, localeCode) }}</td>
+            {% endif %}
+        </tr>
+    {% endfor %}
+    {% if with_prices %}
+        {% set totals = tmonier_quote_request_totals(quoteRequest) %}
+        {% if totals.discount > 0 %}
+            <tr><td colspan="3" style="padding: 6px 0; text-align: right;">{{ 'tmonier_quote_request.ui.discount'|trans({}, null, localeCode)|e }}</td><td style="padding: 6px 0; text-align: right;">-{{ totals.discount|sylius_format_money(currency, localeCode) }}</td></tr>
+        {% endif %}
+        <tr><td colspan="3" style="padding: 6px 0; text-align: right;">{{ 'sylius.ui.taxes'|trans({}, null, localeCode)|e }}</td><td style="padding: 6px 0; text-align: right;">{{ totals.taxTotal|sylius_format_money(currency, localeCode) }}</td></tr>
+        <tr><td colspan="3" style="padding: 6px 0; text-align: right;"><strong>{{ 'tmonier_quote_request.ui.total_without_shipping'|trans({}, null, localeCode)|e }}</strong></td><td style="padding: 6px 0; text-align: right;"><strong>{{ totals.total|sylius_format_money(currency, localeCode) }}</strong></td></tr>
+    {% endif %}
+</table>

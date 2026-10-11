@@ -1,0 +1,63 @@
+{# Lines and totals of a quote; prices of the merchant are shown once a proposal exists. #}
+{% set shows_prices = tmonier_quote_request_shows_prices(quote_request) %}
+{% set currency = quote_request.currencyCode %}
+{% set locale = quote_request.localeCode %}
+
+<div class="table-responsive">
+    <table class="table align-middle" {{ sylius_test_html_attribute('tmonier-quote-lines') }}>
+        <thead>
+            <tr>
+                <th>{{ 'sylius.ui.product'|trans }}</th>
+                <th class="text-end">{{ 'sylius.ui.quantity'|trans }}</th>
+                <th class="text-end">{{ shows_prices ? 'tmonier_quote_request.ui.proposed_unit_price'|trans : 'tmonier_quote_request.ui.catalog_price'|trans }}</th>
+                <th class="text-end">{{ 'sylius.ui.total'|trans }}</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for line in quote_request.lines %}
+                <tr {{ sylius_test_html_attribute('tmonier-quote-line', line.variantCode) }}>
+                    <td>
+                        <div class="fw-semibold">{{ line.productName }}</div>
+                        {% if line.variantName and line.variantName != line.productName %}<div class="small text-body-secondary">{{ line.variantName }}</div>{% endif %}
+                    </td>
+                    <td class="text-end">
+                        {{ line.quantity }}
+                        {% if line.requestedQuantity is not null and line.requestedQuantity != line.quantity %}
+                            <div class="small text-body-secondary">{{ 'tmonier_quote_request.ui.requested_quantity'|trans({'%quantity%': line.requestedQuantity}) }}</div>
+                        {% endif %}
+                    </td>
+                    {% if shows_prices %}
+                        <td class="text-end text-nowrap" {{ sylius_test_html_attribute('tmonier-quote-line-price') }}>
+                            {% if line.effectiveUnitPrice < line.catalogUnitPrice %}
+                                <del class="small text-body-secondary">{{ line.catalogUnitPrice|sylius_format_money(currency, locale) }}</del>
+                            {% endif %}
+                            {{ line.effectiveUnitPrice|sylius_format_money(currency, locale) }}
+                        </td>
+                        <td class="text-end text-nowrap">{{ line.subtotal|sylius_format_money(currency, locale) }}</td>
+                    {% else %}
+                        <td class="text-end text-nowrap">{{ line.catalogUnitPrice|sylius_format_money(currency, locale) }}</td>
+                        <td class="text-end text-nowrap">{{ (line.catalogUnitPrice * line.quantity)|sylius_format_money(currency, locale) }}</td>
+                    {% endif %}
+                </tr>
+            {% endfor %}
+        </tbody>
+        {% if shows_prices %}
+            {% set totals = tmonier_quote_request_totals(quote_request) %}
+            <tfoot>
+                <tr><td colspan="3" class="text-end">{{ 'tmonier_quote_request.ui.subtotal'|trans }}</td><td class="text-end text-nowrap">{{ totals.subtotal|sylius_format_money(currency, locale) }}</td></tr>
+                {% if totals.discount > 0 %}
+                    <tr><td colspan="3" class="text-end">{{ 'tmonier_quote_request.ui.discount'|trans }}</td><td class="text-end text-nowrap" {{ sylius_test_html_attribute('tmonier-quote-discount') }}>-{{ totals.discount|sylius_format_money(currency, locale) }}</td></tr>
+                {% endif %}
+                <tr>
+                    <td colspan="3" class="text-end">{{ 'sylius.ui.taxes'|trans }}{% if totals.hasIncludedTaxes %} <span class="small text-body-secondary">({{ 'tmonier_quote_request.ui.included_in_price'|trans }})</span>{% endif %}</td>
+                    <td class="text-end text-nowrap">{{ totals.taxTotal|sylius_format_money(currency, locale) }}</td>
+                </tr>
+                <tr class="fw-bold"><td colspan="3" class="text-end">{{ 'tmonier_quote_request.ui.total_without_shipping'|trans }}</td><td class="text-end text-nowrap" {{ sylius_test_html_attribute('tmonier-quote-total') }}>{{ totals.total|sylius_format_money(currency, locale) }}</td></tr>
+            </tfoot>
+        {% else %}
+            <tfoot>
+                <tr><td colspan="4" class="small text-body-secondary">{{ 'tmonier_quote_request.ui.prices_indicative'|trans }}</td></tr>
+            </tfoot>
+        {% endif %}
+    </table>
+</div>

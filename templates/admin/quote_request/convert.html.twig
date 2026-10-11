@@ -1,0 +1,7 @@
+{% extends '@SyliusAdmin/shared/layout/base.html.twig' %}
+
+{% block title %}{{ 'tmonier_quote_request.ui.convert_to_order'|trans }} | {{ parent() }}{% endblock %}
+
+{% block body %}
+    {% hook 'tmonier_quote_request.admin.quote_request.convert' with { quote_request, form } %}
+{% endblock %}

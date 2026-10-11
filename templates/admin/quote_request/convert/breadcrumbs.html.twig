@@ -1,0 +1,10 @@
+{% from '@SyliusAdmin/shared/helper/breadcrumbs.html.twig' import breadcrumbs %}
+
+{% set quote_request = hookable_metadata.context.quote_request %}
+
+{{ breadcrumbs([
+    { name: 'sylius.ui.dashboard', url: path('sylius_admin_dashboard'), active: false },
+    { name: 'tmonier_quote_request.ui.quote_requests', url: path('tmonier_quote_request_admin_quote_request_index'), active: false },
+    { name: quote_request.number, url: path('tmonier_quote_request_admin_quote_request_show', {'id': quote_request.id}), active: false },
+    { name: 'tmonier_quote_request.ui.convert_to_order', active: true },
+]) }}

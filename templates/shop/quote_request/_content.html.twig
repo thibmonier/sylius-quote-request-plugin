@@ -1,0 +1,99 @@
+{% set token = quote_request.token %}
+
+<div class="d-flex flex-wrap align-items-center gap-3 mb-3">
+    <h1 class="h2 mb-0">{{ 'tmonier_quote_request.ui.quote_number'|trans({'%number%': quote_request.number}) }}</h1>
+    {% include '@TmonierSyliusQuoteRequestPlugin/shop/status.html.twig' with { status: quote_request.status } only %}
+</div>
+<p class="text-body-secondary">
+    {{ ('tmonier_quote_request.ui.status_help.' ~ quote_request.status)|trans }}
+    {% if quote_request.status == 'proposed' and quote_request.validUntil is not null %}
+        <strong {{ sylius_test_html_attribute('tmonier-quote-valid-until') }}>{{ 'tmonier_quote_request.ui.valid_until_date'|trans({'%date%': quote_request.validUntil|date('Y-m-d')}) }}</strong>
+    {% endif %}
+</p>
+
+<div class="card mb-4">
+    <div class="card-body">
+        {% include '@TmonierSyliusQuoteRequestPlugin/shop/quote_request/_lines.html.twig' %}
+    </div>
+    {% if tmonier_quote_request_can(quote_request, 'accept') or tmonier_quote_request_can(quote_request, 'decline') or quote_request.status == 'accepted' or (quote_request.status in ['new', 'in_review'] and tmonier_quote_request_can(quote_request, 'cancel')) %}
+        <div class="card-footer d-flex flex-wrap gap-2 justify-content-end">
+            {% if quote_request.status in ['new', 'in_review'] and tmonier_quote_request_can(quote_request, 'cancel') %}
+                <form method="post" action="{{ path('tmonier_quote_request_shop_transition', {'token': token, 'action': 'cancel'}) }}">
+                    <input type="hidden" name="_csrf_token" value="{{ csrf_token('tmonier_quote_request_cancel_' ~ quote_request.id) }}">
+                    <button type="submit" class="btn btn-outline-secondary" {{ sylius_test_html_attribute('tmonier-quote-cancel') }}>{{ 'tmonier_quote_request.ui.cancel_request'|trans }}</button>
+                </form>
+            {% endif %}
+            {% if tmonier_quote_request_can(quote_request, 'decline') and quote_request.status == 'proposed' %}
+                <form method="post" action="{{ path('tmonier_quote_request_shop_transition', {'token': token, 'action': 'decline'}) }}">
+                    <input type="hidden" name="_csrf_token" value="{{ csrf_token('tmonier_quote_request_decline_' ~ quote_request.id) }}">
+                    <button type="submit" class="btn btn-outline-danger" {{ sylius_test_html_attribute('tmonier-quote-decline') }}>{{ 'tmonier_quote_request.ui.decline'|trans }}</button>
+                </form>
+            {% endif %}
+            {% if tmonier_quote_request_can(quote_request, 'accept') %}
+                <form method="post" action="{{ path('tmonier_quote_request_shop_transition', {'token': token, 'action': 'accept'}) }}">
+                    <input type="hidden" name="_csrf_token" value="{{ csrf_token('tmonier_quote_request_accept_' ~ quote_request.id) }}">
+                    <button type="submit" class="btn btn-primary" {{ sylius_test_html_attribute('tmonier-quote-accept') }}>
+                        {{ ux_icon('tabler:check', {'class': 'icon'}) }}
+                        {{ 'tmonier_quote_request.ui.accept_and_order'|trans }}
+                    </button>
+                </form>
+            {% endif %}
+            {% if quote_request.status == 'accepted' %}
+                <form method="post" action="{{ path('tmonier_quote_request_shop_checkout', {'token': token}) }}">
+                    <input type="hidden" name="_csrf_token" value="{{ csrf_token('tmonier_quote_request_checkout_' ~ quote_request.id) }}">
+                    <button type="submit" class="btn btn-primary" {{ sylius_test_html_attribute('tmonier-quote-checkout') }}>
+                        {{ ux_icon('tabler:shopping-cart', {'class': 'icon'}) }}
+                        {{ 'tmonier_quote_request.ui.go_to_checkout'|trans }}
+                    </button>
+                </form>
+            {% endif %}
+        </div>
+    {% endif %}
+</div>
+
+<div class="row g-4">
+    <div class="col-12 col-lg-8">
+        <div class="card" {{ sylius_test_html_attribute('tmonier-quote-messages') }}>
+            <div class="card-header fw-bold">{{ 'tmonier_quote_request.ui.messages'|trans }}</div>
+            <ul class="list-group list-group-flush">
+                {% for message in quote_request.messages %}
+                    <li class="list-group-item {{ message.fromCustomer ? '' : 'bg-body-tertiary' }}" {{ sylius_test_html_attribute('tmonier-quote-message', message.authorType) }}>
+                        <div class="d-flex justify-content-between small text-body-secondary mb-1">
+                            <span>{{ message.fromCustomer ? message.authorName|default('tmonier_quote_request.ui.author.customer'|trans) : 'tmonier_quote_request.ui.author.admin'|trans }}</span>
+                            <span>{{ message.createdAt|date('Y-m-d H:i') }}</span>
+                        </div>
+                        <div>{{ message.body|nl2br }}</div>
+                    </li>
+                {% else %}
+                    <li class="list-group-item text-body-secondary">{{ 'tmonier_quote_request.ui.no_messages'|trans }}</li>
+                {% endfor %}
+            </ul>
+            {% if message_form is not null %}
+                <div class="card-body border-top">
+                    {{ form_start(message_form, {'attr': {'novalidate': 'novalidate'}}) }}
+                    {{ form_row(message_form.body) }}
+                    <div class="d-flex flex-wrap gap-2 justify-content-end">
+                        {% if tmonier_quote_request_can(quote_request, 'request_changes') %}
+                            <button type="submit" name="request_changes" value="1" class="btn btn-outline-primary" {{ sylius_test_html_attribute('tmonier-quote-request-changes') }}>{{ 'tmonier_quote_request.ui.request_changes'|trans }}</button>
+                        {% endif %}
+                        <button type="submit" class="btn btn-outline-secondary" {{ sylius_test_html_attribute('tmonier-quote-send-message') }}>{{ 'tmonier_quote_request.ui.send_message'|trans }}</button>
+                    </div>
+                    {{ form_end(message_form) }}
+                </div>
+            {% endif %}
+        </div>
+    </div>
+    <div class="col-12 col-lg-4">
+        <div class="card">
+            <div class="card-header fw-bold">{{ 'tmonier_quote_request.ui.your_details'|trans }}</div>
+            <div class="card-body small">
+                {% if quote_request.company %}<div class="fw-semibold">{{ quote_request.company }}</div>{% endif %}
+                <div>{{ quote_request.fullName }}</div>
+                <div>{{ quote_request.email }}</div>
+                {% if quote_request.phoneNumber %}<div>{{ quote_request.phoneNumber }}</div>{% endif %}
+                {% if quote_request.vatNumber %}<div>{{ 'tmonier_quote_request.form.vat_number'|trans }}: {{ quote_request.vatNumber }}</div>{% endif %}
+                <div class="mt-2 text-body-secondary">{{ 'tmonier_quote_request.ui.requested_at'|trans }}: {{ quote_request.createdAt|date('Y-m-d') }}</div>
+            </div>
+        </div>
+    </div>
+</div>

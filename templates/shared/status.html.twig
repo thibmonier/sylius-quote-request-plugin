@@ -1,0 +1,3 @@
+<span class="badge bg-{{ tmonier_quote_request_status_color(status) }}-lt text-{{ tmonier_quote_request_status_color(status) }}" {{ sylius_test_html_attribute('tmonier-quote-status', status) }}>
+    {{- ('tmonier_quote_request.status.' ~ status)|trans -}}
+</span>

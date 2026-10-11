@@ -1,0 +1,128 @@
+tmonier_quote_request:
+    ui:
+        quote_requests: Offerteaanvragen
+        my_quotes: 'Mijn offertes'
+        my_quotes_help: 'Volg uw offerteaanvragen en de voorstellen van ons verkoopteam.'
+        no_quotes: 'U hebt nog geen offerte aangevraagd.'
+        quote_number: 'Offerte %number%'
+        order_number: 'Bestelling nr. %number%'
+        quote_discount: 'Korting offerte %number%'
+        request_a_quote: 'Offerte aanvragen'
+        request_a_quote_help: 'Laat ons weten welke aantallen u nodig hebt: ons verkoopteam stuurt u een voorstel met uw prijzen.'
+        empty_quote_request: 'Uw offerteaanvraag is leeg. Voeg producten toe vanaf hun pagina of vanuit uw winkelwagen.'
+        products: Producten
+        add_more_products: 'Meer producten toevoegen'
+        your_details: 'Uw gegevens'
+        guest_link_help: 'U ontvangt per e-mail een persoonlijke link om uw aanvraag te volgen, zonder account.'
+        send_request: 'Mijn offerteaanvraag versturen'
+        need_large_quantities: 'Grote aantallen of een zakelijke prijs nodig?'
+        need_large_quantities_help: 'Voeg dit product toe aan een offerteaanvraag en ontvang een voorstel van ons verkoopteam.'
+        add_to_quote: 'Toevoegen aan offerteaanvraag'
+        request_quote_for_cart: 'Offerte aanvragen voor deze winkelwagen'
+        request_quote_for_cart_help: 'Ontvang een voorstel van ons verkoopteam voor de producten en aantallen in uw winkelwagen.'
+        cart_from_quote: 'Deze winkelwagen komt uit uw geaccepteerde offerte %number%.'
+        cart_from_quote_help: 'De onderhandelde prijzen liggen vast en de inhoud van de winkelwagen kan niet worden gewijzigd. Kies verzending en betaling om te bestellen.'
+        leave_quote: 'Offerteprijzen verlaten'
+        catalog_price: Catalogusprijs
+        negotiated_price: 'Onderhandelde stukprijs'
+        proposed_unit_price: 'Voorgestelde stukprijs'
+        requested_quantity: '%quantity% gevraagd'
+        subtotal: Subtotaal
+        discount: Korting
+        included_in_price: 'inbegrepen in de prijzen'
+        total_without_shipping: 'Totaal (zonder verzending)'
+        prices_indicative: 'Catalogusprijzen ter informatie: het voorstel van ons verkoopteam bepaalt uw prijzen.'
+        lines: Regels
+        no_lines: 'Geen regel.'
+        variant_deleted: 'Product niet meer beschikbaar'
+        messages: Berichten
+        no_messages: 'Nog geen berichten.'
+        send_message: 'Bericht versturen'
+        request_changes: 'Wijzigingen vragen'
+        accept_and_order: 'Accepteren en bestellen'
+        decline: 'Voorstel afwijzen'
+        cancel_request: 'Mijn aanvraag annuleren'
+        go_to_checkout: 'Naar de kassa'
+        valid_until: 'Geldig tot'
+        valid_until_date: 'Geldig tot %date%.'
+        requested_at: 'Aangevraagd op'
+        proposed_at: 'Voorstel verstuurd op'
+        accepted_at: 'Geaccepteerd op'
+        ordered_at: 'Besteld op'
+        history: Geschiedenis
+        conditions: Voorwaarden
+        guest: Gast
+        view_customer: 'Klant bekijken'
+        save_and_send_proposal: 'Opslaan en voorstel versturen'
+        convert_to_order: 'Omzetten in bestelling'
+        convert_help: 'Plaatst een bestelling voor de klant tegen de onderhandelde prijzen: de offerte wordt indien nodig namens de klant geaccepteerd en de orderbevestiging wordt verstuurd.'
+        place_order: 'Bestelling plaatsen'
+        author:
+            customer: Klant
+            admin: Verkoopteam
+        transition:
+            review: 'Beoordeling starten'
+            revise: 'Voorstel herzien'
+            decline: Afwijzen
+            expire: 'Als verlopen markeren'
+            cancel: Annuleren
+        status_help:
+            new: 'Uw aanvraag is naar ons verkoopteam verstuurd.'
+            in_review: 'Ons verkoopteam bereidt uw voorstel voor.'
+            proposed: 'Ons voorstel is klaar: accepteer het om tegen deze prijzen te bestellen, of vraag wijzigingen.'
+            accepted: 'U hebt het voorstel geaccepteerd: rond uw bestelling af tegen de onderhandelde prijzen.'
+            ordered: 'Deze offerte is besteld. Bedankt!'
+            declined: 'Deze offerte is afgewezen.'
+            expired: 'Dit voorstel is verlopen. Neem contact met ons op of verstuur een nieuwe aanvraag.'
+            cancelled: 'Deze offerteaanvraag is geannuleerd.'
+    status:
+        new: Nieuw
+        in_review: 'In beoordeling'
+        proposed: 'Voorstel verstuurd'
+        accepted: Geaccepteerd
+        ordered: Besteld
+        declined: Afgewezen
+        expired: Verlopen
+        cancelled: Geannuleerd
+    form:
+        company: Bedrijf
+        vat_number: 'Btw-nummer / KvK-nummer'
+        vat_number_help: 'Optioneel: btw-nummer, KvK-nummer of een andere bedrijfsidentificatie.'
+        message: Bericht
+        your_message: 'Uw bericht'
+        desired_quantity: 'Gewenst aantal'
+        zero_to_remove: 'Vul 0 in om een product te verwijderen.'
+        negotiated_unit_price: 'Onderhandelde stukprijs'
+        empty_for_catalog_price: 'Leeg: catalogusprijs.'
+        add_product: 'Product toevoegen'
+        discount_amount: 'Totale korting (bedrag)'
+        discount_percentage: 'Totale korting (%)'
+        discount_help: 'Gebruikt als er geen bedrag is ingevuld. Geldt voor de hele offerte, vóór de belastingberekening.'
+        valid_until: 'Geldig tot'
+        valid_until_help: 'Leeg: standaardgeldigheid bij het versturen van het voorstel.'
+        internal_note: 'Interne notitie'
+        internal_note_help: 'Wordt nooit aan de klant getoond.'
+        message_to_customer: 'Bericht aan de klant'
+        no_shipping: 'Geen verzending'
+    email:
+        view_quote: 'Offerte bekijken'
+        open_in_admin: 'Offerte openen'
+        link_help: 'Deze link is persoonlijk: iedereen die hem heeft, kan de offerte bekijken en accepteren.'
+        admin_new_request:
+            subject: 'Nieuwe offerteaanvraag %number%'
+            intro: 'Er is een nieuwe offerteaanvraag %number% verstuurd op %channel%.'
+        customer_request_received:
+            subject: 'Uw offerteaanvraag %number%'
+            intro: 'Bedankt! We hebben uw offerteaanvraag %number% ontvangen en sturen u binnenkort een voorstel.'
+        customer_proposal:
+            subject: 'Uw offerte %number% is klaar'
+            intro: 'Ons voorstel voor uw offerteaanvraag %number% is klaar.'
+        admin_accepted:
+            subject: 'Offerte %number% geaccepteerd'
+            intro: 'De klant heeft offerte %number% geaccepteerd; de bestelling volgt via de checkout.'
+        admin_customer_message:
+            subject: 'Nieuw bericht over offerte %number%'
+            intro: 'De klant heeft geschreven over offerte %number%.'
+        customer_merchant_message:
+            subject: 'Nieuw bericht over uw offerte %number%'
+            intro: 'Ons verkoopteam heeft geschreven over uw offerte %number%.'

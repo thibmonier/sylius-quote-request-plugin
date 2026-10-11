@@ -1,0 +1,74 @@
+sylius_twig_hooks:
+    hooks:
+        'tmonier_quote_request.admin.quote_request.show':
+            sidebar:
+                template: '@SyliusAdmin/shared/crud/common/sidebar.html.twig'
+                priority: 200
+            navbar:
+                template: '@SyliusAdmin/shared/crud/common/navbar.html.twig'
+                priority: 100
+            content:
+                template: '@SyliusAdmin/shared/crud/common/content.html.twig'
+                priority: 0
+
+        'tmonier_quote_request.admin.quote_request.show.content':
+            flashes:
+                template: '@SyliusAdmin/shared/crud/common/content/flashes.html.twig'
+                priority: 200
+            header:
+                template: '@SyliusAdmin/shared/crud/common/content/header.html.twig'
+                priority: 100
+            sections:
+                template: '@TmonierSyliusQuoteRequestPlugin/admin/quote_request/show/sections.html.twig'
+                priority: 0
+
+        'tmonier_quote_request.admin.quote_request.show.content.header':
+            breadcrumbs:
+                template: '@TmonierSyliusQuoteRequestPlugin/admin/quote_request/show/breadcrumbs.html.twig'
+                priority: 100
+            title_block:
+                template: '@SyliusAdmin/shared/crud/common/content/header/title_block.html.twig'
+                priority: 0
+
+        'tmonier_quote_request.admin.quote_request.show.content.header.title_block':
+            title:
+                template: '@TmonierSyliusQuoteRequestPlugin/admin/quote_request/show/title.html.twig'
+                priority: 100
+            actions:
+                template: '@TmonierSyliusQuoteRequestPlugin/admin/quote_request/show/actions.html.twig'
+                priority: 0
+
+        'tmonier_quote_request.admin.quote_request.convert':
+            sidebar:
+                template: '@SyliusAdmin/shared/crud/common/sidebar.html.twig'
+                priority: 200
+            navbar:
+                template: '@SyliusAdmin/shared/crud/common/navbar.html.twig'
+                priority: 100
+            content:
+                template: '@SyliusAdmin/shared/crud/common/content.html.twig'
+                priority: 0
+
+        'tmonier_quote_request.admin.quote_request.convert.content':
+            flashes:
+                template: '@SyliusAdmin/shared/crud/common/content/flashes.html.twig'
+                priority: 200
+            header:
+                template: '@SyliusAdmin/shared/crud/common/content/header.html.twig'
+                priority: 100
+            sections:
+                template: '@TmonierSyliusQuoteRequestPlugin/admin/quote_request/convert/sections.html.twig'
+                priority: 0
+
+        'tmonier_quote_request.admin.quote_request.convert.content.header':
+            breadcrumbs:
+                template: '@TmonierSyliusQuoteRequestPlugin/admin/quote_request/convert/breadcrumbs.html.twig'
+                priority: 100
+            title_block:
+                template: '@SyliusAdmin/shared/crud/common/content/header/title_block.html.twig'
+                priority: 0
+
+        'tmonier_quote_request.admin.quote_request.convert.content.header.title_block':
+            title:
+                template: '@TmonierSyliusQuoteRequestPlugin/admin/quote_request/convert/title.html.twig'
+                priority: 100

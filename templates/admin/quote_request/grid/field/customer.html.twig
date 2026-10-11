@@ -1,0 +1,8 @@
+<div>
+    {% if data.company %}<div class="fw-bold">{{ data.company }}</div>{% endif %}
+    <div>{{ data.fullName }}</div>
+    <div class="text-secondary">
+        {{ data.email }}
+        {% if data.customer is null %}<span class="badge bg-secondary-lt ms-1">{{ 'tmonier_quote_request.ui.guest'|trans }}</span>{% endif %}
+    </div>
+</div>

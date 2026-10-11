@@ -1,0 +1,128 @@
+tmonier_quote_request:
+    ui:
+        quote_requests: 'Solicitudes de presupuesto'
+        my_quotes: 'Mis presupuestos'
+        my_quotes_help: 'Siga sus solicitudes de presupuesto y las propuestas de nuestro equipo comercial.'
+        no_quotes: 'Todavía no ha solicitado ningún presupuesto.'
+        quote_number: 'Presupuesto %number%'
+        order_number: 'Pedido n.º %number%'
+        quote_discount: 'Descuento del presupuesto %number%'
+        request_a_quote: 'Solicitar un presupuesto'
+        request_a_quote_help: 'Indíquenos las cantidades que necesita: nuestro equipo comercial le enviará una propuesta con sus precios.'
+        empty_quote_request: 'Su solicitud de presupuesto está vacía. Añada productos desde su página o desde su carrito.'
+        products: Productos
+        add_more_products: 'Añadir más productos'
+        your_details: 'Sus datos'
+        guest_link_help: 'Recibirá por correo electrónico un enlace personal para seguir su solicitud, sin necesidad de cuenta.'
+        send_request: 'Enviar mi solicitud de presupuesto'
+        need_large_quantities: '¿Necesita grandes cantidades o un precio profesional?'
+        need_large_quantities_help: 'Añada este producto a una solicitud de presupuesto y reciba una propuesta de nuestro equipo comercial.'
+        add_to_quote: 'Añadir al presupuesto'
+        request_quote_for_cart: 'Solicitar un presupuesto para este carrito'
+        request_quote_for_cart_help: 'Reciba una propuesta de nuestro equipo comercial para los productos y cantidades de su carrito.'
+        cart_from_quote: 'Este carrito procede de su presupuesto aceptado %number%.'
+        cart_from_quote_help: 'Los precios negociados están bloqueados y el contenido del carrito no se puede modificar. Elija el envío y el pago para realizar el pedido.'
+        leave_quote: 'Abandonar los precios del presupuesto'
+        catalog_price: 'Precio de catálogo'
+        negotiated_price: 'Precio unitario negociado'
+        proposed_unit_price: 'Precio unitario propuesto'
+        requested_quantity: '%quantity% solicitado(s)'
+        subtotal: Subtotal
+        discount: Descuento
+        included_in_price: 'incluidos en los precios'
+        total_without_shipping: 'Total (sin envío)'
+        prices_indicative: 'Precios de catálogo a título informativo: la propuesta de nuestro equipo comercial fijará sus precios.'
+        lines: Líneas
+        no_lines: 'Ninguna línea.'
+        variant_deleted: 'Producto ya no disponible'
+        messages: Mensajes
+        no_messages: 'Todavía no hay mensajes.'
+        send_message: 'Enviar el mensaje'
+        request_changes: 'Solicitar cambios'
+        accept_and_order: 'Aceptar y pedir'
+        decline: 'Rechazar la propuesta'
+        cancel_request: 'Cancelar mi solicitud'
+        go_to_checkout: 'Ir a la caja'
+        valid_until: 'Válido hasta'
+        valid_until_date: 'Válido hasta el %date%.'
+        requested_at: 'Solicitado el'
+        proposed_at: 'Propuesta enviada el'
+        accepted_at: 'Aceptado el'
+        ordered_at: 'Pedido el'
+        history: Historial
+        conditions: Condiciones
+        guest: Invitado
+        view_customer: 'Ver el cliente'
+        save_and_send_proposal: 'Guardar y enviar la propuesta'
+        convert_to_order: 'Convertir en pedido'
+        convert_help: 'Realiza un pedido para el cliente con los precios negociados: el presupuesto se acepta en nombre del cliente si es necesario y se envía la confirmación del pedido.'
+        place_order: 'Realizar el pedido'
+        author:
+            customer: Cliente
+            admin: 'Equipo comercial'
+        transition:
+            review: 'Empezar el estudio'
+            revise: 'Revisar la propuesta'
+            decline: Rechazar
+            expire: 'Marcar como caducado'
+            cancel: Cancelar
+        status_help:
+            new: 'Su solicitud se ha enviado a nuestro equipo comercial.'
+            in_review: 'Nuestro equipo comercial está preparando su propuesta.'
+            proposed: 'Nuestra propuesta está lista: acéptela para pedir a estos precios o solicite cambios.'
+            accepted: 'Ha aceptado la propuesta: finalice su pedido con los precios negociados.'
+            ordered: 'Este presupuesto se ha pedido. ¡Gracias!'
+            declined: 'Este presupuesto ha sido rechazado.'
+            expired: 'Esta propuesta ha caducado. Contáctenos o envíe una nueva solicitud.'
+            cancelled: 'Esta solicitud de presupuesto ha sido cancelada.'
+    status:
+        new: Nuevo
+        in_review: 'En estudio'
+        proposed: 'Propuesta enviada'
+        accepted: Aceptado
+        ordered: Pedido
+        declined: Rechazado
+        expired: Caducado
+        cancelled: Cancelado
+    form:
+        company: Empresa
+        vat_number: 'NIF / IVA intracomunitario'
+        vat_number_help: 'Opcional: número de IVA, NIF o cualquier identificador de empresa.'
+        message: Mensaje
+        your_message: 'Su mensaje'
+        desired_quantity: 'Cantidad deseada'
+        zero_to_remove: 'Indique 0 para quitar un producto.'
+        negotiated_unit_price: 'Precio unitario negociado'
+        empty_for_catalog_price: 'Vacío: precio de catálogo.'
+        add_product: 'Añadir un producto'
+        discount_amount: 'Descuento global (importe)'
+        discount_percentage: 'Descuento global (%)'
+        discount_help: 'Se usa si no se indica un importe. Se aplica a todo el presupuesto, antes del cálculo de impuestos.'
+        valid_until: 'Válido hasta'
+        valid_until_help: 'Vacío: validez por defecto al enviar la propuesta.'
+        internal_note: 'Nota interna'
+        internal_note_help: 'Nunca se muestra al cliente.'
+        message_to_customer: 'Mensaje al cliente'
+        no_shipping: 'Sin envío'
+    email:
+        view_quote: 'Ver el presupuesto'
+        open_in_admin: 'Abrir el presupuesto'
+        link_help: 'Este enlace es personal: cualquier persona que lo tenga puede ver y aceptar el presupuesto.'
+        admin_new_request:
+            subject: 'Nueva solicitud de presupuesto %number%'
+            intro: 'Se ha enviado una nueva solicitud de presupuesto %number% en %channel%.'
+        customer_request_received:
+            subject: 'Su solicitud de presupuesto %number%'
+            intro: '¡Gracias! Hemos recibido su solicitud de presupuesto %number% y le enviaremos una propuesta en breve.'
+        customer_proposal:
+            subject: 'Su presupuesto %number% está listo'
+            intro: 'Nuestra propuesta para su solicitud de presupuesto %number% está lista.'
+        admin_accepted:
+            subject: 'Presupuesto %number% aceptado'
+            intro: 'El cliente ha aceptado el presupuesto %number%; el pedido seguirá el proceso de compra.'
+        admin_customer_message:
+            subject: 'Nuevo mensaje sobre el presupuesto %number%'
+            intro: 'El cliente ha escrito sobre el presupuesto %number%.'
+        customer_merchant_message:
+            subject: 'Nuevo mensaje sobre su presupuesto %number%'
+            intro: 'Nuestro equipo comercial ha escrito sobre su presupuesto %number%.'

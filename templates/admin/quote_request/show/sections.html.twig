@@ -1,0 +1,179 @@
+{% set quote_request = hookable_metadata.context.quote_request %}
+{% set form = hookable_metadata.context.form %}
+{% set editable = hookable_metadata.context.editable %}
+{% set currency = quote_request.currencyCode %}
+{% set locale = app.user.localeCode|default(quote_request.localeCode) %}
+{% set totals = tmonier_quote_request_totals(quote_request) %}
+
+<div class="page-body">
+    <div class="container-xl">
+        {{ form_start(form, {'attr': {'novalidate': 'novalidate', 'id': 'tmonier-quote-request-form'}}) }}
+        {{ form_errors(form) }}
+        <div class="row g-3">
+            <div class="col-12 col-lg-8">
+                <div class="card mb-3" {{ sylius_test_html_attribute('tmonier-quote-lines') }}>
+                    <div class="card-header">
+                        <h3 class="card-title">{{ 'tmonier_quote_request.ui.lines'|trans }}</h3>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-vcenter card-table">
+                            <thead>
+                                <tr>
+                                    <th>{{ 'sylius.ui.product'|trans }}</th>
+                                    <th class="text-end">{{ 'tmonier_quote_request.ui.catalog_price'|trans }}</th>
+                                    <th class="w-1">{{ 'sylius.ui.quantity'|trans }}</th>
+                                    <th class="w-1">{{ 'tmonier_quote_request.ui.negotiated_price'|trans }}</th>
+                                    <th class="text-end">{{ 'sylius.ui.total'|trans }}</th>
+                                    {% if editable %}<th class="w-1"></th>{% endif %}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for line_form in form.lines %}
+                                    {% set line = line_form.vars.data %}
+                                    <tr {{ sylius_test_html_attribute('tmonier-quote-line', line.variantCode) }}>
+                                        <td>
+                                            <div class="fw-bold">{{ line.productName }}</div>
+                                            <div class="text-secondary small">
+                                                {% if line.variantName and line.variantName != line.productName %}{{ line.variantName }} · {% endif %}{{ line.variantCode }}
+                                                {% if line.requestedQuantity is not null and line.requestedQuantity != line.quantity %}
+                                                    · {{ 'tmonier_quote_request.ui.requested_quantity'|trans({'%quantity%': line.requestedQuantity}) }}
+                                                {% endif %}
+                                            </div>
+                                            {% if line.variant is null %}
+                                                <span class="badge bg-red-lt">{{ 'tmonier_quote_request.ui.variant_deleted'|trans }}</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-end text-nowrap">{{ line.catalogUnitPrice|sylius_format_money(currency, locale) }}</td>
+                                        {% if editable %}
+                                            <td style="min-width: 7rem">{{ form_widget(line_form.quantity) }}{{ form_errors(line_form.quantity) }}</td>
+                                            <td style="min-width: 10rem">{{ form_widget(line_form.unitPrice, {'attr': {'placeholder': (line.catalogUnitPrice / 100)|number_format(2, '.', '')}}) }}{{ form_errors(line_form.unitPrice) }}</td>
+                                        {% else %}
+                                            <td class="text-end">{{ line.quantity }}</td>
+                                            <td class="text-end text-nowrap">{{ line.effectiveUnitPrice|sylius_format_money(currency, locale) }}</td>
+                                            {% do line_form.setRendered %}
+                                        {% endif %}
+                                        <td class="text-end text-nowrap">{{ line.subtotal|sylius_format_money(currency, locale) }}</td>
+                                        {% if editable %}
+                                            <td>{{ form_widget(line_form.remove) }}</td>
+                                        {% endif %}
+                                    </tr>
+                                {% else %}
+                                    <tr><td colspan="6" class="text-secondary">{{ 'tmonier_quote_request.ui.no_lines'|trans }}</td></tr>
+                                {% endfor %}
+                            </tbody>
+                            <tfoot>
+                                <tr>
+                                    <td colspan="4" class="text-end">{{ 'tmonier_quote_request.ui.subtotal'|trans }}</td>
+                                    <td class="text-end text-nowrap" {{ sylius_test_html_attribute('tmonier-quote-subtotal') }}>{{ totals.subtotal|sylius_format_money(currency, locale) }}</td>
+                                    {% if editable %}<td></td>{% endif %}
+                                </tr>
+                                {% if totals.discount > 0 %}
+                                    <tr>
+                                        <td colspan="4" class="text-end">{{ 'tmonier_quote_request.ui.discount'|trans }}</td>
+                                        <td class="text-end text-nowrap" {{ sylius_test_html_attribute('tmonier-quote-discount') }}>-{{ totals.discount|sylius_format_money(currency, locale) }}</td>
+                                        {% if editable %}<td></td>{% endif %}
+                                    </tr>
+                                {% endif %}
+                                <tr>
+                                    <td colspan="4" class="text-end">
+                                        {{ 'sylius.ui.taxes'|trans }}
+                                        {% if totals.hasIncludedTaxes %}<span class="text-secondary small">({{ 'tmonier_quote_request.ui.included_in_price'|trans }})</span>{% endif %}
+                                    </td>
+                                    <td class="text-end text-nowrap" {{ sylius_test_html_attribute('tmonier-quote-taxes') }}>{{ totals.taxTotal|sylius_format_money(currency, locale) }}</td>
+                                    {% if editable %}<td></td>{% endif %}
+                                </tr>
+                                <tr>
+                                    <td colspan="4" class="text-end fw-bold">{{ 'tmonier_quote_request.ui.total_without_shipping'|trans }}</td>
+                                    <td class="text-end text-nowrap fw-bold" {{ sylius_test_html_attribute('tmonier-quote-total') }}>{{ totals.total|sylius_format_money(currency, locale) }}</td>
+                                    {% if editable %}<td></td>{% endif %}
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                    {% if editable %}
+                        <div class="card-body border-top">
+                            <div class="row g-2 align-items-end">
+                                <div class="col-12 col-md-8">{{ form_row(form.newVariant) }}</div>
+                                <div class="col-12 col-md-4">{{ form_row(form.newQuantity) }}</div>
+                            </div>
+                        </div>
+                    {% else %}
+                        {% do form.newVariant.setRendered %}
+                        {% do form.newQuantity.setRendered %}
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="col-12 col-lg-4">
+                <div class="card mb-3" {{ sylius_test_html_attribute('tmonier-quote-customer') }}>
+                    <div class="card-header"><h3 class="card-title">{{ 'sylius.ui.customer'|trans }}</h3></div>
+                    <div class="card-body">
+                        {% if quote_request.company %}<div class="fw-bold">{{ quote_request.company }}</div>{% endif %}
+                        <div>{{ quote_request.fullName }}</div>
+                        <div><a href="mailto:{{ quote_request.email }}">{{ quote_request.email }}</a></div>
+                        {% if quote_request.phoneNumber %}<div>{{ quote_request.phoneNumber }}</div>{% endif %}
+                        {% if quote_request.vatNumber %}<div class="text-secondary">{{ 'tmonier_quote_request.form.vat_number'|trans }}: {{ quote_request.vatNumber }}</div>{% endif %}
+                        <div class="mt-2">
+                            {% if quote_request.customer is not null %}
+                                <a href="{{ path('sylius_admin_customer_show', {'id': quote_request.customer.id}) }}">{{ 'tmonier_quote_request.ui.view_customer'|trans }}</a>
+                            {% else %}
+                                <span class="badge bg-secondary-lt">{{ 'tmonier_quote_request.ui.guest'|trans }}</span>
+                            {% endif %}
+                        </div>
+                        <div class="text-secondary small mt-2">{{ quote_request.channel.name }} · {{ quote_request.localeCode }} · {{ quote_request.currencyCode }}</div>
+                    </div>
+                </div>
+
+                <div class="card mb-3" {{ sylius_test_html_attribute('tmonier-quote-conditions') }}>
+                    <div class="card-header"><h3 class="card-title">{{ 'tmonier_quote_request.ui.conditions'|trans }}</h3></div>
+                    <div class="card-body">
+                        {{ form_row(form.discountAmount) }}
+                        {{ form_row(form.discountPercentage) }}
+                        {{ form_row(form.validUntil) }}
+                        {{ form_row(form.internalNote, {'attr': {'rows': 3}}) }}
+                        {% if editable %}
+                            {{ form_row(form.message, {'attr': {'rows': 3}}) }}
+                        {% else %}
+                            {% do form.message.setRendered %}
+                        {% endif %}
+                    </div>
+                    {% if editable %}
+                        <div class="card-footer d-flex flex-wrap gap-2 justify-content-end">
+                            {{ form_widget(form.save, {'attr': {'class': 'btn'}}) }}
+                            {{ form_widget(form.propose, {'attr': {'class': 'btn btn-primary'}}) }}
+                        </div>
+                    {% else %}
+                        {% do form.save.setRendered %}
+                        {% do form.propose.setRendered %}
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {{ form_rest(form) }}
+        {{ form_end(form) }}
+
+        <div class="row g-3">
+            <div class="col-12 col-lg-8">
+                {% include '@TmonierSyliusQuoteRequestPlugin/admin/quote_request/show/messages.html.twig' with { quote_request: quote_request, message_form: hookable_metadata.context.message_form } only %}
+            </div>
+            <div class="col-12 col-lg-4">
+                <div class="card mb-3">
+                    <div class="card-header"><h3 class="card-title">{{ 'tmonier_quote_request.ui.history'|trans }}</h3></div>
+                    <div class="list-group list-group-flush">
+                        {% for label, date in {
+                            'tmonier_quote_request.ui.requested_at': quote_request.createdAt,
+                            'tmonier_quote_request.ui.proposed_at': quote_request.proposedAt,
+                            'tmonier_quote_request.ui.valid_until': quote_request.validUntil,
+                            'tmonier_quote_request.ui.accepted_at': quote_request.acceptedAt,
+                            'tmonier_quote_request.ui.ordered_at': quote_request.orderedAt,
+                        } %}
+                            {% if date is not null %}
+                                <div class="list-group-item d-flex justify-content-between"><span>{{ label|trans }}</span><span class="text-secondary">{{ date|date('Y-m-d H:i') }}</span></div>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

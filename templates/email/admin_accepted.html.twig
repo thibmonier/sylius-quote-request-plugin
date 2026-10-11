@@ -1,0 +1,13 @@
+{% extends '@SyliusCore/Email/layout.html.twig' %}
+
+{% block subject %}
+    {{- 'tmonier_quote_request.email.admin_accepted.subject'|trans({'%number%': quoteRequest.number}, null, localeCode) -}}
+{% endblock %}
+
+{% block content %}
+    <div style="text-align: left;">
+        <p>{{ 'tmonier_quote_request.email.admin_accepted.intro'|trans({'%number%': quoteRequest.number, '%channel%': channel.name}, null, localeCode)|e }}</p>
+        {% include '@TmonierSyliusQuoteRequestPlugin/email/_summary.html.twig' with { with_prices: true } %}
+        {% include '@TmonierSyliusQuoteRequestPlugin/email/_admin_link.html.twig' %}
+    </div>
+{% endblock %}

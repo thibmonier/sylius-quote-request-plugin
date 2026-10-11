@@ -1,0 +1,4 @@
+{% set colors = { new: 'primary', in_review: 'info', proposed: 'warning', accepted: 'success', ordered: 'success', declined: 'danger' } %}
+<span class="badge text-bg-{{ colors[status]|default('secondary') }}" {{ sylius_test_html_attribute('tmonier-quote-status', status) }}>
+    {{- ('tmonier_quote_request.status.' ~ status)|trans -}}
+</span>

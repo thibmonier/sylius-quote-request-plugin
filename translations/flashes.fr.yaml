@@ -1,0 +1,31 @@
+tmonier_quote_request:
+    flash:
+        added_to_quote: 'Le produit a été ajouté à votre demande de devis.'
+        invalid_product: 'Ce produit ne peut pas être ajouté à une demande de devis.'
+        too_many_lines: 'Votre demande de devis contient trop de produits.'
+        empty_cart: 'Votre panier est vide.'
+        login_required: 'Connectez-vous pour demander un devis.'
+        no_product: 'Ajoutez au moins un produit à votre demande de devis.'
+        request_sent: 'Votre demande de devis a été envoyée. Nous revenons vers vous rapidement.'
+        accepted: 'Devis accepté : votre panier contient les prix négociés.'
+        cannot_accept: 'Cette proposition ne peut plus être acceptée.'
+        declined: 'La proposition a été refusée.'
+        cancelled: 'La demande de devis a été annulée.'
+        transition_not_allowed: "Cette action n'est pas possible dans le statut actuel du devis."
+        message_sent: 'Votre message a été envoyé.'
+        message_invalid: 'Le message ne peut pas être vide.'
+        changes_requested: 'Votre demande de modifications a été envoyée.'
+        cart_released: 'Votre panier est revenu aux prix catalogue.'
+        cannot_propose: 'La proposition doit contenir au moins un produit pouvant être commandé.'
+        cannot_convert: 'Seuls une proposition encore valable ou un devis accepté peuvent être convertis en commande.'
+        conversion_failed: "La commande n'a pas pu être passée : %reason%"
+        variant_not_in_channel: "Ce produit n'a pas de prix dans le canal du devis."
+        admin:
+            saved: 'Le devis a été enregistré.'
+            review: "L'étude du devis a commencé."
+            propose: 'La proposition a été envoyée au client.'
+            revise: "La proposition est revenue en cours d'étude."
+            decline: 'Le devis a été refusé.'
+            expire: 'Le devis a été marqué comme expiré.'
+            cancel: 'Le devis a été annulé.'
+            converted: 'La commande a été passée à partir du devis.'

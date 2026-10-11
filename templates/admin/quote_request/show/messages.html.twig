@@ -1,0 +1,30 @@
+<div class="card mb-3" {{ sylius_test_html_attribute('tmonier-quote-messages') }}>
+    <div class="card-header"><h3 class="card-title">{{ 'tmonier_quote_request.ui.messages'|trans }}</h3></div>
+    <div class="list-group list-group-flush">
+        {% for message in quote_request.messages %}
+            <div class="list-group-item {{ message.fromCustomer ? '' : 'bg-azure-lt' }}" {{ sylius_test_html_attribute('tmonier-quote-message', message.authorType) }}>
+                <div class="d-flex justify-content-between small text-secondary mb-1">
+                    <span>
+                        {{ ux_icon(message.fromCustomer ? 'tabler:user' : 'tabler:building-store', {'class': 'icon'}) }}
+                        {{ message.authorName|default(('tmonier_quote_request.ui.author.' ~ message.authorType)|trans) }}
+                    </span>
+                    <span>{{ message.createdAt|date('Y-m-d H:i') }}</span>
+                </div>
+                <div>{{ message.body|nl2br }}</div>
+            </div>
+        {% else %}
+            <div class="list-group-item text-secondary">{{ 'tmonier_quote_request.ui.no_messages'|trans }}</div>
+        {% endfor %}
+    </div>
+    <div class="card-body border-top">
+        {{ form_start(message_form, {'attr': {'novalidate': 'novalidate'}}) }}
+        {{ form_row(message_form.body, {'label': 'tmonier_quote_request.form.message_to_customer'}) }}
+        <div class="d-flex justify-content-end">
+            <button type="submit" class="btn" {{ sylius_test_html_attribute('tmonier-quote-send-message') }}>
+                {{ ux_icon('tabler:send', {'class': 'icon'}) }}
+                {{ 'tmonier_quote_request.ui.send_message'|trans }}
+            </button>
+        </div>
+        {{ form_end(message_form) }}
+    </div>
+</div>

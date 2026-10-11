@@ -1,0 +1,17 @@
+{% set cart = hookable_metadata.context.cart|default(null) %}
+{% set quote_request = tmonier_quote_request_cart_quote(cart) %}
+
+{% if quote_request is not null %}
+    <div class="container">
+        <div class="alert alert-info d-flex flex-wrap gap-3 justify-content-between align-items-center my-3" {{ sylius_test_html_attribute('tmonier-quote-cart-notice') }}>
+            <div>
+                <div class="fw-bold">{{ 'tmonier_quote_request.ui.cart_from_quote'|trans({'%number%': quote_request.number}) }}</div>
+                <div class="small">{{ 'tmonier_quote_request.ui.cart_from_quote_help'|trans }}</div>
+            </div>
+            <form method="post" action="{{ path('tmonier_quote_request_shop_release_cart') }}">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token('tmonier_quote_request_release_cart') }}">
+                <button type="submit" class="btn btn-sm btn-outline-secondary" {{ sylius_test_html_attribute('tmonier-quote-release-cart') }}>{{ 'tmonier_quote_request.ui.leave_quote'|trans }}</button>
+            </form>
+        </div>
+    </div>
+{% endif %}

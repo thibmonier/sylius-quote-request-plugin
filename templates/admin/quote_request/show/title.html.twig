@@ -1,0 +1,10 @@
+{% import '@SyliusAdmin/shared/helper/header.html.twig' as header %}
+
+{% set quote_request = hookable_metadata.context.quote_request %}
+
+<div class="col-12 col-md-6">
+    <div class="d-flex align-items-center gap-2">
+        {{ header.h1('tmonier_quote_request.ui.quote_number'|trans({'%number%': quote_request.number}), 'tabler:file-dollar', quote_request.createdAt|date('Y-m-d H:i')) }}
+        {% include '@TmonierSyliusQuoteRequestPlugin/shared/status.html.twig' with { status: quote_request.status } only %}
+    </div>
+</div>

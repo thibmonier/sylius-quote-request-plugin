@@ -1,0 +1,128 @@
+tmonier_quote_request:
+    ui:
+        quote_requests: Angebotsanfragen
+        my_quotes: 'Meine Angebote'
+        my_quotes_help: 'Verfolgen Sie Ihre Angebotsanfragen und die Angebote unseres Vertriebsteams.'
+        no_quotes: 'Sie haben noch kein Angebot angefragt.'
+        quote_number: 'Angebot %number%'
+        order_number: 'Bestellung Nr. %number%'
+        quote_discount: 'Rabatt des Angebots %number%'
+        request_a_quote: 'Angebot anfordern'
+        request_a_quote_help: 'Nennen Sie uns die gewünschten Mengen: Unser Vertriebsteam sendet Ihnen ein Angebot mit Ihren Preisen.'
+        empty_quote_request: 'Ihre Angebotsanfrage ist leer. Fügen Sie Produkte über ihre Seite oder über Ihren Warenkorb hinzu.'
+        products: Produkte
+        add_more_products: 'Weitere Produkte hinzufügen'
+        your_details: 'Ihre Angaben'
+        guest_link_help: 'Sie erhalten per E-Mail einen persönlichen Link, um Ihre Anfrage zu verfolgen, ohne Kundenkonto.'
+        send_request: 'Angebotsanfrage senden'
+        need_large_quantities: 'Große Mengen oder ein Geschäftskundenpreis?'
+        need_large_quantities_help: 'Fügen Sie dieses Produkt einer Angebotsanfrage hinzu und erhalten Sie ein Angebot unseres Vertriebsteams.'
+        add_to_quote: 'Zur Angebotsanfrage hinzufügen'
+        request_quote_for_cart: 'Angebot für diesen Warenkorb anfordern'
+        request_quote_for_cart_help: 'Erhalten Sie ein Angebot unseres Vertriebsteams für die Produkte und Mengen Ihres Warenkorbs.'
+        cart_from_quote: 'Dieser Warenkorb stammt aus Ihrem angenommenen Angebot %number%.'
+        cart_from_quote_help: 'Die verhandelten Preise sind festgeschrieben und der Inhalt des Warenkorbs kann nicht geändert werden. Wählen Sie Versand und Zahlung, um zu bestellen.'
+        leave_quote: 'Angebotspreise verlassen'
+        catalog_price: Katalogpreis
+        negotiated_price: 'Verhandelter Stückpreis'
+        proposed_unit_price: 'Angebotener Stückpreis'
+        requested_quantity: '%quantity% angefragt'
+        subtotal: Zwischensumme
+        discount: Rabatt
+        included_in_price: 'in den Preisen enthalten'
+        total_without_shipping: 'Gesamt (ohne Versand)'
+        prices_indicative: 'Katalogpreise zur Information: Das Angebot unseres Vertriebsteams legt Ihre Preise fest.'
+        lines: Positionen
+        no_lines: 'Keine Position.'
+        variant_deleted: 'Produkt nicht mehr verfügbar'
+        messages: Nachrichten
+        no_messages: 'Noch keine Nachricht.'
+        send_message: 'Nachricht senden'
+        request_changes: 'Änderungen anfragen'
+        accept_and_order: 'Annehmen und bestellen'
+        decline: 'Angebot ablehnen'
+        cancel_request: 'Meine Anfrage stornieren'
+        go_to_checkout: 'Zur Kasse'
+        valid_until: 'Gültig bis'
+        valid_until_date: 'Gültig bis %date%.'
+        requested_at: 'Angefragt am'
+        proposed_at: 'Angebot gesendet am'
+        accepted_at: 'Angenommen am'
+        ordered_at: 'Bestellt am'
+        history: Verlauf
+        conditions: Konditionen
+        guest: Gast
+        view_customer: 'Kunden anzeigen'
+        save_and_send_proposal: 'Speichern und Angebot senden'
+        convert_to_order: 'In Bestellung umwandeln'
+        convert_help: 'Gibt für den Kunden eine Bestellung zu den verhandelten Preisen auf: Das Angebot wird bei Bedarf im Namen des Kunden angenommen und die Bestellbestätigung wird gesendet.'
+        place_order: 'Bestellung aufgeben'
+        author:
+            customer: Kunde
+            admin: Vertriebsteam
+        transition:
+            review: 'Prüfung beginnen'
+            revise: 'Angebot überarbeiten'
+            decline: Ablehnen
+            expire: 'Als abgelaufen markieren'
+            cancel: Stornieren
+        status_help:
+            new: 'Ihre Anfrage wurde an unser Vertriebsteam gesendet.'
+            in_review: 'Unser Vertriebsteam bereitet Ihr Angebot vor.'
+            proposed: 'Unser Angebot ist fertig: Nehmen Sie es an, um zu diesen Preisen zu bestellen, oder fragen Sie Änderungen an.'
+            accepted: 'Sie haben das Angebot angenommen: Schließen Sie Ihre Bestellung zu den verhandelten Preisen ab.'
+            ordered: 'Dieses Angebot wurde bestellt. Vielen Dank!'
+            declined: 'Dieses Angebot wurde abgelehnt.'
+            expired: 'Dieses Angebot ist abgelaufen. Kontaktieren Sie uns oder senden Sie eine neue Anfrage.'
+            cancelled: 'Diese Angebotsanfrage wurde storniert.'
+    status:
+        new: Neu
+        in_review: 'In Prüfung'
+        proposed: 'Angebot gesendet'
+        accepted: Angenommen
+        ordered: Bestellt
+        declined: Abgelehnt
+        expired: Abgelaufen
+        cancelled: Storniert
+    form:
+        company: Firma
+        vat_number: 'USt-IdNr. / Handelsregisternummer'
+        vat_number_help: 'Optional: USt-IdNr., Handelsregisternummer oder eine andere Firmenkennung.'
+        message: Nachricht
+        your_message: 'Ihre Nachricht'
+        desired_quantity: 'Gewünschte Menge'
+        zero_to_remove: 'Menge 0 eingeben, um ein Produkt zu entfernen.'
+        negotiated_unit_price: 'Verhandelter Stückpreis'
+        empty_for_catalog_price: 'Leer: Katalogpreis.'
+        add_product: 'Produkt hinzufügen'
+        discount_amount: 'Gesamtrabatt (Betrag)'
+        discount_percentage: 'Gesamtrabatt (%)'
+        discount_help: 'Wird verwendet, wenn kein Betrag angegeben ist. Gilt für das gesamte Angebot, vor der Steuerberechnung.'
+        valid_until: 'Gültig bis'
+        valid_until_help: 'Leer: Standardgültigkeit beim Senden des Angebots.'
+        internal_note: 'Interne Notiz'
+        internal_note_help: 'Wird dem Kunden nie angezeigt.'
+        message_to_customer: 'Nachricht an den Kunden'
+        no_shipping: 'Kein Versand'
+    email:
+        view_quote: 'Angebot ansehen'
+        open_in_admin: 'Angebot öffnen'
+        link_help: 'Dieser Link ist persönlich: Jeder, der ihn besitzt, kann das Angebot ansehen und annehmen.'
+        admin_new_request:
+            subject: 'Neue Angebotsanfrage %number%'
+            intro: 'Eine neue Angebotsanfrage %number% wurde auf %channel% gesendet.'
+        customer_request_received:
+            subject: 'Ihre Angebotsanfrage %number%'
+            intro: 'Vielen Dank! Wir haben Ihre Angebotsanfrage %number% erhalten und senden Ihnen in Kürze ein Angebot.'
+        customer_proposal:
+            subject: 'Ihr Angebot %number% ist fertig'
+            intro: 'Unser Angebot zu Ihrer Anfrage %number% ist fertig.'
+        admin_accepted:
+            subject: 'Angebot %number% angenommen'
+            intro: 'Der Kunde hat das Angebot %number% angenommen; die Bestellung folgt über den Checkout.'
+        admin_customer_message:
+            subject: 'Neue Nachricht zum Angebot %number%'
+            intro: 'Der Kunde hat zum Angebot %number% geschrieben.'
+        customer_merchant_message:
+            subject: 'Neue Nachricht zu Ihrem Angebot %number%'
+            intro: 'Unser Vertriebsteam hat zu Ihrem Angebot %number% geschrieben.'

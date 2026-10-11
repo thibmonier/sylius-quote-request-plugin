@@ -1,0 +1,31 @@
+tmonier_quote_request:
+    flash:
+        added_to_quote: 'Il prodotto è stato aggiunto alla tua richiesta di preventivo.'
+        invalid_product: 'Questo prodotto non può essere aggiunto a una richiesta di preventivo.'
+        too_many_lines: 'La tua richiesta di preventivo contiene troppi prodotti.'
+        empty_cart: 'Il tuo carrello è vuoto.'
+        login_required: 'Accedi per richiedere un preventivo.'
+        no_product: 'Aggiungi almeno un prodotto alla tua richiesta di preventivo.'
+        request_sent: 'La tua richiesta di preventivo è stata inviata. Ti risponderemo presto.'
+        accepted: 'Preventivo accettato: il tuo carrello contiene i prezzi negoziati.'
+        cannot_accept: 'Questa proposta non può più essere accettata.'
+        declined: 'La proposta è stata rifiutata.'
+        cancelled: 'La richiesta di preventivo è stata annullata.'
+        transition_not_allowed: 'Questa azione non è possibile nello stato attuale del preventivo.'
+        message_sent: 'Il tuo messaggio è stato inviato.'
+        message_invalid: 'Il messaggio non può essere vuoto.'
+        changes_requested: 'La tua richiesta di modifiche è stata inviata.'
+        cart_released: 'Il tuo carrello è tornato ai prezzi di catalogo.'
+        cannot_propose: 'La proposta richiede almeno un prodotto ordinabile.'
+        cannot_convert: 'Solo una proposta ancora valida o un preventivo accettato possono essere convertiti in ordine.'
+        conversion_failed: "Non è stato possibile effettuare l'ordine: %reason%"
+        variant_not_in_channel: 'Questo prodotto non ha un prezzo nel canale del preventivo.'
+        admin:
+            saved: 'Il preventivo è stato salvato.'
+            review: "L'esame del preventivo è iniziato."
+            propose: 'La proposta è stata inviata al cliente.'
+            revise: 'La proposta è tornata in esame.'
+            decline: 'Il preventivo è stato rifiutato.'
+            expire: 'Il preventivo è stato segnato come scaduto.'
+            cancel: 'Il preventivo è stato annullato.'
+            converted: "L'ordine è stato effettuato a partire dal preventivo."

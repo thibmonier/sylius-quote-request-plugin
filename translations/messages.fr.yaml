@@ -1,0 +1,128 @@
+tmonier_quote_request:
+    ui:
+        quote_requests: 'Demandes de devis'
+        my_quotes: 'Mes devis'
+        my_quotes_help: 'Suivez vos demandes de devis et les propositions de notre équipe commerciale.'
+        no_quotes: "Vous n'avez encore demandé aucun devis."
+        quote_number: 'Devis %number%'
+        order_number: 'Commande n° %number%'
+        quote_discount: 'Remise du devis %number%'
+        request_a_quote: 'Demander un devis'
+        request_a_quote_help: 'Indiquez les quantités souhaitées : notre équipe commerciale vous enverra une proposition avec vos prix.'
+        empty_quote_request: 'Votre demande de devis est vide. Ajoutez des produits depuis leur page ou depuis votre panier.'
+        products: Produits
+        add_more_products: "Ajouter d'autres produits"
+        your_details: 'Vos coordonnées'
+        guest_link_help: 'Vous recevrez par e-mail un lien personnel pour suivre votre demande, sans créer de compte.'
+        send_request: 'Envoyer ma demande de devis'
+        need_large_quantities: "Besoin de grandes quantités ou d'un prix professionnel ?"
+        need_large_quantities_help: 'Ajoutez ce produit à une demande de devis et recevez une proposition de notre équipe commerciale.'
+        add_to_quote: 'Ajouter au devis'
+        request_quote_for_cart: 'Demander un devis pour ce panier'
+        request_quote_for_cart_help: 'Recevez une proposition de notre équipe commerciale pour les produits et quantités de votre panier.'
+        cart_from_quote: 'Ce panier provient de votre devis accepté %number%.'
+        cart_from_quote_help: 'Les prix négociés sont verrouillés et le contenu du panier ne peut pas être modifié. Choisissez la livraison et le paiement pour passer commande.'
+        leave_quote: 'Abandonner les prix du devis'
+        catalog_price: 'Prix catalogue'
+        negotiated_price: 'Prix unitaire négocié'
+        proposed_unit_price: 'Prix unitaire proposé'
+        requested_quantity: '%quantity% demandé(s)'
+        subtotal: Sous-total
+        discount: Remise
+        included_in_price: 'incluses dans les prix'
+        total_without_shipping: 'Total (hors livraison)'
+        prices_indicative: 'Prix catalogue à titre indicatif : la proposition de notre équipe commerciale fixera vos prix.'
+        lines: Lignes
+        no_lines: 'Aucune ligne.'
+        variant_deleted: 'Produit plus disponible'
+        messages: Messages
+        no_messages: "Aucun message pour l'instant."
+        send_message: 'Envoyer le message'
+        request_changes: 'Demander des modifications'
+        accept_and_order: 'Accepter et commander'
+        decline: 'Refuser la proposition'
+        cancel_request: 'Annuler ma demande'
+        go_to_checkout: 'Passer commande'
+        valid_until: "Valable jusqu'au"
+        valid_until_date: "Valable jusqu'au %date%."
+        requested_at: 'Demandé le'
+        proposed_at: 'Proposition envoyée le'
+        accepted_at: 'Accepté le'
+        ordered_at: 'Commandé le'
+        history: Historique
+        conditions: Conditions
+        guest: Invité
+        view_customer: 'Voir le client'
+        save_and_send_proposal: 'Enregistrer et envoyer la proposition'
+        convert_to_order: 'Convertir en commande'
+        convert_help: "Passe une commande pour le client aux prix négociés : le devis est accepté au nom du client si nécessaire et l'e-mail de confirmation de commande est envoyé."
+        place_order: 'Passer la commande'
+        author:
+            customer: Client
+            admin: 'Équipe commerciale'
+        transition:
+            review: "Commencer l'étude"
+            revise: 'Modifier la proposition'
+            decline: Refuser
+            expire: 'Marquer comme expiré'
+            cancel: Annuler
+        status_help:
+            new: 'Votre demande a été transmise à notre équipe commerciale.'
+            in_review: 'Notre équipe commerciale prépare votre proposition.'
+            proposed: 'Notre proposition est prête : acceptez-la pour commander à ces prix, ou demandez des modifications.'
+            accepted: 'Vous avez accepté la proposition : finalisez votre commande aux prix négociés.'
+            ordered: 'Ce devis a été commandé. Merci !'
+            declined: 'Ce devis a été refusé.'
+            expired: 'Cette proposition a expiré. Contactez-nous ou envoyez une nouvelle demande.'
+            cancelled: 'Cette demande de devis a été annulée.'
+    status:
+        new: Nouveau
+        in_review: "En cours d'étude"
+        proposed: 'Proposition envoyée'
+        accepted: Accepté
+        ordered: Commandé
+        declined: Refusé
+        expired: Expiré
+        cancelled: Annulé
+    form:
+        company: Société
+        vat_number: 'N° de TVA / SIREN'
+        vat_number_help: "Facultatif : numéro de TVA, SIREN ou tout identifiant d'entreprise."
+        message: Message
+        your_message: 'Votre message'
+        desired_quantity: 'Quantité souhaitée'
+        zero_to_remove: 'Indiquez 0 pour retirer un produit.'
+        negotiated_unit_price: 'Prix unitaire négocié'
+        empty_for_catalog_price: 'Vide : prix catalogue.'
+        add_product: 'Ajouter un produit'
+        discount_amount: 'Remise globale (montant)'
+        discount_percentage: 'Remise globale (%)'
+        discount_help: "Utilisée si aucun montant n'est saisi. Appliquée à tout le devis, avant le calcul des taxes."
+        valid_until: "Valable jusqu'au"
+        valid_until_help: "Vide : validité par défaut à l'envoi de la proposition."
+        internal_note: 'Note interne'
+        internal_note_help: 'Jamais affichée au client.'
+        message_to_customer: 'Message au client'
+        no_shipping: 'Pas de livraison'
+    email:
+        view_quote: 'Voir le devis'
+        open_in_admin: 'Ouvrir le devis'
+        link_help: 'Ce lien est personnel : toute personne qui le possède peut consulter et accepter le devis.'
+        admin_new_request:
+            subject: 'Nouvelle demande de devis %number%'
+            intro: 'Une nouvelle demande de devis %number% a été envoyée sur %channel%.'
+        customer_request_received:
+            subject: 'Votre demande de devis %number%'
+            intro: 'Merci ! Nous avons bien reçu votre demande de devis %number% et vous enverrons une proposition rapidement.'
+        customer_proposal:
+            subject: 'Votre devis %number% est prêt'
+            intro: 'Notre proposition pour votre demande de devis %number% est prête.'
+        admin_accepted:
+            subject: 'Devis %number% accepté'
+            intro: 'Le client a accepté le devis %number% ; la commande suivra le tunnel de commande.'
+        admin_customer_message:
+            subject: 'Nouveau message sur le devis %number%'
+            intro: 'Le client a écrit au sujet du devis %number%.'
+        customer_merchant_message:
+            subject: 'Nouveau message sur votre devis %number%'
+            intro: 'Notre équipe commerciale a écrit au sujet de votre devis %number%.'

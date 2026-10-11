@@ -1,0 +1,15 @@
+{% extends '@SyliusCore/Email/layout.html.twig' %}
+
+{% block subject %}
+    {{- 'tmonier_quote_request.email.customer_proposal.subject'|trans({'%number%': quoteRequest.number}, null, localeCode) -}}
+{% endblock %}
+
+{% block content %}
+    <div style="text-align: left;">
+        <p>{{ 'tmonier_quote_request.email.customer_proposal.intro'|trans({'%number%': quoteRequest.number, '%channel%': channel.name}, null, localeCode)|e }}</p>
+        {% if quoteRequest.validUntil %}<p><strong>{{ 'tmonier_quote_request.ui.valid_until_date'|trans({'%date%': quoteRequest.validUntil|date('Y-m-d')}, null, localeCode)|e }}</strong></p>{% endif %}
+        {% include '@TmonierSyliusQuoteRequestPlugin/email/_summary.html.twig' with { with_prices: true } %}
+        {% include '@TmonierSyliusQuoteRequestPlugin/email/_last_message.html.twig' %}
+        {% include '@TmonierSyliusQuoteRequestPlugin/email/_link.html.twig' %}
+    </div>
+{% endblock %}
