@@ -170,6 +170,68 @@ final class ShopQuoteRequestTest extends WebTestCase
         self::assertResponseStatusCodeSame(404);
     }
 
+    public function testGuestRequestsAreRateLimitedPerEmail(): void
+    {
+        [$variant] = $this->sellableVariants(1);
+
+        for ($attempt = 1; $attempt <= 4; ++$attempt) {
+            $this->addToBasket($variant, 5);
+            $crawler = $this->client->request('GET', $this->shopUrl('/quote-request'));
+            $this->client->submit($crawler->filter('[data-test-tmonier-quote-submit]')->form([
+                'tmonier_quote_request[firstName]' => 'Spam',
+                'tmonier_quote_request[lastName]' => 'Bot',
+                'tmonier_quote_request[email]' => 'victim@example.com',
+            ]));
+        }
+
+        self::assertResponseStatusCodeSame(429);
+        self::assertSame(3, $this->entityManager()->getRepository(QuoteRequest::class)->count(['email' => 'victim@example.com']));
+    }
+
+    public function testTheHoneypotSilentlyDropsTheRequest(): void
+    {
+        [$variant] = $this->sellableVariants(1);
+        $this->addToBasket($variant, 5);
+        $crawler = $this->client->request('GET', $this->shopUrl('/quote-request'));
+
+        $this->client->submit($crawler->filter('[data-test-tmonier-quote-submit]')->form([
+            'tmonier_quote_request[firstName]' => 'Spam',
+            'tmonier_quote_request[lastName]' => 'Bot',
+            'tmonier_quote_request[email]' => 'bot@example.com',
+            'tmonier_quote_request[website]' => 'http://spam.example',
+        ]));
+
+        self::assertResponseRedirects($this->shopUrl('/'));
+        self::assertEmailCount(0);
+        self::assertSame(0, $this->entityManager()->getRepository(QuoteRequest::class)->count(['email' => 'bot@example.com']));
+    }
+
+    public function testCustomerEmailsDoNotRepeatTheDetailsTypedInTheFormAndLinksIgnoreTheHostHeader(): void
+    {
+        [$variant] = $this->sellableVariants(1);
+        $this->addToBasket($variant, 5);
+        $crawler = $this->client->request('GET', $this->shopUrl('/quote-request'));
+        $form = $crawler->filter('[data-test-tmonier-quote-submit]')->form([
+            'tmonier_quote_request[company]' => 'Your account is suspended call 555-0100',
+            'tmonier_quote_request[firstName]' => 'Mallory',
+            'tmonier_quote_request[lastName]' => 'Phisher',
+            'tmonier_quote_request[email]' => 'someone@example.com',
+        ]);
+
+        $this->client->request('POST', (string) $form->getUri(), $form->getPhpValues(), [], ['HTTP_HOST' => 'localhost', 'HTTP_X_FORWARDED_HOST' => 'evil.example']);
+
+        self::assertEmailCount(2);
+        $adminEmail = self::getMailerMessage(0);
+        $customerEmail = self::getMailerMessage(1);
+        self::assertNotNull($adminEmail);
+        self::assertNotNull($customerEmail);
+        self::assertEmailHtmlBodyContains($adminEmail, 'Your account is suspended call 555-0100');
+        self::assertEmailHtmlBodyNotContains($customerEmail, 'Your account is suspended');
+        self::assertEmailHtmlBodyContains($adminEmail, 'https://localhost/admin/quote-requests/');
+        self::assertEmailHtmlBodyNotContains($adminEmail, 'evil.example');
+        self::assertEmailHtmlBodyContains($customerEmail, 'https://localhost/' . $this->localeCode() . '/quotes/');
+    }
+
     private function addToBasket(ProductVariantInterface $variant, int $quantity): void
     {
         $product = $variant->getProduct();

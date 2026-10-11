@@ -116,6 +116,19 @@ checkout and the admin conversion.
 - **Adapter-agnostic "ordered"**: Doctrine `onFlush` listener on orders whose `checkoutState`
   changes to `completed` (works with Winzou), in addition to the Symfony Workflow listener.
 
+## 2c. Review fixes (2026-10-11)
+
+Orderability checks on accept and conversion; conversion follows the real checkout state
+(skipped steps), checks the chosen shipping method, validates with `sylius_checkout_complete`,
+runs in one locked transaction and never completes the customer's own cart (dedicated cart);
+events after commit; quote graph pinned to the Symfony Workflow adapter, Winzou fallback on
+onFlush/postFlush; validity at 23:59:59 and default validity when re-proposing with a past
+date; e-mail links from `base_url` / channel hostname; guest rate limit + honeypot + minimal
+customer e-mails; owner-only access to account quotes; customer decline only on proposals;
+PDF engine probe, failure-tolerant proposal e-mail, attachment kept for async workers,
+wkhtmltopdf sandbox options; prorated fixed discount; memoised quote lookup (no query for
+regular carts); ordered demo quote; export-ignore list.
+
 ## 3. Model
 
 - `QuoteRequest` (`tmonier_quote_request`): number (`Q000042`, from the id), status, token,

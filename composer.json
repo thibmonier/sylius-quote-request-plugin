@@ -40,7 +40,8 @@
         "winzou/state-machine-bundle": "^0.6"
     },
     "suggest": {
-        "knplabs/knp-snappy-bundle": "Quote PDF (download and proposal e-mail attachment) with wkhtmltopdf"
+        "knplabs/knp-snappy-bundle": "Quote PDF (download and proposal e-mail attachment) with wkhtmltopdf",
+        "knplabs/knp-snappy": "Quote PDF with the pdf_binary option, without KnpSnappyBundle"
     },
     "config": {
         "sort-packages": true,

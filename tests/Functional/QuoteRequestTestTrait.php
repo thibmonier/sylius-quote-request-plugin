@@ -36,6 +36,10 @@ trait QuoteRequestTestTrait
         $this->client = self::createClient();
         $this->client->disableReboot();
         $this->connection()->beginTransaction();
+        // Rate limiter state of the previous tests.
+        $pool = self::getContainer()->get('cache.tmonier_quote_request_limiter');
+        self::assertInstanceOf(\Psr\Cache\CacheItemPoolInterface::class, $pool);
+        $pool->clear();
     }
 
     private function tearDownClient(): void

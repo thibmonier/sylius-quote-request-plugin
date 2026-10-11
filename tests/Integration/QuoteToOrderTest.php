@@ -60,7 +60,7 @@ final class QuoteToOrderTest extends KernelTestCase
         $expectedTotals = $this->totalsCalculator()->calculate($quote);
 
         $cart = $this->manager()->accept($quote, $this->customer(), false);
-        $this->checkout($cart);
+        $this->checkout($cart, $quote);
 
         self::assertSame(OrderInterface::STATE_NEW, $cart->getState());
         self::assertSame(QuoteRequestStatuses::ORDERED, $quote->getStatus());
@@ -192,6 +192,54 @@ final class QuoteToOrderTest extends KernelTestCase
         self::assertNotNull($reloaded->getOrderedAt());
     }
 
+    public function testAProductNoLongerSoldAfterTheAcceptanceLeavesTheCart(): void
+    {
+        [$first, $second] = $this->variants();
+        $quote = $this->proposedQuote([[$first, 2, 1000], [$second, 3, 2000]]);
+        $quote->setDiscountAmount(800);
+        $cart = $this->manager()->accept($quote, $this->customer(), false);
+        self::assertCount(2, $cart->getItems());
+
+        $second->setEnabled(false);
+        $this->orderProcessor()->process($cart);
+
+        self::assertCount(1, $cart->getItems());
+        self::assertSame([1000], $this->unitPrices($cart));
+        // 800 on an 8000 proposal: the remaining 2000 keep 200 of it.
+        self::assertSame(-200, $cart->getAdjustmentsTotalRecursively(AdjustmentInterface::ORDER_PROMOTION_ADJUSTMENT));
+    }
+
+    public function testAChangeMadeMeanwhileIsDetectedUnderTheLock(): void
+    {
+        [$first] = $this->variants();
+        $quote = $this->proposedQuote([[$first, 2, 1000]]);
+        $this->entityManager()->getConnection()->executeStatement('UPDATE tmonier_quote_request SET status = ? WHERE id = ?', [QuoteRequestStatuses::CANCELLED, $quote->getId()]);
+
+        try {
+            $this->manager()->accept($quote, $this->customer(), false);
+            self::fail('The concurrent change must be detected.');
+        } catch (\Tmonier\SyliusQuoteRequestPlugin\Manager\QuoteTransitionException $exception) {
+            self::assertStringContainsString('changed meanwhile', $exception->getMessage());
+        }
+
+        $status = $this->entityManager()->getConnection()->fetchOne('SELECT status FROM tmonier_quote_request WHERE id = ?', [$quote->getId()]);
+        self::assertSame(QuoteRequestStatuses::CANCELLED, $status);
+        $orders = $this->entityManager()->getConnection()->fetchOne('SELECT order_id FROM tmonier_quote_request WHERE id = ?', [$quote->getId()]);
+        self::assertNull($orders, 'No cart was created.');
+    }
+
+    public function testAProposalWithAPastValidityGetsTheDefaultOne(): void
+    {
+        [$first] = $this->variants();
+        $quote = $this->proposedQuote([[$first, 2, 1000]]);
+        $this->manager()->apply($quote, QuoteRequestTransitions::TRANSITION_REVISE);
+        $quote->setValidUntil(new \DateTimeImmutable('-3 days'));
+
+        $this->manager()->apply($quote, QuoteRequestTransitions::TRANSITION_PROPOSE);
+
+        self::assertSame((new \DateTimeImmutable('+30 days'))->format('Y-m-d') . ' 23:59:59', $quote->getValidUntil()?->format('Y-m-d H:i:s'));
+    }
+
     /**
      * @param list<array{0: ProductVariantInterface, 1: int, 2: int}> $lines
      */
@@ -214,7 +262,7 @@ final class QuoteToOrderTest extends KernelTestCase
         return $quote;
     }
 
-    private function checkout(OrderInterface $cart): void
+    private function checkout(OrderInterface $cart, ?QuoteRequestInterface $quote = null): void
     {
         /** @var StateMachineInterface $stateMachine */
         $stateMachine = self::getContainer()->get('sylius_abstraction.state_machine');
@@ -223,9 +271,16 @@ final class QuoteToOrderTest extends KernelTestCase
         $cart->setBillingAddress(clone $address);
 
         foreach ([OrderCheckoutTransitions::TRANSITION_ADDRESS, OrderCheckoutTransitions::TRANSITION_SELECT_SHIPPING, OrderCheckoutTransitions::TRANSITION_SELECT_PAYMENT, OrderCheckoutTransitions::TRANSITION_COMPLETE] as $transition) {
-            self::assertTrue($stateMachine->can($cart, OrderCheckoutTransitions::GRAPH, $transition), sprintf('Checkout transition "%s".', $transition));
-            $stateMachine->apply($cart, OrderCheckoutTransitions::GRAPH, $transition);
+            // Sylius skips the shipping / payment steps by itself when there is nothing to choose.
+            if (OrderCheckoutTransitions::TRANSITION_COMPLETE === $transition || $stateMachine->can($cart, OrderCheckoutTransitions::GRAPH, $transition)) {
+                $stateMachine->apply($cart, OrderCheckoutTransitions::GRAPH, $transition);
+            }
             $this->orderProcessor()->process($cart);
+        }
+
+        // The Symfony Workflow listener marks the quote before anything is flushed.
+        if (null !== $quote) {
+            self::assertSame(QuoteRequestStatuses::ORDERED, $quote->getStatus());
         }
         $this->entityManager()->flush();
     }

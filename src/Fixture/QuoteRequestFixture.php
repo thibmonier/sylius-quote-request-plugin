@@ -7,11 +7,14 @@ namespace Tmonier\SyliusQuoteRequestPlugin\Fixture;
 use Doctrine\Persistence\ObjectManager;
 use Psr\Clock\ClockInterface;
 use Sylius\Bundle\FixturesBundle\Fixture\AbstractFixture;
+use Sylius\Component\Core\Model\AddressInterface;
 use Sylius\Component\Core\Model\ChannelInterface;
 use Sylius\Component\Core\Model\CustomerInterface;
 use Sylius\Component\Core\Model\ProductVariantInterface;
 use Sylius\Resource\Doctrine\Persistence\RepositoryInterface;
+use Sylius\Resource\Factory\FactoryInterface;
 use Symfony\Component\Config\Definition\Builder\ArrayNodeDefinition;
+use Tmonier\SyliusQuoteRequestPlugin\Conversion\QuoteOrderConverterInterface;
 use Tmonier\SyliusQuoteRequestPlugin\Entity\QuoteMessageInterface;
 use Tmonier\SyliusQuoteRequestPlugin\Entity\QuoteRequestInterface;
 use Tmonier\SyliusQuoteRequestPlugin\Entity\QuoteRequestLineInterface;
@@ -34,7 +37,7 @@ final class QuoteRequestFixture extends AbstractFixture
         QuoteRequestStatuses::DECLINED,
         QuoteRequestStatuses::EXPIRED,
         QuoteRequestStatuses::CANCELLED,
-        QuoteRequestStatuses::NEW,
+        QuoteRequestStatuses::ORDERED,
     ];
 
     private const COMPANIES = ['Acme Industries', 'Globex Corporation', 'Initech', 'Umbrella Supplies', 'Stark Logistics', 'Wayne Office Furniture', 'Hooli Services', 'Vandelay Imports'];
@@ -43,6 +46,7 @@ final class QuoteRequestFixture extends AbstractFixture
      * @param RepositoryInterface<ChannelInterface> $channelRepository
      * @param RepositoryInterface<CustomerInterface> $customerRepository
      * @param RepositoryInterface<ProductVariantInterface> $variantRepository
+     * @param FactoryInterface<AddressInterface> $addressFactory
      */
     public function __construct(
         private readonly QuoteRequestFactoryInterface $factory,
@@ -52,6 +56,8 @@ final class QuoteRequestFixture extends AbstractFixture
         private readonly RepositoryInterface $customerRepository,
         private readonly RepositoryInterface $variantRepository,
         private readonly ClockInterface $clock,
+        private readonly QuoteOrderConverterInterface $converter,
+        private readonly FactoryInterface $addressFactory,
     ) {
     }
 
@@ -73,7 +79,7 @@ final class QuoteRequestFixture extends AbstractFixture
             static fn (CustomerInterface $customer): bool => null !== $customer->getUser(),
         ));
         /** @var list<ProductVariantInterface> $variants */
-        $variants = $this->variantRepository->findBy(['enabled' => true], ['id' => 'ASC'], 60);
+        $variants = $this->variantRepository->findBy(['enabled' => true, 'tracked' => false], ['id' => 'ASC'], 60);
 
         $channel = $channels[0] ?? null;
         if (null === $channel || [] === $variants) {
@@ -162,8 +168,32 @@ final class QuoteRequestFixture extends AbstractFixture
             QuoteRequestStatuses::ACCEPTED => $this->manager->accept($quote, $quote->getCustomer(), false),
             QuoteRequestStatuses::DECLINED => $this->manager->apply($quote, QuoteRequestTransitions::TRANSITION_DECLINE),
             QuoteRequestStatuses::EXPIRED => $this->expire($quote),
+            QuoteRequestStatuses::ORDERED => $this->order($quote),
             default => null,
         };
+    }
+
+    /** Placed by the merchant with the default shipping and payment methods (payment awaiting). */
+    private function order(QuoteRequestInterface $quote): void
+    {
+        $address = $quote->getCustomer()?->getDefaultAddress();
+        if (null === $address) {
+            $address = $this->addressFactory->createNew();
+            $address->setFirstName($quote->getFirstName() ?? 'Alex');
+            $address->setLastName($quote->getLastName() ?? 'Buyer');
+            $address->setCompany($quote->getCompany());
+            $address->setStreet('1 Main Street');
+            $address->setCity('New York');
+            $address->setPostcode('10001');
+            $address->setCountryCode('US');
+        }
+
+        try {
+            $this->converter->convert($quote, $address, null, null);
+        } catch (\RuntimeException) {
+            // QuoteTransitionException included.
+            // Random fixtures without method for this address: the quote stays proposed.
+        }
     }
 
     private function expire(QuoteRequestInterface $quote): void

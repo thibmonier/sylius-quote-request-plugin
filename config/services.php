@@ -346,6 +346,8 @@ return static function (ContainerConfigurator $container): void {
                 service('sylius.repository.customer'),
                 service('sylius.repository.product_variant'),
                 service('clock'),
+                service('tmonier_quote_request.order_converter'),
+                service('sylius.factory.address'),
             ])
             ->tag('sylius_fixtures.fixture')
         ;

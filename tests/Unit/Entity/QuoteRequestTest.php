@@ -119,4 +119,14 @@ final class QuoteRequestTest extends TestCase
         $line->setDiscountTiers([['min_quantity' => 1, 'value' => 25.0]]);
         self::assertSame(0, $line->getEffectiveUnitPrice());
     }
+
+    public function testTheValidityDateIsTheEndOfTheDay(): void
+    {
+        $quote = new QuoteRequest();
+        $quote->setValidUntil(new \DateTimeImmutable('2026-10-20 00:00:00'));
+
+        self::assertSame('2026-10-20 23:59:59', $quote->getValidUntil()?->format('Y-m-d H:i:s'));
+        self::assertTrue($quote->isValidAt(new \DateTimeImmutable('2026-10-20 18:00:00')));
+        self::assertFalse($quote->isValidAt(new \DateTimeImmutable('2026-10-21 00:00:00')));
+    }
 }

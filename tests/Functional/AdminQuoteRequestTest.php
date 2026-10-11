@@ -336,6 +336,90 @@ final class AdminQuoteRequestTest extends WebTestCase
         self::assertEmailCount(0);
     }
 
+    public function testAQuoteWithNothingToShipIsConvertedInOneClick(): void
+    {
+        $customer = $this->customerWithDefaultAddress();
+        [$variant] = $this->sellableVariants(1);
+        $variant->setShippingRequired(false);
+        $this->entityManager()->flush();
+        $quote = $this->createQuote([[$variant, 2, 900]], $customer, QuoteRequestStatuses::PROPOSED);
+        $this->loginAdmin();
+
+        $crawler = $this->client->request('GET', sprintf('/admin/quote-requests/%d', $this->idOf($quote)));
+        $this->client->submit($crawler->filter('[data-test-tmonier-quote-convert-now]')->form());
+
+        $quote = $this->reloadQuote($quote);
+        $order = $quote->getOrder();
+        self::assertInstanceOf(OrderInterface::class, $order);
+        self::assertResponseRedirects(sprintf('/admin/orders/%d', $this->idOf($order)));
+        self::assertSame(QuoteRequestStatuses::ORDERED, $quote->getStatus());
+        self::assertFalse($order->hasShipments());
+        self::assertSame('completed', $order->getCheckoutState());
+    }
+
+    public function testAnOutOfStockProductStopsTheConversion(): void
+    {
+        $customer = $this->customerWithDefaultAddress();
+        [$variant] = $this->sellableVariants(1);
+        $quote = $this->createQuote([[$variant, 5, 900]], $customer, QuoteRequestStatuses::ACCEPTED);
+        $variant->setTracked(true);
+        $variant->setOnHand(1);
+        $variant->setOnHold(0);
+        $this->entityManager()->flush();
+        $this->loginAdmin();
+
+        $crawler = $this->client->request('GET', sprintf('/admin/quote-requests/%d', $this->idOf($quote)));
+        $this->client->submit($crawler->filter('[data-test-tmonier-quote-convert-now]')->form());
+
+        self::assertResponseRedirects(sprintf('/admin/quote-requests/%d/convert', $this->idOf($quote)));
+        $crawler = $this->client->followRedirect();
+        self::assertStringContainsString('The order could not be placed', implode(' ', $this->flashes($crawler)));
+        $quote = $this->reloadQuote($quote);
+        self::assertSame(QuoteRequestStatuses::ACCEPTED, $quote->getStatus());
+        self::assertNotSame('completed', $quote->getOrder()?->getCheckoutState());
+    }
+
+    public function testConvertingAnAcceptedQuoteLeavesTheCustomerCartAlone(): void
+    {
+        $customer = $this->customerWithDefaultAddress();
+        [$variant] = $this->sellableVariants(1);
+        $quote = $this->createQuote([[$variant, 3, 1200]], $customer, QuoteRequestStatuses::ACCEPTED);
+        $customerCart = $quote->getOrder();
+        self::assertInstanceOf(OrderInterface::class, $customerCart);
+        $customerCartId = $this->idOf($customerCart);
+        $this->loginAdmin();
+
+        $crawler = $this->client->request('GET', sprintf('/admin/quote-requests/%d', $this->idOf($quote)));
+        $this->client->submit($crawler->filter('[data-test-tmonier-quote-convert-now]')->form());
+
+        $quote = $this->reloadQuote($quote);
+        $order = $quote->getOrder();
+        self::assertInstanceOf(OrderInterface::class, $order);
+        self::assertNotSame($customerCartId, $order->getId());
+        self::assertSame(QuoteRequestStatuses::ORDERED, $quote->getStatus());
+        $customerCart = $this->entityManager()->find(OrderInterface::class, $customerCartId);
+        self::assertInstanceOf(OrderInterface::class, $customerCart);
+        self::assertSame(OrderInterface::STATE_CART, $customerCart->getState());
+        foreach ($customerCart->getItems() as $item) {
+            self::assertFalse($item->isImmutable(), 'The released cart is back to the catalog prices.');
+        }
+    }
+
+    public function testTheValidityDateLastsUntilTheEndOfTheDay(): void
+    {
+        [$variant] = $this->sellableVariants(1);
+        $quote = $this->createQuote([[$variant, 10]]);
+        $this->loginAdmin();
+        $date = new \DateTimeImmutable('+5 days');
+
+        $crawler = $this->client->request('GET', sprintf('/admin/quote-requests/%d', $this->idOf($quote)));
+        $this->client->submit($crawler->filter('#tmonier_quote_request_admin_save')->form([
+            'tmonier_quote_request_admin[validUntil]' => $date->format('Y-m-d'),
+        ]));
+
+        self::assertSame($date->format('Y-m-d') . ' 23:59:59', $this->reloadQuote($quote)->getValidUntil()?->format('Y-m-d H:i:s'));
+    }
+
     /** @return list<ShippingMethodInterface> */
     private function shippingMethods(): array
     {
@@ -346,6 +430,22 @@ final class AdminQuoteRequestTest extends WebTestCase
         $methods = $repository->findEnabledForChannel($this->channel());
 
         return $methods;
+    }
+
+    private function customerWithDefaultAddress(): \Sylius\Component\Core\Model\CustomerInterface
+    {
+        $customer = $this->shopCustomer();
+        $address = new \Sylius\Component\Core\Model\Address();
+        $address->setFirstName('Ada');
+        $address->setLastName('Buyer');
+        $address->setStreet('1 Main Street');
+        $address->setCity('New York');
+        $address->setPostcode('10001');
+        $address->setCountryCode('US');
+        $customer->setDefaultAddress($address);
+        $this->entityManager()->flush();
+
+        return $customer;
     }
 
     private function shippingMethodOfZone(string $zoneCode): ShippingMethodInterface

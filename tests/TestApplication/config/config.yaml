@@ -9,7 +9,6 @@ parameters:
 tmonier_sylius_quote_request:
     allow_guests: '%env(bool:TMONIER_QUOTE_ALLOW_GUESTS)%'
     rate_limit:
-        # Fresh limiter state for every test kernel.
         cache_pool: cache.tmonier_quote_request_limiter
     customer_group_discounts:
         retail: 5
@@ -18,8 +17,9 @@ tmonier_sylius_quote_request:
 framework:
     cache:
         pools:
+            # Filesystem (an array pool is reset between requests); cleared by every functional test.
             cache.tmonier_quote_request_limiter:
-                adapter: cache.adapter.array
+                adapter: cache.adapter.filesystem
 
 twig:
     paths:

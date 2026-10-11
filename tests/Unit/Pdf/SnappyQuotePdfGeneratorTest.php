@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Tmonier\SyliusQuoteRequestPlugin\Unit\Pdf;
 
 use Knp\Snappy\GeneratorInterface;
+use Knp\Snappy\Pdf;
 use PHPUnit\Framework\TestCase;
 use Tmonier\SyliusQuoteRequestPlugin\Entity\QuoteRequest;
 use Tmonier\SyliusQuoteRequestPlugin\Pdf\SnappyQuotePdfGenerator;
@@ -27,7 +28,7 @@ final class SnappyQuotePdfGeneratorTest extends TestCase
         $snappy = $this->createMock(GeneratorInterface::class);
         $snappy->expects(self::once())
             ->method('getOutputFromHtml')
-            ->with('<h1>Q000042</h1>', self::arrayHasKey('page-size'))
+            ->with('<h1>Q000042</h1>', self::callback(static fn (array $options): bool => true === $options['disable-local-file-access'] && true === $options['disable-javascript']))
             ->willReturn('%PDF-1.4 rendered')
         ;
         $generator = new SnappyQuotePdfGenerator($this->twig(), $snappy);
@@ -42,5 +43,19 @@ final class SnappyQuotePdfGeneratorTest extends TestCase
     private function twig(): Environment
     {
         return new Environment(new ArrayLoader([SnappyQuotePdfGenerator::TEMPLATE => '<h1>{{ quote_request.number }}</h1>']));
+    }
+
+    public function testABundleEngineWithoutWorkingBinaryIsUnavailable(): void
+    {
+        $generator = new SnappyQuotePdfGenerator($this->twig(), new Pdf('/nonexistent/wkhtmltopdf'));
+
+        self::assertFalse($generator->isAvailable());
+    }
+
+    public function testABinaryFoundInThePathIsAccepted(): void
+    {
+        $generator = new SnappyQuotePdfGenerator($this->twig(), new Pdf('sh'));
+
+        self::assertTrue($generator->isAvailable());
     }
 }

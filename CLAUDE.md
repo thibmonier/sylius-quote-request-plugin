@@ -23,7 +23,7 @@ Local env overrides (gitignored): `compose.override.yml` (MySQL published on 332
 8041/1041), `tests/TestApplication/.env.local` (DATABASE_URL + MAILER_DSN) and
 `.env.test.local` (DATABASE_URL). Databases: `tmonier_sylius_quote_request_dev` / `_test`,
 both loaded with the default fixture suite, which includes the `tmonier_quote_request` demo
-fixture (8 quotes in every status). Dev server:
+fixture (8 quotes in every status, ordered included when the random fixtures allow it). Dev server:
 `symfony server:start -d --port=8088 --no-tls` (admin `sylius` / `sylius`, shop
 `shop@example.com` / `sylius`).
 
@@ -65,6 +65,18 @@ fixture (8 quotes in every status). Dev server:
   ResourceController + grid `tmonier_quote_request_admin_quote_request`.
 - Twig: `Twig/QuoteRequestExtension` (`tmonier_quote_request_totals`, `_can`, `_cart_quote`,
   `_setting`, `_shows_prices`, `_status_color`). Hooks in `config/twig_hooks`.
+
+- Locks and atomicity: `QuoteRequestManager::transactional()` (transaction + `SELECT ... FOR
+  UPDATE` on the quote with a status re-check, events dispatched after commit, EM cleared on
+  failure). Accept, startCheckout, apply and the conversion use it.
+- `Checkout/QuoteOrderabilityChecker`: accept guard, synchronizer (unsellable lines left out,
+  fixed discount prorated), conversion validated with `sylius_checkout_complete`.
+- Real PDF: `WKHTMLTOPDF_PATH=$PWD/tests/TestApplication/bin/wkhtmltopdf-docker` (clear
+  var/cache/test) runs `QuotePdfRenderingTest` with wkhtmltopdf in Docker and pdftotext.
+- Winzou: `winzou/state-machine-bundle` is a dev dependency registered in the test app;
+  `TEST_SYLIUS_STATE_MACHINE_ADAPTER=winzou_state_machine` switches the Sylius graphs
+  (`WinzouStateMachineTest`). The rate limiter of the test app uses a filesystem pool cleared
+  by every functional test.
 
 ## Rules
 

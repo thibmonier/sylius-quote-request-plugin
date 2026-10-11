@@ -69,7 +69,7 @@ open source.
   proposal (customer), acceptance (merchant), messages (the other party).
 - Events for integrators: `tmonier_quote_request.created`, `.proposed`, `.accepted`,
   `.ordered`, `.declined`, `.expired`, `.cancelled`, `.changes_requested`, `.message_posted`.
-- Demo fixture `tmonier_quote_request` (quotes in every status).
+- Demo fixture `tmonier_quote_request` (quotes in every status, one of them ordered).
 - Translations in English, French, German, Spanish, Italian, Dutch and Polish; Twig Hooks;
   MySQL, MariaDB and PostgreSQL migrations.
 
@@ -108,11 +108,16 @@ Screenshots go in `docs/images/`.
 | Sylius | 2.2, 2.3 |
 | Symfony | 6.4, 7.4, 8.0 |
 
-The quote becomes *ordered* on `workflow.sylius_order_checkout.completed.complete` (Symfony
-Workflow adapter, the Sylius 2 default) and, whatever the adapter (Winzou included), when an
-order whose checkout state becomes `completed` is flushed (Doctrine `onFlush` listener).
+State machines: the quote graph `tmonier_quote_request` is always mapped to the Symfony
+Workflow adapter (`graphs_to_adapters_mapping`), so it works when the shop keeps
+`default_adapter: winzou_state_machine`. The quote becomes *ordered* on
+`workflow.sylius_order_checkout.completed.complete` (Symfony Workflow adapter, the Sylius 2
+default) and, whatever the adapter (Winzou included), when an order whose checkout state
+becomes `completed` is flushed (Doctrine `onFlush` listener, event dispatched on `postFlush`).
+Both paths are tested.
 
-Optional: `knplabs/knp-snappy-bundle` and wkhtmltopdf for the quote PDF.
+Optional: `knplabs/knp-snappy-bundle` (or `knplabs/knp-snappy` with `pdf_binary`) and
+wkhtmltopdf for the quote PDF. Required: `symfony/rate-limiter` (guest rate limits).
 
 ## Installation
 
@@ -169,8 +174,18 @@ tmonier_sylius_quote_request:
     max_lines: 100              # lines of one request
     customer_group_discounts:   # global discount (%) suggested by customer group code
         wholesale: 12.5
-    pdf_binary: ~               # wkhtmltopdf path, when KnpSnappyBundle is not installed
+    pdf_binary: ~               # wkhtmltopdf path, with knplabs/knp-snappy, when KnpSnappyBundle is not installed
+    base_url: ~                 # base of the links in the e-mails; the channel hostname when null
+    rate_limit:                 # guests: quote requests and messages
+        enabled: true
+        per_ip: 10
+        per_email: 3
+        interval: '1 hour'
+        cache_pool: cache.rate_limiter
 ```
+
+Validity dates are stored as the end of the day (23:59:59) in the PHP default timezone: use
+the same `date.timezone` for PHP-FPM and for the cron running `tmonier:quote-request:expire`.
 
 `allow_guests` (like the other flags) accepts an env variable, e.g.
 `'%env(bool:QUOTE_ALLOW_GUESTS)%'`.
@@ -193,19 +208,33 @@ public function onAccepted(QuoteRequestEvent $event): void
 }
 ```
 
-`created`, `proposed`, `accepted` and the messages events are dispatched after the change is
-flushed; `ordered` is dispatched during the checkout completion (flushed with the order). The
-Symfony Workflow events of `tmonier_quote_request` are available too.
+`created`, `proposed`, `accepted`, `declined`, `cancelled`, `expired` and the messages events
+are dispatched once the change is committed (accept, convert and the merchant transitions run
+in a transaction holding a lock on the quote row). `ordered` is dispatched during the checkout
+completion with the Symfony Workflow adapter (flushed with the order), or after the flush on
+the Winzou path; on the first path, listeners must not flush. The Symfony Workflow events of
+`tmonier_quote_request` are available too.
 
 ## Security
 
-- The secret link is the only access for guests: 256-bit tokens, compared in constant time,
-  limited to the channel of the quote. Anyone holding the link can view and accept the quote
-  (as stated in the e-mail).
-- *My quotes* only shows the quotes of the logged-in customer (404 otherwise).
+- The secret link is the access of **guest** quotes: 256-bit tokens, compared in constant time
+  (case-sensitive even on MySQL collations), limited to the channel of the quote. Anyone
+  holding the link can view and accept a guest quote (as stated in the e-mail).
+- The quotes of a **shop account** need their owner logged in, link or not (other customers get
+  a 403, visitors the login page); their e-mails link to *My quotes*. The cart of an accepted
+  quote is never handed to another customer.
+- Guests are rate limited (per IP and per e-mail) and a honeypot field drops robots. E-mails
+  to the customer never repeat the contact details typed in the form (the recipient may not be
+  the author); the merchant e-mail keeps them.
+- Links in e-mails come from `base_url` or the channel hostname, never from the request Host
+  header. Set `framework.trusted_hosts` anyway.
 - Every action is a POST with a CSRF token; the admin pages are behind the Sylius admin
-  firewall.
-- Customer input is escaped in the e-mails (the Sylius e-mail layout disables autoescaping).
+  firewall. Customers can only cancel a request in progress or decline a proposal.
+- Customer input is escaped in the e-mails (the Sylius e-mail layout disables autoescaping) and
+  in the PDF; wkhtmltopdf runs with `--disable-local-file-access` and `--disable-javascript`.
+- Accepting and converting check that every product can still be ordered (enabled, sold in
+  the channel, stock for tracked variants); the conversion runs the `sylius_checkout_complete`
+  validation of the shop checkout and is atomic.
 
 ## Limitations
 
@@ -213,6 +242,12 @@ Symfony Workflow events of `tmonier_quote_request` are available too.
 - Shipping costs are not part of the quote; they are chosen and charged at checkout.
 - Lines are product variants of the catalog (no free-text line, no attachment).
 - Amount volume discounts assume a currency with 2 decimals.
+- The PDF of the proposal e-mail is attached by path (Sylius mailer): it is kept in
+  `<tmp>/tmonier_quote_request_pdf` for 48 hours so that an async mailer worker on the same
+  host can read it. With workers on other hosts, send the e-mails synchronously.
+- A PDF engine that fails sends the proposal without attachment and warns the merchant.
+- A product disabled or removed from the channel after the acceptance leaves the quote cart
+  (with its share of a fixed global discount); the customer is told on the quote page.
 - The PDF layout is a single Twig template (`templates/pdf/quote.html.twig`), override it in
   your theme or templates directory.
 - A quote cart cannot be mixed with other products: leaving the quote prices brings the cart
