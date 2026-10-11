@@ -22,6 +22,7 @@ use Sylius\Resource\Factory\FactoryInterface;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Tmonier\SyliusQuoteRequestPlugin\Checkout\QuoteCartManagerInterface;
 use Tmonier\SyliusQuoteRequestPlugin\Entity\QuoteRequestInterface;
+use Tmonier\SyliusQuoteRequestPlugin\Event\QuoteRequestEvents;
 use Tmonier\SyliusQuoteRequestPlugin\Factory\QuoteRequestFactoryInterface;
 use Tmonier\SyliusQuoteRequestPlugin\Manager\QuoteRequestManagerInterface;
 use Tmonier\SyliusQuoteRequestPlugin\Pricing\QuoteTotalsCalculatorInterface;
@@ -443,6 +444,42 @@ final class QuoteToOrderTest extends KernelTestCase
 
         $this->entityManager()->refresh($source);
         self::assertCount(0, $source->getItems(), 'Idle for more than checkout_idle_minutes.');
+    }
+
+    public function testAFailingListenerAfterTheCommitDoesNotStopTheOtherEvents(): void
+    {
+        [$quoted, $kept] = $this->variants();
+        $source = $this->cartOf($this->customer(), [[$quoted, 2], [$kept, 1]]);
+        $quote = $this->proposedQuote([[$quoted, 2, 999]]);
+        $quote->setSourceOrder($source);
+        $this->entityManager()->flush();
+        /** @var \Symfony\Component\EventDispatcher\EventDispatcherInterface $dispatcher */
+        $dispatcher = self::getContainer()->get('event_dispatcher');
+        $received = [];
+        $dispatcher->addListener(QuoteRequestEvents::ACCEPTED, static function (): void {
+            throw new \RuntimeException('SMTP down');
+        });
+        foreach ([QuoteRequestEvents::ORDERED, QuoteRequestEvents::DECLINED] as $eventName) {
+            $dispatcher->addListener($eventName, static function (\Tmonier\SyliusQuoteRequestPlugin\Event\QuoteRequestEvent $event) use (&$received, $eventName): void {
+                $received[] = [$eventName, $event->getQuoteRequest()->getNumber()];
+            });
+        }
+
+        // The committed conversion is not reported as failed.
+        $order = $this->converter()->convert($quote, $this->usAddress(), null, null);
+
+        self::assertSame(OrderInterface::STATE_NEW, $order->getState());
+        self::assertSame([[QuoteRequestEvents::ORDERED, $quote->getNumber()]], $received, '"ordered" still dispatched.');
+        $this->entityManager()->refresh($source);
+        self::assertSame([$kept], array_map(static fn (OrderItemInterface $item) => $item->getVariant(), $this->items($source)), 'Source cart cleaned.');
+
+        // The next, unrelated operation dispatches its own events only.
+        $other = $this->proposedQuote([[$kept, 1, 500]]);
+        $this->manager()->apply($other, QuoteRequestTransitions::TRANSITION_DECLINE);
+        self::assertSame([
+            [QuoteRequestEvents::ORDERED, $quote->getNumber()],
+            [QuoteRequestEvents::DECLINED, $other->getNumber()],
+        ], $received);
     }
 
     /** @param list<array{0: ProductVariantInterface, 1: int}> $lines */

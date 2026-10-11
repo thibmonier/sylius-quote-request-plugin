@@ -107,7 +107,7 @@ final class QuoteRequestMailerTest extends TestCase
         self::assertSame([[QuoteRequestEmails::CUSTOMER_PROPOSAL, ['buyer@example.com'], []]], $this->sent);
         self::assertCount(1, $this->attachments);
         $path = (string) array_key_first($this->attachments);
-        self::assertMatchesRegularExpression('#/quote-Q000042-[0-9a-f]{16}\.pdf$#', $path);
+        self::assertMatchesRegularExpression('#/tmonier_quote_Q000042-[0-9a-f]{16}\.pdf$#', $path);
         self::assertSame('%PDF-fake Q000042', $this->attachments[$path]);
         self::assertFileExists($path, 'The file stays for an async mailer worker.');
         self::assertSame($this->directory, dirname($path));
@@ -230,5 +230,24 @@ final class QuoteRequestMailerTest extends TestCase
                 ($this->record)($code, $recipients, $replyTo, $attachments);
             }
         };
+    }
+
+    public function testOnlyThePluginPdfsAreCleanedUp(): void
+    {
+        mkdir($this->directory, 0775);
+        $foreign = $this->directory . '/invoice-2026-001.pdf';
+        $old = $this->directory . '/' . QuoteRequestMailer::FILE_PREFIX . 'Q000001-0123456789abcdef.pdf';
+        file_put_contents($foreign, '%PDF-invoice');
+        file_put_contents($old, '%PDF-old quote');
+        touch($foreign, time() - 3 * 86400);
+        touch($old, time() - 3 * 86400);
+        $mailer = new QuoteRequestMailer($this->recordingSender(), new FakePdfGenerator(true), null, new NullLogger(), $this->requestStack, $this->directory);
+        $quote = $this->quote();
+        $quote->setNumber('Q000046');
+
+        $mailer->onProposed(new QuoteRequestEvent($quote));
+
+        self::assertFileExists($foreign, 'Another PDF of the directory is never deleted.');
+        self::assertFileDoesNotExist($old, 'An old quote PDF is cleaned up.');
     }
 }

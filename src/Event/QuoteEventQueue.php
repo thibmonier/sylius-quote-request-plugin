@@ -5,6 +5,11 @@ declare(strict_types=1);
 namespace Tmonier\SyliusQuoteRequestPlugin\Event;
 
 use Doctrine\ORM\EntityManagerInterface;
+use Psr\Log\LoggerInterface;
+use Psr\Log\NullLogger;
+use Symfony\Component\HttpFoundation\Exception\SessionNotFoundException;
+use Symfony\Component\HttpFoundation\RequestStack;
+use Symfony\Component\HttpFoundation\Session\FlashBagAwareSessionInterface;
 use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
 
 /**
@@ -29,6 +34,8 @@ final class QuoteEventQueue
     public function __construct(
         private readonly EventDispatcherInterface $eventDispatcher,
         private readonly EntityManagerInterface $entityManager,
+        private readonly LoggerInterface $logger = new NullLogger(),
+        private readonly ?RequestStack $requestStack = null,
     ) {
     }
 
@@ -62,15 +69,34 @@ final class QuoteEventQueue
             return;
         }
 
-        while ([] !== $this->events) {
-            [$event, $eventName] = array_shift($this->events);
+        // Taken out of the queue first: a later operation never dispatches them.
+        $events = $this->events;
+        $this->events = [];
+        foreach ($events as [$event, $eventName]) {
             $this->dispatchNow($event, $eventName);
         }
     }
 
+    /**
+     * The change is committed: a failing listener (e.g. the mail server is down) is logged and
+     * reported as a warning, the other listeners and events still run, and the operation is
+     * not reported as failed.
+     */
     private function dispatchNow(QuoteRequestEvent $event, string $eventName): void
     {
-        $this->eventDispatcher->dispatch($event, $eventName);
+        try {
+            $this->eventDispatcher->dispatch($event, $eventName);
+        } catch (\Throwable $exception) {
+            $this->logger->error('A listener of {event} failed for quote {number}: {message}', [
+                'event' => $eventName,
+                'number' => $event->getQuoteRequest()->getNumber(),
+                'message' => $exception->getMessage(),
+                'exception' => $exception,
+            ]);
+            $this->warn();
+
+            return;
+        }
 
         // What the "ordered" listeners persist is saved, whatever the moment of dispatch.
         if (QuoteRequestEvents::ORDERED === $eventName && $this->entityManager->isOpen()) {
@@ -79,6 +105,18 @@ final class QuoteEventQueue
             if ([] !== $unitOfWork->getScheduledEntityInsertions() || [] !== $unitOfWork->getScheduledEntityUpdates() || [] !== $unitOfWork->getScheduledEntityDeletions()) {
                 $this->entityManager->flush();
             }
+        }
+    }
+
+    private function warn(): void
+    {
+        try {
+            $session = $this->requestStack?->getSession();
+        } catch (SessionNotFoundException) {
+            return;
+        }
+        if ($session instanceof FlashBagAwareSessionInterface) {
+            $session->getFlashBag()->add('warning', 'tmonier_quote_request.flash.notification_failed');
         }
     }
 }

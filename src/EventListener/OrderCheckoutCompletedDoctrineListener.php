@@ -27,8 +27,9 @@ use Tmonier\SyliusQuoteRequestPlugin\Workflow\QuoteRequestTransitions;
  * - any adapter (Winzou included): onFlush sees the order checkout state becoming "completed"
  *   and sets the quote fields (no workflow, no event inside onFlush).
  *
- * The event goes through {@see QuoteEventQueue}: on postFlush, only for quotes really stored as
- * "ordered", and after the commit of an enclosing transaction.
+ * The event goes through {@see QuoteEventQueue} on postFlush, only for quotes this flush stored
+ * as "ordered": held until commit inside a transaction of the plugin (merchant conversion),
+ * dispatched right away otherwise (inside a foreign transaction, before it commits).
  */
 final class OrderCheckoutCompletedDoctrineListener
 {
@@ -102,7 +103,7 @@ final class OrderCheckoutCompletedDoctrineListener
             if (!$entityManager->contains($quoteRequest) || QuoteRequestStatuses::ORDERED !== ($unitOfWork->getOriginalEntityData($quoteRequest)['status'] ?? null)) {
                 continue;
             }
-            // Dispatched now, or after the commit of the enclosing transaction.
+            // Held until commit inside a plugin transaction, dispatched right away otherwise.
             $this->eventQueue->dispatch(new QuoteRequestEvent($quoteRequest, QuoteRequestTransitions::TRANSITION_ORDER), QuoteRequestEvents::ORDERED);
         }
     }

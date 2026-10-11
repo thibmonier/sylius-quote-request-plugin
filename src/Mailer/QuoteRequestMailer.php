@@ -19,6 +19,8 @@ final class QuoteRequestMailer implements EventSubscriberInterface
 {
     public const ATTACHMENT_TTL = 172800;
 
+    public const FILE_PREFIX = 'tmonier_quote_';
+
     public function __construct(
         private readonly SenderInterface $sender,
         private readonly QuotePdfGeneratorInterface $pdfGenerator,
@@ -94,7 +96,7 @@ final class QuoteRequestMailer implements EventSubscriberInterface
             $content = $this->pdfGenerator->generate($quoteRequest);
             $this->removeOldAttachments();
             // One uniquely named file per PDF, readable by an async mailer worker (0644).
-            $path = sprintf('%s/%s-%s.pdf', $this->attachmentDirectory(), pathinfo($this->pdfGenerator->getFilename($quoteRequest), \PATHINFO_FILENAME), bin2hex(random_bytes(8)));
+            $path = sprintf('%s/%s%s-%s.pdf', $this->attachmentDirectory(), self::FILE_PREFIX, preg_replace('/[^A-Za-z0-9_-]/', '', (string) $quoteRequest->getNumber()), bin2hex(random_bytes(8)));
             if (false === file_put_contents($path, $content)) {
                 throw new \RuntimeException(sprintf('Cannot write "%s".', $path));
             }
@@ -116,7 +118,8 @@ final class QuoteRequestMailer implements EventSubscriberInterface
     private function removeOldAttachments(): void
     {
         $limit = time() - self::ATTACHMENT_TTL;
-        foreach (glob($this->attachmentDirectory() . '/*.pdf') ?: [] as $file) {
+        // Only the files of the plugin: the directory may hold other PDFs.
+        foreach (glob($this->attachmentDirectory() . '/' . self::FILE_PREFIX . '*.pdf') ?: [] as $file) {
             if (filemtime($file) < $limit) {
                 @unlink($file);
             }

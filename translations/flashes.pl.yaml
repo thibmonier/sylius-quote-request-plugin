@@ -34,3 +34,4 @@ tmonier_quote_request:
         too_many_requests: 'Zbyt wiele żądań: spróbuj ponownie później.'
         cart_of_another_customer: 'Koszyk tej oferty należy do innego klienta.'
         quote_changed: 'Oferta została w międzyczasie zmieniona (na przykład zamówiona przez nasz dział handlowy): sprawdź ją ponownie.'
+        notification_failed: 'Zmiana została zapisana, ale powiadomienie (e-mail lub integracja) nie powiodło się: sprawdź logi.'

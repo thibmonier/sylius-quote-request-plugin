@@ -34,3 +34,4 @@ tmonier_quote_request:
         too_many_requests: 'Trop de demandes : veuillez réessayer plus tard.'
         cart_of_another_customer: 'Le panier de ce devis appartient à un autre client.'
         quote_changed: 'Le devis a été modifié entre-temps (par exemple commandé par notre équipe commerciale) : veuillez le consulter à nouveau.'
+        notification_failed: 'La modification est enregistrée, mais une notification (e-mail ou intégration) a échoué : voir les journaux.'

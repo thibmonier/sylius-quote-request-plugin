@@ -34,3 +34,4 @@ tmonier_quote_request:
         too_many_requests: 'Te veel verzoeken: probeer het later opnieuw.'
         cart_of_another_customer: 'De winkelwagen van deze offerte is van een andere klant.'
         quote_changed: 'De offerte is intussen gewijzigd (bijvoorbeeld besteld door ons verkoopteam): bekijk hem opnieuw.'
+        notification_failed: 'De wijziging is opgeslagen, maar een melding (e-mail of integratie) is mislukt: zie de logs.'

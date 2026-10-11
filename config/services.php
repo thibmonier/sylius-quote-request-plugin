@@ -229,7 +229,10 @@ return static function (ContainerConfigurator $container): void {
         ->args([
             service('event_dispatcher'),
             service('doctrine.orm.entity_manager'),
+            service('logger'),
+            service('request_stack'),
         ])
+        ->tag('monolog.logger', ['channel' => 'tmonier_quote_request'])
     ;
 
     $services

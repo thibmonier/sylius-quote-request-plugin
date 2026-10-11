@@ -34,3 +34,4 @@ tmonier_quote_request:
         too_many_requests: 'Troppe richieste: riprova più tardi.'
         cart_of_another_customer: 'Il carrello di questo preventivo appartiene a un altro cliente.'
         quote_changed: 'Il preventivo è stato modificato nel frattempo (ad esempio ordinato dal nostro team commerciale): ricontrollalo.'
+        notification_failed: 'La modifica è salvata, ma una notifica (e-mail o integrazione) non è riuscita: vedi i log.'

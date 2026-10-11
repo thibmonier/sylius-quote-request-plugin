@@ -220,7 +220,9 @@ the order of the changes (`accepted` before `ordered`), and not at all if it rol
 command behind the messenger `doctrine_transaction` middleware, the checkout completion flush
 that makes a quote `ordered`, any caller wrapping the plugin in its own transaction) are
 dispatched right away, on postFlush, like the Sylius core events: listeners may run before the
-outer transaction commits, and are not undone if it rolls back. For reliable integrations
+outer transaction commits, and are not undone if it rolls back. A listener that fails after a
+commit (e.g. the mail server is down) is logged and reported as a warning flash; the other
+listeners and events still run and the operation is not reported as failed. For reliable integrations
 (ERP, webhooks), record the events in an outbox, e.g.
 [tmonier/sylius-webhook-outbox-plugin](https://github.com/thibmonier/sylius-webhook-outbox-plugin). What the `ordered` listeners persist is
 flushed right after them, whatever the state machine adapter. The Symfony Workflow events of
@@ -277,7 +279,7 @@ flushed right after them, whatever the state machine adapter. The Symfony Workfl
 - Rate limit keys only fold `+tag` sub-addressing (all providers) and Gmail dots; other
   provider aliases count as distinct mailboxes.
 - The PDF of the proposal e-mail is attached by path (Sylius mailer): each PDF is written as a
-  uniquely named file (0644) in `pdf_attachment_directory` (default
+  uniquely named file (`tmonier_quote_<number>-<random>.pdf`, 0644) in `pdf_attachment_directory` (default
   `%kernel.project_dir%/var/tmonier_quote_request/pdf`) and removed after 48 hours, so that an
   async mailer worker can read it. The directory is created 0775 when missing (an existing one
   keeps its permissions): run php-fpm, the console and the workers with a common group, or
