@@ -243,6 +243,8 @@ flushed right after them, whatever the state machine adapter. The Symfony Workfl
 - **Quote carts.** `Tmonier\SyliusQuoteRequestPlugin\Checkout\QuoteCartCheckerInterface::isQuoteCart($order)`
   tells whether a cart is the cart of an accepted quote: its content is restored at every
   processing, so a bulk add-to-cart (quick order...) should refuse or divert to a regular cart.
+  Service id `tmonier_quote_request.quote_cart_checker` (stable public API, also aliased by the
+  interface); tmonier/sylius-quick-order-plugin uses it when installed.
 - **Events**: see above; for integrations, prefer an outbox.
 
 ## Security
