@@ -117,6 +117,7 @@ tmonier_quote_request:
             percentage: 'Porcentaje por unidad'
             amount: 'Importe por unidad'
         discount_tiers: 'Tramos (cantidad mín.: descuento)'
+        honeypot: 'Deje este campo vacío'
     email:
         view_quote: 'Ver el presupuesto'
         open_in_admin: 'Abrir el presupuesto'

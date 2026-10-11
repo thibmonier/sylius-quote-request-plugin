@@ -8,9 +8,18 @@ parameters:
 
 tmonier_sylius_quote_request:
     allow_guests: '%env(bool:TMONIER_QUOTE_ALLOW_GUESTS)%'
+    rate_limit:
+        # Fresh limiter state for every test kernel.
+        cache_pool: cache.tmonier_quote_request_limiter
     customer_group_discounts:
         retail: 5
         wholesale: 12.5
+
+framework:
+    cache:
+        pools:
+            cache.tmonier_quote_request_limiter:
+                adapter: cache.adapter.array
 
 twig:
     paths:

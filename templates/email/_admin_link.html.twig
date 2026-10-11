@@ -1,5 +1,5 @@
 <p style="margin: 25px 0; text-align: center;">
-    <a href="{{ url('tmonier_quote_request_admin_quote_request_show', {'id': quoteRequest.id})|e('html_attr') }}" style="display: inline-block; text-decoration: none; padding: 12px 24px; background: #1abb9c; color: #fff; border-radius: 4px;">
+    <a href="{{ tmonier_quote_request_absolute_url(path('tmonier_quote_request_admin_quote_request_show', {'id': quoteRequest.id}), channel)|e('html_attr') }}" style="display: inline-block; text-decoration: none; padding: 12px 24px; background: #1abb9c; color: #fff; border-radius: 4px;">
         {{ 'tmonier_quote_request.email.open_in_admin'|trans({}, null, localeCode)|e }}
     </a>
 </p>

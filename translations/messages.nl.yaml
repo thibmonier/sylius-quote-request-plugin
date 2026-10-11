@@ -117,6 +117,7 @@ tmonier_quote_request:
             percentage: 'Percentage per stuk'
             amount: 'Bedrag per stuk'
         discount_tiers: 'Staffels (min. aantal: korting)'
+        honeypot: 'Laat dit veld leeg'
     email:
         view_quote: 'Offerte bekijken'
         open_in_admin: 'Offerte openen'

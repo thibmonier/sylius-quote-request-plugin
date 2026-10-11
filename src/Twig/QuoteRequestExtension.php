@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace Tmonier\SyliusQuoteRequestPlugin\Twig;
 
+use Sylius\Component\Core\Model\ChannelInterface;
 use Sylius\Component\Order\Model\OrderInterface;
+use Tmonier\SyliusQuoteRequestPlugin\Checkout\QuoteOrderabilityCheckerInterface;
 use Tmonier\SyliusQuoteRequestPlugin\Entity\QuoteRequestInterface;
 use Tmonier\SyliusQuoteRequestPlugin\Entity\QuoteRequestLineInterface;
 use Tmonier\SyliusQuoteRequestPlugin\Manager\QuoteRequestManagerInterface;
@@ -38,7 +40,9 @@ final class QuoteRequestExtension extends AbstractExtension
         private readonly QuoteRequestManagerInterface $quoteRequestManager,
         private readonly QuoteOrderResolverInterface $quoteOrderResolver,
         private readonly QuotePdfGeneratorInterface $pdfGenerator,
+        private readonly QuoteOrderabilityCheckerInterface $orderabilityChecker,
         private readonly array $settings,
+        private readonly ?string $baseUrl = null,
     ) {
         $this->totals = new \WeakMap();
     }
@@ -51,6 +55,8 @@ final class QuoteRequestExtension extends AbstractExtension
             new TwigFunction('tmonier_quote_request_cart_quote', $this->cartQuote(...)),
             new TwigFunction('tmonier_quote_request_setting', $this->setting(...)),
             new TwigFunction('tmonier_quote_request_pdf_available', $this->pdfGenerator->isAvailable(...)),
+            new TwigFunction('tmonier_quote_request_absolute_url', $this->absoluteUrl(...)),
+            new TwigFunction('tmonier_quote_request_unorderable_lines', $this->orderabilityChecker->getUnorderableLines(...)),
             new TwigFunction('tmonier_quote_request_has_volume_discount', static fn (QuoteRequestInterface $quoteRequest): bool => $quoteRequest->getLines()->exists(static fn (int $key, QuoteRequestLineInterface $line): bool => $line->getUnitDiscount() > 0)),
             new TwigFunction('tmonier_quote_request_status_color', static fn (string $status): string => self::STATUS_COLORS[$status] ?? 'secondary'),
             new TwigFunction('tmonier_quote_request_shows_prices', static fn (QuoteRequestInterface $quoteRequest): bool => in_array($quoteRequest->getStatus(), QuoteRequestStatuses::WITH_PROPOSAL, true)),
@@ -65,6 +71,25 @@ final class QuoteRequestExtension extends AbstractExtension
     public function cartQuote(mixed $cart): ?QuoteRequestInterface
     {
         return $cart instanceof OrderInterface ? $this->quoteOrderResolver->resolveLockingQuote($cart) : null;
+    }
+
+    /**
+     * Absolute URL for the e-mails, never built from the request Host header (which a visitor
+     * controls when trusted_hosts is not set): `base_url` when configured, the channel hostname
+     * otherwise, the bare path as a last resort.
+     */
+    public function absoluteUrl(string $path, ?ChannelInterface $channel = null): string
+    {
+        if (null !== $this->baseUrl && '' !== $this->baseUrl) {
+            return rtrim($this->baseUrl, '/') . $path;
+        }
+
+        $hostname = $channel?->getHostname();
+        if (null !== $hostname && '' !== $hostname) {
+            return 'https://' . $hostname . $path;
+        }
+
+        return $path;
     }
 
     public function setting(string $name): mixed

@@ -19,6 +19,9 @@ use Tmonier\SyliusQuoteRequestPlugin\Entity\QuoteRequestInterface;
 
 final class QuoteRequestType extends AbstractType
 {
+    /** Hidden field that only robots fill. */
+    public const HONEYPOT = 'website';
+
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
         $builder
@@ -55,6 +58,12 @@ final class QuoteRequestType extends AbstractType
                 'label' => false,
                 'entry_type' => QuoteRequestLineQuantityType::class,
                 'entry_options' => ['label' => false],
+            ])
+            ->add(self::HONEYPOT, TextType::class, [
+                'label' => 'tmonier_quote_request.form.honeypot',
+                'mapped' => false,
+                'required' => false,
+                'attr' => ['autocomplete' => 'off', 'tabindex' => '-1'],
             ])
             ->add('message', TextareaType::class, [
                 'label' => 'tmonier_quote_request.form.message',

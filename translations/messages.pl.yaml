@@ -117,6 +117,7 @@ tmonier_quote_request:
             percentage: 'Procent za sztukę'
             amount: 'Kwota za sztukę'
         discount_tiers: 'Progi (min. ilość: rabat)'
+        honeypot: 'Pozostaw to pole puste'
     email:
         view_quote: 'Zobacz ofertę'
         open_in_admin: 'Otwórz ofertę'

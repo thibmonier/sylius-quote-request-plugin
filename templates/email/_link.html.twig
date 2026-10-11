@@ -1,7 +1,15 @@
-{%- set url = sylius_channel_url(path('tmonier_quote_request_shop_show_by_token', {'token': quoteRequest.token, '_locale': localeCode}), channel) -%}
+{#- Account-owned quotes link to the account (login required), guest quotes to their secret link. -#}
+{%- if quoteRequest.customer is not null and quoteRequest.customer.user is not null -%}
+    {%- set path = path('tmonier_quote_request_shop_account_show', {'number': quoteRequest.number, '_locale': localeCode}) -%}
+{%- else -%}
+    {%- set path = path('tmonier_quote_request_shop_show_by_token', {'token': quoteRequest.token, '_locale': localeCode}) -%}
+{%- endif -%}
+{%- set url = tmonier_quote_request_absolute_url(path, channel) -%}
 <p style="margin: 25px 0; text-align: center;">
     <a href="{{ url|e('html_attr') }}" style="display: inline-block; text-decoration: none; padding: 12px 24px; background: #1abb9c; color: #fff; border-radius: 4px;">
         {{ 'tmonier_quote_request.email.view_quote'|trans({}, null, localeCode)|e }}
     </a>
 </p>
-<p style="font-size: 13px; color: #888;">{{ 'tmonier_quote_request.email.link_help'|trans({}, null, localeCode)|e }}</p>
+{% if quoteRequest.customer is null or quoteRequest.customer.user is null %}
+    <p style="font-size: 13px; color: #888;">{{ 'tmonier_quote_request.email.link_help'|trans({}, null, localeCode)|e }}</p>
+{% endif %}

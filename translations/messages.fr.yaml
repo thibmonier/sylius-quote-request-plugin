@@ -117,6 +117,7 @@ tmonier_quote_request:
             percentage: 'Pourcentage par unité'
             amount: 'Montant par unité'
         discount_tiers: 'Paliers (quantité min. : remise)'
+        honeypot: 'Laissez ce champ vide'
     email:
         view_quote: 'Voir le devis'
         open_in_admin: 'Ouvrir le devis'

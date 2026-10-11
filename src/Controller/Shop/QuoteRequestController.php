@@ -22,6 +22,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
+use Symfony\Component\RateLimiter\RateLimiterFactory;
 use Tmonier\SyliusQuoteRequestPlugin\Basket\QuoteBasketInterface;
 use Tmonier\SyliusQuoteRequestPlugin\Checkout\QuoteCartManagerInterface;
 use Tmonier\SyliusQuoteRequestPlugin\Entity\QuoteMessageInterface;
@@ -67,6 +68,8 @@ final class QuoteRequestController extends AbstractController
         private readonly bool $fromCart,
         private readonly int $maxLines,
         private readonly QuotePdfGeneratorInterface $pdfGenerator,
+        private readonly ?RateLimiterFactory $ipLimiter = null,
+        private readonly ?RateLimiterFactory $emailLimiter = null,
     ) {
     }
 
@@ -153,6 +156,25 @@ final class QuoteRequestController extends AbstractController
 
         $form = $this->createForm(QuoteRequestType::class, $quoteRequest, ['email_editable' => null === $customer]);
         $form->handleRequest($request);
+
+        if ($form->isSubmitted() && null === $customer) {
+            // Honeypot: robots fill the hidden "website" field; they get the usual answer, nothing is sent.
+            $honeypot = $form->get(QuoteRequestType::HONEYPOT)->getData();
+            if (is_string($honeypot) && '' !== trim($honeypot)) {
+                $this->addFlash('success', 'tmonier_quote_request.flash.request_sent');
+
+                return $this->redirectToRoute('sylius_shop_homepage');
+            }
+            if ($this->isRateLimited($request, $quoteRequest->getEmail())) {
+                $this->addFlash('error', 'tmonier_quote_request.flash.too_many_requests');
+
+                return $this->render('@TmonierSyliusQuoteRequestPlugin/shop/quote_request/new.html.twig', [
+                    'quote_request' => $quoteRequest,
+                    'form' => $form->createView(),
+                    'is_guest' => true,
+                ], new Response(null, Response::HTTP_TOO_MANY_REQUESTS));
+            }
+        }
 
         if ($form->isSubmitted() && $form->isValid()) {
             foreach ($quoteRequest->getLines()->toArray() as $line) {
@@ -247,7 +269,9 @@ final class QuoteRequestController extends AbstractController
         }
         $this->checkCsrf($request, $action, $quoteRequest);
 
-        if (QuoteRequestTransitions::TRANSITION_CANCEL === $transition && !in_array($quoteRequest->getStatus(), QuoteRequestStatuses::EDITABLE, true)) {
+        // Customers cancel a request in progress and decline a proposal, nothing else.
+        if ((QuoteRequestTransitions::TRANSITION_CANCEL === $transition && !in_array($quoteRequest->getStatus(), QuoteRequestStatuses::EDITABLE, true)) ||
+            (QuoteRequestTransitions::TRANSITION_DECLINE === $transition && QuoteRequestStatuses::PROPOSED !== $quoteRequest->getStatus())) {
             $this->addFlash('error', 'tmonier_quote_request.flash.transition_not_allowed');
 
             return $this->redirectToQuote($quoteRequest);
@@ -276,6 +300,11 @@ final class QuoteRequestController extends AbstractController
     public function messageAction(Request $request, string $token): Response
     {
         $quoteRequest = $this->findByToken($token);
+        if (null === $quoteRequest->getCustomer() && $this->isRateLimited($request, $quoteRequest->getEmail())) {
+            $this->addFlash('error', 'tmonier_quote_request.flash.too_many_requests');
+
+            return $this->redirectToQuote($quoteRequest);
+        }
         $form = $this->createForm(QuoteMessageType::class);
         $form->handleRequest($request);
         if (!$form->isSubmitted() || !$form->isValid()) {
@@ -312,7 +341,13 @@ final class QuoteRequestController extends AbstractController
             return $this->redirectToQuote($quoteRequest);
         }
 
-        $this->quoteCartManager->start($quoteRequest, $this->shopCustomer());
+        try {
+            $this->quoteRequestManager->startCheckout($quoteRequest, $this->shopCustomer());
+        } catch (QuoteTransitionException) {
+            $this->addFlash('error', 'tmonier_quote_request.flash.cart_of_another_customer');
+
+            return $this->redirectToRoute('tmonier_quote_request_shop_show_by_token', ['token' => $token]);
+        }
 
         return $this->redirectToRoute('sylius_shop_cart_summary');
     }
@@ -345,6 +380,20 @@ final class QuoteRequestController extends AbstractController
         ]);
     }
 
+    /** Guests only: per IP and per e-mail (consumes one token of each limiter). */
+    private function isRateLimited(Request $request, ?string $email): bool
+    {
+        $limited = false;
+        if (null !== $this->ipLimiter) {
+            $limited = !$this->ipLimiter->create((string) $request->getClientIp())->consume()->isAccepted();
+        }
+        if (null !== $this->emailLimiter && null !== $email && '' !== $email) {
+            $limited = !$this->emailLimiter->create(mb_strtolower(trim($email)))->consume()->isAccepted() || $limited;
+        }
+
+        return $limited;
+    }
+
     private function isOpen(QuoteRequestInterface $quoteRequest): bool
     {
         return in_array($quoteRequest->getStatus(), [QuoteRequestStatuses::NEW, QuoteRequestStatuses::IN_REVIEW, QuoteRequestStatuses::PROPOSED, QuoteRequestStatuses::ACCEPTED], true);
@@ -365,6 +414,13 @@ final class QuoteRequestController extends AbstractController
         $quoteRequest = $this->quoteRequestRepository->findOneByToken($token);
         if (null === $quoteRequest || $quoteRequest->getChannel() !== $this->channel()) {
             throw new NotFoundHttpException('Quote request not found.');
+        }
+
+        // The token is the key of guest quotes only: the quote of a shop account needs its owner
+        // logged in (anonymous visitors are sent to the login page, other customers get a 403).
+        $owner = $quoteRequest->getCustomer();
+        if (null !== $owner && null !== $owner->getUser() && $this->shopCustomer() !== $owner) {
+            throw $this->createAccessDeniedException('This quote belongs to a shop account.');
         }
 
         return $quoteRequest;

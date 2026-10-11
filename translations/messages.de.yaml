@@ -117,6 +117,7 @@ tmonier_quote_request:
             percentage: 'Prozent pro Stück'
             amount: 'Betrag pro Stück'
         discount_tiers: 'Staffeln (Mindestmenge: Rabatt)'
+        honeypot: 'Dieses Feld leer lassen'
     email:
         view_quote: 'Angebot ansehen'
         open_in_admin: 'Angebot öffnen'

@@ -7,7 +7,7 @@
 {% block content %}
     <div style="text-align: left;">
         <p>{{ 'tmonier_quote_request.email.customer_request_received.intro'|trans({'%number%': quoteRequest.number, '%channel%': channel.name}, null, localeCode)|e }}</p>
-        {% include '@TmonierSyliusQuoteRequestPlugin/email/_summary.html.twig' %}
+        {% include '@TmonierSyliusQuoteRequestPlugin/email/_summary.html.twig' with { with_contact: false } %}
         {% include '@TmonierSyliusQuoteRequestPlugin/email/_link.html.twig' %}
     </div>
 {% endblock %}

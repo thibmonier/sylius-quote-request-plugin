@@ -117,6 +117,7 @@ tmonier_quote_request:
             percentage: 'Percentage per unit'
             amount: 'Amount per unit'
         discount_tiers: 'Tiers (min. quantity: discount)'
+        honeypot: 'Leave this field empty'
     email:
         view_quote: 'View the quote'
         open_in_admin: 'Open the quote'

@@ -78,6 +78,9 @@
                             {{ form_row(form.phoneNumber) }}
                             {{ form_row(form.vatNumber) }}
                             {{ form_row(form.message) }}
+                            <div style="position: absolute; left: -10000px; top: auto; width: 1px; height: 1px; overflow: hidden;" aria-hidden="true">
+                                {{ form_row(form.website) }}
+                            </div>
                             {{ form_rest(form) }}
                             <button type="submit" class="btn btn-primary w-100" {{ sylius_test_html_attribute('tmonier-quote-submit') }}>
                                 {{ ux_icon('tabler:send', {'class': 'icon'}) }}

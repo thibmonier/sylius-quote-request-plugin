@@ -284,6 +284,8 @@ return static function (ContainerConfigurator $container): void {
             param('tmonier_quote_request.from_cart'),
             param('tmonier_quote_request.max_lines'),
             service('tmonier_quote_request.pdf_generator'),
+            service('limiter.tmonier_quote_request_ip')->nullOnInvalid(),
+            service('limiter.tmonier_quote_request_email')->nullOnInvalid(),
         ])
         ->call('setContainer', [service(\Psr\Container\ContainerInterface::class)])
         ->tag('controller.service_arguments')
@@ -320,12 +322,14 @@ return static function (ContainerConfigurator $container): void {
             service('tmonier_quote_request.manager'),
             service('tmonier_quote_request.order_resolver'),
             service('tmonier_quote_request.pdf_generator'),
+            service('tmonier_quote_request.orderability_checker'),
             [
                 'allow_guests' => param('tmonier_quote_request.allow_guests'),
                 'from_product_page' => param('tmonier_quote_request.from_product_page'),
                 'from_cart' => param('tmonier_quote_request.from_cart'),
                 'allow_promotions' => param('tmonier_quote_request.allow_promotions'),
             ],
+            param('tmonier_quote_request.base_url'),
         ])
         ->tag('twig.extension')
     ;

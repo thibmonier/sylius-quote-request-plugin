@@ -16,6 +16,9 @@
         <strong {{ sylius_test_html_attribute('tmonier-quote-valid-until') }}>{{ 'tmonier_quote_request.ui.valid_until_date'|trans({'%date%': quote_request.validUntil|date('Y-m-d')}) }}</strong>
     {% endif %}
 </p>
+{% if quote_request.status in ['proposed', 'accepted'] and tmonier_quote_request_unorderable_lines(quote_request) is not empty %}
+    <div class="alert alert-warning" {{ sylius_test_html_attribute('tmonier-quote-unavailable') }}>{{ 'tmonier_quote_request.ui.unavailable_products'|trans }}</div>
+{% endif %}
 
 <div class="card mb-4">
     <div class="card-body">

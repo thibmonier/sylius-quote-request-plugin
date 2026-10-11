@@ -117,6 +117,7 @@ tmonier_quote_request:
             percentage: 'Percentuale per unità'
             amount: 'Importo per unità'
         discount_tiers: 'Scaglioni (quantità min.: sconto)'
+        honeypot: 'Lascia vuoto questo campo'
     email:
         view_quote: 'Vedi il preventivo'
         open_in_admin: 'Apri il preventivo'
