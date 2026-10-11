@@ -18,7 +18,9 @@ use Sylius\Resource\Doctrine\Persistence\RepositoryInterface;
 use Sylius\Resource\Factory\FactoryInterface;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 use Tmonier\SyliusQuoteRequestPlugin\Checkout\QuoteCartManagerInterface;
+use Tmonier\SyliusQuoteRequestPlugin\Checkout\QuoteOrderabilityCheckerInterface;
 use Tmonier\SyliusQuoteRequestPlugin\Entity\QuoteRequestInterface;
+use Tmonier\SyliusQuoteRequestPlugin\Entity\QuoteRequestLineInterface;
 use Tmonier\SyliusQuoteRequestPlugin\Manager\QuoteRequestManagerInterface;
 use Tmonier\SyliusQuoteRequestPlugin\Workflow\QuoteRequestStatuses;
 use Tmonier\SyliusQuoteRequestPlugin\Workflow\QuoteRequestTransitions;
@@ -39,6 +41,7 @@ final class QuoteOrderConverter implements QuoteOrderConverterInterface
         private readonly FactoryInterface $customerFactory,
         private readonly EntityManagerInterface $entityManager,
         private readonly ValidatorInterface $validator,
+        private readonly QuoteOrderabilityCheckerInterface $orderabilityChecker,
     ) {
     }
 
@@ -57,11 +60,20 @@ final class QuoteOrderConverter implements QuoteOrderConverterInterface
         // One transaction holding the quote lock: a failed step leaves the quote as it was, and
         // the accepted / ordered events are dispatched only once the order exists.
         return $this->quoteRequestManager->transactional($quoteRequest, function () use ($quoteRequest, $address, $shippingMethod, $paymentMethod): OrderInterface {
+            // An accepted quote is not re-checked by the accept guard: every line must still be
+            // orderable, never place a partial or empty order.
+            $unorderable = $this->orderabilityChecker->getUnorderableLines($quoteRequest);
+            if ([] !== $unorderable) {
+                throw new \RuntimeException(sprintf('These products can no longer be ordered: %s.', implode(', ', array_map(
+                    static fn (QuoteRequestLineInterface $line): string => (string) ($line->getProductName() ?? $line->getVariantCode()),
+                    $unorderable,
+                ))));
+            }
+
             $customer = $this->resolveCustomer($quoteRequest);
 
             if (QuoteRequestStatuses::ACCEPTED === $quoteRequest->getStatus()) {
-                // Never complete a cart the customer may be checking out: start a dedicated one.
-                $this->quoteCartManager->release($quoteRequest);
+                $this->takeOverCustomerCart($quoteRequest);
                 $cart = $this->quoteCartManager->start($quoteRequest, $customer, false);
             } else {
                 $cart = $this->quoteRequestManager->accept($quoteRequest, $customer, false);
@@ -75,19 +87,11 @@ final class QuoteOrderConverter implements QuoteOrderConverterInterface
             $this->applyIfPossible($cart, OrderCheckoutTransitions::TRANSITION_ADDRESS, true);
             $this->orderProcessor->process($cart);
 
-            // Sylius may have skipped the shipping step already (nothing to ship, single method).
+            // The chosen method, whatever Sylius did on the address step (it may have skipped the
+            // shipping step with its own single eligible method).
+            $this->useShippingMethod($cart, $shippingMethod);
+
             if (OrderCheckoutStates::STATE_ADDRESSED === $cart->getCheckoutState()) {
-                if (null !== $shippingMethod && $cart->hasShipments()) {
-                    foreach ($cart->getShipments() as $shipment) {
-                        $shipment->setMethod($shippingMethod);
-                    }
-                    $this->orderProcessor->process($cart);
-                    foreach ($cart->getShipments() as $shipment) {
-                        if ($shipment->getMethod() !== $shippingMethod) {
-                            throw new \RuntimeException(sprintf('The shipping method "%s" is not available for this address.', (string) $shippingMethod->getName()));
-                        }
-                    }
-                }
                 if (!$this->applyIfPossible($cart, OrderCheckoutTransitions::TRANSITION_SELECT_SHIPPING)) {
                     $this->applyIfPossible($cart, OrderCheckoutTransitions::TRANSITION_SKIP_SHIPPING, true);
                 }
@@ -102,6 +106,11 @@ final class QuoteOrderConverter implements QuoteOrderConverterInterface
                 if (!$this->applyIfPossible($cart, OrderCheckoutTransitions::TRANSITION_SELECT_PAYMENT)) {
                     $this->applyIfPossible($cart, OrderCheckoutTransitions::TRANSITION_SKIP_PAYMENT, true);
                 }
+            }
+
+            $this->useShippingMethod($cart, $shippingMethod);
+            if ($cart->getItems()->isEmpty() || $cart->getItems()->count() !== $quoteRequest->getLines()->count()) {
+                throw new \RuntimeException('The cart of the quote does not hold all the quote lines.');
             }
 
             // The checks of the shop checkout: products still sold, stock, eligible methods.
@@ -144,6 +153,48 @@ final class QuoteOrderConverter implements QuoteOrderConverterInterface
         }
 
         return $customer;
+    }
+
+    private function useShippingMethod(OrderInterface $cart, ?ShippingMethodInterface $shippingMethod): void
+    {
+        if (null === $shippingMethod || !$cart->hasShipments()) {
+            return;
+        }
+
+        foreach ($cart->getShipments() as $shipment) {
+            $shipment->setMethod($shippingMethod);
+        }
+        $this->orderProcessor->process($cart);
+        foreach ($cart->getShipments() as $shipment) {
+            if ($shipment->getMethod() !== $shippingMethod) {
+                throw new \RuntimeException(sprintf('The shipping method "%s" is not available for this address.', (string) $shippingMethod->getName()));
+            }
+        }
+    }
+
+    /**
+     * The merchant places the order of an accepted quote in a dedicated cart. The customer's
+     * quote cart is emptied (no duplicate order at catalog prices) unless the customer is
+     * already in the checkout: then the conversion is refused. The cart row is locked so that a
+     * checkout step of the customer waits for the end of the conversion.
+     */
+    private function takeOverCustomerCart(QuoteRequestInterface $quoteRequest): void
+    {
+        $cart = $quoteRequest->getOrder();
+        if (null === $cart || null === $cart->getId()) {
+            return;
+        }
+
+        $table = $this->entityManager->getClassMetadata($cart::class)->getTableName();
+        $row = $this->entityManager->getConnection()->fetchAssociative(sprintf('SELECT state, checkout_state FROM %s WHERE id = ? FOR UPDATE', $table), [$cart->getId()]);
+        if (!is_array($row) || OrderInterface::STATE_CART !== $row['state']) {
+            return;
+        }
+        if (OrderCheckoutStates::STATE_CART !== $row['checkout_state']) {
+            throw new \RuntimeException('The customer is checking out this quote: wait for the order or cancel the quote.');
+        }
+
+        $this->quoteCartManager->release($quoteRequest, true);
     }
 
     private function applyIfPossible(OrderInterface $cart, string $transition, bool $required = false): bool

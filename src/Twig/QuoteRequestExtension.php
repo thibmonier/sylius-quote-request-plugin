@@ -6,6 +6,7 @@ namespace Tmonier\SyliusQuoteRequestPlugin\Twig;
 
 use Sylius\Component\Core\Model\ChannelInterface;
 use Sylius\Component\Order\Model\OrderInterface;
+use Symfony\Component\HttpFoundation\UrlHelper;
 use Tmonier\SyliusQuoteRequestPlugin\Checkout\QuoteOrderabilityCheckerInterface;
 use Tmonier\SyliusQuoteRequestPlugin\Entity\QuoteRequestInterface;
 use Tmonier\SyliusQuoteRequestPlugin\Entity\QuoteRequestLineInterface;
@@ -43,6 +44,8 @@ final class QuoteRequestExtension extends AbstractExtension
         private readonly QuoteOrderabilityCheckerInterface $orderabilityChecker,
         private readonly array $settings,
         private readonly ?string $baseUrl = null,
+        private readonly ?UrlHelper $urlHelper = null,
+        private readonly bool $unsecuredUrls = false,
     ) {
         $this->totals = new \WeakMap();
     }
@@ -74,9 +77,9 @@ final class QuoteRequestExtension extends AbstractExtension
     }
 
     /**
-     * Absolute URL for the e-mails, never built from the request Host header (which a visitor
-     * controls when trusted_hosts is not set): `base_url` when configured, the channel hostname
-     * otherwise, the bare path as a last resort.
+     * Absolute URL for the e-mails: `base_url` when configured, the channel hostname otherwise
+     * (scheme following `sylius.unsecured_urls`), as `sylius_channel_url` does; without either,
+     * the Symfony URL helper (router default URI, or the request: set framework.trusted_hosts).
      */
     public function absoluteUrl(string $path, ?ChannelInterface $channel = null): string
     {
@@ -86,10 +89,10 @@ final class QuoteRequestExtension extends AbstractExtension
 
         $hostname = $channel?->getHostname();
         if (null !== $hostname && '' !== $hostname) {
-            return 'https://' . $hostname . $path;
+            return ($this->unsecuredUrls ? 'http://' : 'https://') . $hostname . $path;
         }
 
-        return $path;
+        return null !== $this->urlHelper ? $this->urlHelper->getAbsoluteUrl($path) : $path;
     }
 
     public function setting(string $name): mixed

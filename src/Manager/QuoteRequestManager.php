@@ -68,6 +68,9 @@ final class QuoteRequestManager implements QuoteRequestManagerInterface
             return;
         }
 
+        // Refused before the transaction: the caller keeps its unsaved changes (no rollback/clear).
+        $this->assertCan($quoteRequest, $transition);
+
         $this->transactional($quoteRequest, function () use ($quoteRequest, $transition, $message): void {
             $this->applyTransition($quoteRequest, $transition, $message);
             if (QuoteRequestTransitions::TRANSITION_CANCEL === $transition) {
@@ -80,6 +83,8 @@ final class QuoteRequestManager implements QuoteRequestManagerInterface
 
     public function accept(QuoteRequestInterface $quoteRequest, ?CustomerInterface $customer = null, bool $storeInSession = true): OrderInterface
     {
+        $this->assertCan($quoteRequest, QuoteRequestTransitions::TRANSITION_ACCEPT);
+
         return $this->transactional($quoteRequest, function () use ($quoteRequest, $customer, $storeInSession): OrderInterface {
             $this->applyTransition($quoteRequest, QuoteRequestTransitions::TRANSITION_ACCEPT);
             $cart = $this->quoteCartManager->start($quoteRequest, $customer, $storeInSession);
@@ -91,11 +96,12 @@ final class QuoteRequestManager implements QuoteRequestManagerInterface
 
     public function startCheckout(QuoteRequestInterface $quoteRequest, ?CustomerInterface $customer = null): OrderInterface
     {
-        return $this->transactional($quoteRequest, function () use ($quoteRequest, $customer): OrderInterface {
-            if (QuoteRequestStatuses::ACCEPTED !== $quoteRequest->getStatus()) {
-                throw QuoteTransitionException::notAllowed('checkout', $quoteRequest->getStatus());
-            }
+        if (QuoteRequestStatuses::ACCEPTED !== $quoteRequest->getStatus()) {
+            throw QuoteTransitionException::notAllowed('checkout', $quoteRequest->getStatus());
+        }
 
+        // The lock re-checks status and version: a concurrent start or conversion is refused.
+        return $this->transactional($quoteRequest, function () use ($quoteRequest, $customer): OrderInterface {
             return $this->quoteCartManager->start($quoteRequest, $customer);
         });
     }
@@ -103,7 +109,6 @@ final class QuoteRequestManager implements QuoteRequestManagerInterface
     public function markOrdered(QuoteRequestInterface $quoteRequest): void
     {
         $this->applyTransition($quoteRequest, QuoteRequestTransitions::TRANSITION_ORDER);
-        $this->dispatch($quoteRequest, QuoteRequestTransitions::TRANSITION_ORDER);
     }
 
     public function postMessage(QuoteRequestInterface $quoteRequest, QuoteMessageInterface $message): void
@@ -157,8 +162,8 @@ final class QuoteRequestManager implements QuoteRequestManagerInterface
     }
 
     /**
-     * Locks the quote row until the end of the transaction and checks that nobody changed its
-     * status meanwhile (double click, customer and merchant at the same time).
+     * Locks the quote row until the end of the transaction and checks that nobody changed it
+     * meanwhile (double click, customer and merchant at the same time).
      */
     private function lock(QuoteRequestInterface $quoteRequest): void
     {
@@ -168,9 +173,20 @@ final class QuoteRequestManager implements QuoteRequestManagerInterface
         }
 
         $table = $this->entityManager->getClassMetadata($quoteRequest::class)->getTableName();
-        $status = $this->entityManager->getConnection()->fetchOne(sprintf('SELECT status FROM %s WHERE id = ? FOR UPDATE', $table), [$id]);
-        if ($status !== $quoteRequest->getStatus()) {
-            throw QuoteTransitionException::concurrentChange(is_string($status) ? $status : 'unknown');
+        $row = $this->entityManager->getConnection()->fetchAssociative(sprintf('SELECT status, version FROM %s WHERE id = ? FOR UPDATE', $table), [$id]);
+        $status = is_array($row) && is_string($row['status'] ?? null) ? $row['status'] : 'unknown';
+        // The version changes with any committed change (status, cart link, lines...): the
+        // in-memory quote is outdated, nothing may be decided on it.
+        $version = is_array($row) && is_numeric($row['version'] ?? null) ? (int) $row['version'] : null;
+        if ($status !== $quoteRequest->getStatus() || $version !== $quoteRequest->getVersion()) {
+            throw QuoteTransitionException::concurrentChange($status);
+        }
+    }
+
+    private function assertCan(QuoteRequestInterface $quoteRequest, string $transition): void
+    {
+        if ($this->depth === 0 && !$this->can($quoteRequest, $transition)) {
+            throw QuoteTransitionException::notAllowed($transition, $quoteRequest->getStatus());
         }
     }
 

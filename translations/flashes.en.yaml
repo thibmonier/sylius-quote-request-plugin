@@ -33,3 +33,4 @@ tmonier_quote_request:
         pdf_failed: 'The PDF of the quote could not be generated: the e-mail was sent without it.'
         too_many_requests: 'Too many requests: please try again later.'
         cart_of_another_customer: 'The cart of this quote belongs to another customer.'
+        quote_changed: 'The quote was changed meanwhile (for example ordered by our sales team): please check it again.'

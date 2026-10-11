@@ -34,6 +34,7 @@ use Tmonier\SyliusQuoteRequestPlugin\Form\Type\Shop\QuoteRequestType;
 use Tmonier\SyliusQuoteRequestPlugin\Manager\QuoteRequestManagerInterface;
 use Tmonier\SyliusQuoteRequestPlugin\Manager\QuoteTransitionException;
 use Tmonier\SyliusQuoteRequestPlugin\Pdf\QuotePdfGeneratorInterface;
+use Tmonier\SyliusQuoteRequestPlugin\RateLimit\RateLimitKeys;
 use Tmonier\SyliusQuoteRequestPlugin\Repository\QuoteRequestRepositoryInterface;
 use Tmonier\SyliusQuoteRequestPlugin\Workflow\QuoteRequestStatuses;
 use Tmonier\SyliusQuoteRequestPlugin\Workflow\QuoteRequestTransitions;
@@ -70,6 +71,8 @@ final class QuoteRequestController extends AbstractController
         private readonly QuotePdfGeneratorInterface $pdfGenerator,
         private readonly ?RateLimiterFactory $ipLimiter = null,
         private readonly ?RateLimiterFactory $emailLimiter = null,
+        private readonly ?RateLimiterFactory $messageIpLimiter = null,
+        private readonly ?RateLimiterFactory $messageQuoteLimiter = null,
     ) {
     }
 
@@ -165,15 +168,18 @@ final class QuoteRequestController extends AbstractController
 
                 return $this->redirectToRoute('sylius_shop_homepage');
             }
-            if ($this->isRateLimited($request, $quoteRequest->getEmail())) {
-                $this->addFlash('error', 'tmonier_quote_request.flash.too_many_requests');
+        }
 
-                return $this->render('@TmonierSyliusQuoteRequestPlugin/shop/quote_request/new.html.twig', [
-                    'quote_request' => $quoteRequest,
-                    'form' => $form->createView(),
-                    'is_guest' => true,
-                ], new Response(null, Response::HTTP_TOO_MANY_REQUESTS));
-            }
+        // Only valid requests count; customers with an account are limited too (registration
+        // may not need an e-mail verification).
+        if ($form->isSubmitted() && $form->isValid() && $this->isRateLimited($this->ipLimiter, $this->emailLimiter, $request, RateLimitKeys::email((string) $quoteRequest->getEmail()))) {
+            $this->addFlash('error', 'tmonier_quote_request.flash.too_many_requests');
+
+            return $this->render('@TmonierSyliusQuoteRequestPlugin/shop/quote_request/new.html.twig', [
+                'quote_request' => $quoteRequest,
+                'form' => $form->createView(),
+                'is_guest' => null === $customer,
+            ], new Response(null, Response::HTTP_TOO_MANY_REQUESTS));
         }
 
         if ($form->isSubmitted() && $form->isValid()) {
@@ -286,8 +292,12 @@ final class QuoteRequestController extends AbstractController
             }
 
             $this->quoteRequestManager->apply($quoteRequest, $transition);
-        } catch (QuoteTransitionException) {
-            $this->addFlash('error', QuoteRequestTransitions::TRANSITION_ACCEPT === $transition ? 'tmonier_quote_request.flash.cannot_accept' : 'tmonier_quote_request.flash.transition_not_allowed');
+        } catch (QuoteTransitionException $exception) {
+            $this->addFlash('error', match (true) {
+                $exception->isConcurrentChange() => 'tmonier_quote_request.flash.quote_changed',
+                QuoteRequestTransitions::TRANSITION_ACCEPT === $transition => 'tmonier_quote_request.flash.cannot_accept',
+                default => 'tmonier_quote_request.flash.transition_not_allowed',
+            });
 
             return $this->redirectToQuote($quoteRequest);
         }
@@ -300,15 +310,16 @@ final class QuoteRequestController extends AbstractController
     public function messageAction(Request $request, string $token): Response
     {
         $quoteRequest = $this->findByToken($token);
-        if (null === $quoteRequest->getCustomer() && $this->isRateLimited($request, $quoteRequest->getEmail())) {
-            $this->addFlash('error', 'tmonier_quote_request.flash.too_many_requests');
-
-            return $this->redirectToQuote($quoteRequest);
-        }
         $form = $this->createForm(QuoteMessageType::class);
         $form->handleRequest($request);
         if (!$form->isSubmitted() || !$form->isValid()) {
             $this->addFlash('error', 'tmonier_quote_request.flash.message_invalid');
+
+            return $this->redirectToQuote($quoteRequest);
+        }
+        // Conversations have their own budget, per quote (and per IP).
+        if ($this->isRateLimited($this->messageIpLimiter, $this->messageQuoteLimiter, $request, 'quote-' . (string) $quoteRequest->getId())) {
+            $this->addFlash('error', 'tmonier_quote_request.flash.too_many_requests');
 
             return $this->redirectToQuote($quoteRequest);
         }
@@ -343,8 +354,8 @@ final class QuoteRequestController extends AbstractController
 
         try {
             $this->quoteRequestManager->startCheckout($quoteRequest, $this->shopCustomer());
-        } catch (QuoteTransitionException) {
-            $this->addFlash('error', 'tmonier_quote_request.flash.cart_of_another_customer');
+        } catch (QuoteTransitionException $exception) {
+            $this->addFlash('error', $exception->isConcurrentChange() ? 'tmonier_quote_request.flash.quote_changed' : 'tmonier_quote_request.flash.cart_of_another_customer');
 
             return $this->redirectToRoute('tmonier_quote_request_shop_show_by_token', ['token' => $token]);
         }
@@ -380,15 +391,15 @@ final class QuoteRequestController extends AbstractController
         ]);
     }
 
-    /** Guests only: per IP and per e-mail (consumes one token of each limiter). */
-    private function isRateLimited(Request $request, ?string $email): bool
+    /** Consumes one token per limiter (IP or IPv6 /64, and the given key). */
+    private function isRateLimited(?RateLimiterFactory $ipLimiter, ?RateLimiterFactory $keyLimiter, Request $request, string $key): bool
     {
         $limited = false;
-        if (null !== $this->ipLimiter) {
-            $limited = !$this->ipLimiter->create((string) $request->getClientIp())->consume()->isAccepted();
+        if (null !== $ipLimiter) {
+            $limited = !$ipLimiter->create(RateLimitKeys::ip($request->getClientIp()))->consume()->isAccepted();
         }
-        if (null !== $this->emailLimiter && null !== $email && '' !== $email) {
-            $limited = !$this->emailLimiter->create(mb_strtolower(trim($email)))->consume()->isAccepted() || $limited;
+        if (null !== $keyLimiter && '' !== $key) {
+            $limited = !$keyLimiter->create($key)->consume()->isAccepted() || $limited;
         }
 
         return $limited;

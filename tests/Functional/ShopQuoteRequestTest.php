@@ -227,9 +227,10 @@ final class ShopQuoteRequestTest extends WebTestCase
         self::assertNotNull($customerEmail);
         self::assertEmailHtmlBodyContains($adminEmail, 'Your account is suspended call 555-0100');
         self::assertEmailHtmlBodyNotContains($customerEmail, 'Your account is suspended');
-        self::assertEmailHtmlBodyContains($adminEmail, 'https://localhost/admin/quote-requests/');
+        // Channel hostname, with the scheme of sylius.unsecured_urls (http in the test application).
+        self::assertEmailHtmlBodyContains($adminEmail, '://localhost/admin/quote-requests/');
         self::assertEmailHtmlBodyNotContains($adminEmail, 'evil.example');
-        self::assertEmailHtmlBodyContains($customerEmail, 'https://localhost/' . $this->localeCode() . '/quotes/');
+        self::assertEmailHtmlBodyContains($customerEmail, '://localhost/' . $this->localeCode() . '/quotes/');
     }
 
     private function addToBasket(ProductVariantInterface $variant, int $quantity): void

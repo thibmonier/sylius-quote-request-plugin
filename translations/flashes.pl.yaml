@@ -33,3 +33,4 @@ tmonier_quote_request:
         pdf_failed: 'Nie udało się wygenerować PDF oferty: e-mail wysłano bez załącznika.'
         too_many_requests: 'Zbyt wiele żądań: spróbuj ponownie później.'
         cart_of_another_customer: 'Koszyk tej oferty należy do innego klienta.'
+        quote_changed: 'Oferta została w międzyczasie zmieniona (na przykład zamówiona przez nasz dział handlowy): sprawdź ją ponownie.'

@@ -93,7 +93,11 @@ final class SnappyQuotePdfGenerator implements QuotePdfGeneratorInterface
 
     private static function isExecutable(string $binary): bool
     {
-        // The binary may come with arguments ("xvfb-run wkhtmltopdf"): check the command itself.
+        // A full path, spaces included (knp-snappy escapes it), or Windows path.
+        if (is_file($binary) && is_executable($binary)) {
+            return true;
+        }
+        // A command with arguments ("xvfb-run wkhtmltopdf"): check the command itself.
         $command = strtok(trim($binary), ' ');
         if (false === $command) {
             return false;

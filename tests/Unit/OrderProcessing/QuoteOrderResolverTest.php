@@ -14,16 +14,31 @@ use Tmonier\SyliusQuoteRequestPlugin\Workflow\QuoteRequestStatuses;
 
 final class QuoteOrderResolverTest extends TestCase
 {
-    public function testARegularCartNeverQueriesTheDatabase(): void
+    public function testARegularCartIsLookedUpOncePerRequest(): void
     {
         $repository = $this->createMock(QuoteRequestRepositoryInterface::class);
-        $repository->expects(self::never())->method('findOneByOrder');
+        $repository->expects(self::once())->method('findOneByOrder')->willReturn(null);
         $cart = $this->cart(1, immutable: false);
 
         $resolver = new QuoteOrderResolver($repository);
 
         self::assertNull($resolver->resolveLockingQuote($cart));
         self::assertNull($resolver->resolveLockingQuote($cart));
+    }
+
+    public function testAnEmptiedQuoteCartStillFindsItsQuote(): void
+    {
+        $cart = $this->cart(4, immutable: false);
+        foreach ($cart->getItems()->toArray() as $item) {
+            $cart->removeItem($item);
+        }
+        $quote = new QuoteRequest();
+        $quote->setStatus(QuoteRequestStatuses::ACCEPTED);
+        $quote->setOrder($cart);
+        $repository = $this->createMock(QuoteRequestRepositoryInterface::class);
+        $repository->method('findOneByOrder')->willReturn($quote);
+
+        self::assertSame($quote, (new QuoteOrderResolver($repository))->resolveLockingQuote($cart));
     }
 
     public function testTheQuoteOfACartIsLookedUpOnce(): void
@@ -49,7 +64,7 @@ final class QuoteOrderResolverTest extends TestCase
     public function testRememberedAndForgottenCarts(): void
     {
         $repository = $this->createMock(QuoteRequestRepositoryInterface::class);
-        $repository->expects(self::never())->method('findOneByOrder');
+        $repository->expects(self::once())->method('findOneByOrder')->willReturn(null);
         $cart = $this->cart(3, immutable: false);
         $quote = new QuoteRequest();
         $quote->setStatus(QuoteRequestStatuses::ACCEPTED);
@@ -57,10 +72,10 @@ final class QuoteOrderResolverTest extends TestCase
         $resolver = new QuoteOrderResolver($repository);
 
         $resolver->remember($cart, $quote);
-        self::assertSame($quote, $resolver->resolveLockingQuote($cart), 'A new quote cart has no immutable item yet.');
+        self::assertSame($quote, $resolver->resolveLockingQuote($cart), 'Remembered: no query.');
 
         $resolver->forget($cart);
-        self::assertNull($resolver->resolveLockingQuote($cart));
+        self::assertNull($resolver->resolveLockingQuote($cart), 'Forgotten: looked up again.');
     }
 
     private function cart(int $id, bool $immutable): Order

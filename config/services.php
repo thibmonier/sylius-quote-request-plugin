@@ -98,7 +98,9 @@ return static function (ContainerConfigurator $container): void {
             service('tmonier_quote_request.repository.quote_request'),
             service('tmonier_quote_request.manager'),
             service('clock'),
+            service('logger'),
         ])
+        ->tag('monolog.logger', ['channel' => 'tmonier_quote_request'])
     ;
     $services->alias(QuoteRequestExpirerInterface::class, 'tmonier_quote_request.expirer');
 
@@ -192,6 +194,7 @@ return static function (ContainerConfigurator $container): void {
             service('sylius.factory.customer'),
             service('sylius.manager.order'),
             service('validator'),
+            service('tmonier_quote_request.orderability_checker'),
         ])
     ;
     $services->alias(QuoteOrderConverterInterface::class, 'tmonier_quote_request.order_converter');
@@ -223,6 +226,7 @@ return static function (ContainerConfigurator $container): void {
         ->args([
             service('tmonier_quote_request.repository.quote_request'),
             service('tmonier_quote_request.manager'),
+            service('tmonier_quote_request.listener.order_checkout_completed_doctrine'),
         ])
         ->tag('kernel.event_listener', ['event' => 'workflow.sylius_order_checkout.completed.complete'])
     ;
@@ -233,6 +237,7 @@ return static function (ContainerConfigurator $container): void {
         ->args([service('event_dispatcher'), service('clock')])
         ->tag('doctrine.event_listener', ['event' => 'onFlush'])
         ->tag('doctrine.event_listener', ['event' => 'postFlush'])
+        ->tag('doctrine.event_listener', ['event' => 'onClear'])
     ;
 
     $services
@@ -286,6 +291,8 @@ return static function (ContainerConfigurator $container): void {
             service('tmonier_quote_request.pdf_generator'),
             service('limiter.tmonier_quote_request_ip')->nullOnInvalid(),
             service('limiter.tmonier_quote_request_email')->nullOnInvalid(),
+            service('limiter.tmonier_quote_request_message_ip')->nullOnInvalid(),
+            service('limiter.tmonier_quote_request_message_quote')->nullOnInvalid(),
         ])
         ->call('setContainer', [service(\Psr\Container\ContainerInterface::class)])
         ->tag('controller.service_arguments')
@@ -330,6 +337,8 @@ return static function (ContainerConfigurator $container): void {
                 'allow_promotions' => param('tmonier_quote_request.allow_promotions'),
             ],
             param('tmonier_quote_request.base_url'),
+            service('url_helper'),
+            param('sylius.unsecured_urls'),
         ])
         ->tag('twig.extension')
     ;

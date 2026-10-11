@@ -12,6 +12,7 @@
             <generator strategy="AUTO" />
         </id>
 
+        <field name="version" column="version" type="integer" version="true" />
         <field name="number" column="number" type="string" length="32" nullable="true" unique="true" />
         <field name="status" column="status" type="string" length="32" />
         <field name="token" column="token" type="string" length="64" unique="true" />

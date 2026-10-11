@@ -61,7 +61,7 @@ final class TmonierSyliusQuoteRequestExtension extends AbstractResourceExtension
             ],
         ]);
 
-        /** @var array{rate_limit: array{enabled: bool, per_ip: int, per_email: int, interval: string, cache_pool: string}} $limits */
+        /** @var array{rate_limit: array{enabled: bool, per_ip: int, per_email: int, messages_per_ip: int, messages_per_quote: int, interval: string, cache_pool: string}} $limits */
         $limits = $this->processConfiguration(new Configuration(), array_map(
             static fn (array $config): array => isset($config['rate_limit']) ? ['rate_limit' => $config['rate_limit']] : [],
             $container->getExtensionConfig($this->getAlias()),
@@ -77,6 +77,8 @@ final class TmonierSyliusQuoteRequestExtension extends AbstractResourceExtension
             $container->prependExtensionConfig('framework', ['rate_limiter' => [
                 'tmonier_quote_request_ip' => $limiter($limits['rate_limit']['per_ip']),
                 'tmonier_quote_request_email' => $limiter($limits['rate_limit']['per_email']),
+                'tmonier_quote_request_message_ip' => $limiter($limits['rate_limit']['messages_per_ip']),
+                'tmonier_quote_request_message_quote' => $limiter($limits['rate_limit']['messages_per_quote']),
             ]]);
         }
 

@@ -71,6 +71,8 @@ final class Configuration implements ConfigurationInterface
                     ->children()
                         ->integerNode('per_ip')->defaultValue(10)->min(1)->end()
                         ->integerNode('per_email')->defaultValue(3)->min(1)->end()
+                        ->integerNode('messages_per_ip')->defaultValue(30)->min(1)->end()
+                        ->integerNode('messages_per_quote')->defaultValue(10)->min(1)->end()
                         ->scalarNode('interval')->defaultValue('1 hour')->cannotBeEmpty()->end()
                         ->scalarNode('cache_pool')->defaultValue('cache.rate_limiter')->cannotBeEmpty()->end()
                     ->end()

@@ -17,6 +17,9 @@ class QuoteRequest implements QuoteRequestInterface
 
     protected ?string $number = null;
 
+    /** Optimistic lock: a flush based on an outdated quote fails instead of overwriting it. */
+    protected ?int $version = 1;
+
     protected string $status = QuoteRequestStatuses::NEW;
 
     protected ?string $token = null;
@@ -76,6 +79,16 @@ class QuoteRequest implements QuoteRequestInterface
     public function getId(): ?int
     {
         return $this->id;
+    }
+
+    public function getVersion(): ?int
+    {
+        return $this->version;
+    }
+
+    public function setVersion(?int $version): void
+    {
+        $this->version = $version;
     }
 
     public function getNumber(): ?string

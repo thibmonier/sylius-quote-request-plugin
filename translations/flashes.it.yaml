@@ -33,3 +33,4 @@ tmonier_quote_request:
         pdf_failed: "Non è stato possibile generare il PDF del preventivo: l'e-mail è stata inviata senza."
         too_many_requests: 'Troppe richieste: riprova più tardi.'
         cart_of_another_customer: 'Il carrello di questo preventivo appartiene a un altro cliente.'
+        quote_changed: 'Il preventivo è stato modificato nel frattempo (ad esempio ordinato dal nostro team commerciale): ricontrollalo.'

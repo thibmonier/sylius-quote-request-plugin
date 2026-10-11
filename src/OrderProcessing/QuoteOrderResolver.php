@@ -11,8 +11,9 @@ use Tmonier\SyliusQuoteRequestPlugin\Repository\QuoteRequestRepositoryInterface;
 use Tmonier\SyliusQuoteRequestPlugin\Workflow\QuoteRequestStatuses;
 
 /**
- * Called by two order processors and the cart page, so the lookup is memoised per order, and
- * carts without immutable item (all the regular carts) never query the database.
+ * Called by two order processors and the cart page: the lookup is memoised per order (one
+ * query per cart and request). It does not rely on the cart content, so a quote cart emptied by
+ * the customer still gets its quote lines back.
  */
 final class QuoteOrderResolver implements QuoteOrderResolverInterface
 {
@@ -31,9 +32,6 @@ final class QuoteOrderResolver implements QuoteOrderResolverInterface
         }
 
         if (!isset($this->resolved[$order])) {
-            if (!$this->hasImmutableItem($order)) {
-                return null;
-            }
             $this->resolved[$order] = $this->quoteRequestRepository->findOneByOrder($order) ?? false;
         }
 
@@ -53,16 +51,5 @@ final class QuoteOrderResolver implements QuoteOrderResolverInterface
     public function forget(BaseOrderInterface $order): void
     {
         unset($this->resolved[$order]);
-    }
-
-    private function hasImmutableItem(OrderInterface $order): bool
-    {
-        foreach ($order->getItems() as $item) {
-            if ($item->isImmutable()) {
-                return true;
-            }
-        }
-
-        return false;
     }
 }

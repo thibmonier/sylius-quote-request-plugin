@@ -17,8 +17,9 @@ interface QuoteCartManagerInterface
     public function start(QuoteRequestInterface $quoteRequest, ?CustomerInterface $customer = null, bool $storeInSession = true): OrderInterface;
 
     /**
-     * Unlinks the quote cart: its items get back the catalog prices (flushed). The quote
+     * Unlinks the quote cart: its items get back the catalog prices, or are removed when the
+     * quote is ordered by other means (flushed). The quote
      * keeps its status, an accepted quote can start a new cart later.
      */
-    public function release(QuoteRequestInterface $quoteRequest): void;
+    public function release(QuoteRequestInterface $quoteRequest, bool $removeItems = false): void;
 }

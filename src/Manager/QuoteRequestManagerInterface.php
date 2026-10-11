@@ -31,8 +31,8 @@ interface QuoteRequestManagerInterface
     public function accept(QuoteRequestInterface $quoteRequest, ?CustomerInterface $customer = null, bool $storeInSession = true): OrderInterface;
 
     /**
-     * Applies the "order" transition without flushing: called while the order completes its
-     * checkout, the change is flushed with the order.
+     * Applies the "order" transition without flushing nor event: called while the order
+     * completes its checkout, the change and the "ordered" event follow the order flush.
      */
     public function markOrdered(QuoteRequestInterface $quoteRequest): void;
 

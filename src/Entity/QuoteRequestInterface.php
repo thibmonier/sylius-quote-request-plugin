@@ -9,8 +9,9 @@ use Sylius\Component\Core\Model\ChannelInterface;
 use Sylius\Component\Core\Model\CustomerInterface;
 use Sylius\Component\Core\Model\OrderInterface;
 use Sylius\Resource\Model\ResourceInterface;
+use Sylius\Resource\Model\VersionedInterface;
 
-interface QuoteRequestInterface extends ResourceInterface
+interface QuoteRequestInterface extends ResourceInterface, VersionedInterface
 {
     public const DISCOUNT_ADJUSTMENT_ORIGIN = 'tmonier_quote_request';
 

@@ -6,6 +6,7 @@ namespace Tmonier\SyliusQuoteRequestPlugin\EventListener;
 
 use Sylius\Component\Core\Model\OrderInterface;
 use Symfony\Component\Workflow\Event\CompletedEvent;
+use Tmonier\SyliusQuoteRequestPlugin\Checkout\QuoteCartInspector;
 use Tmonier\SyliusQuoteRequestPlugin\Manager\QuoteRequestManagerInterface;
 use Tmonier\SyliusQuoteRequestPlugin\Repository\QuoteRequestRepositoryInterface;
 use Tmonier\SyliusQuoteRequestPlugin\Workflow\QuoteRequestStatuses;
@@ -19,6 +20,7 @@ final class OrderCheckoutCompletedListener
     public function __construct(
         private readonly QuoteRequestRepositoryInterface $quoteRequestRepository,
         private readonly QuoteRequestManagerInterface $quoteRequestManager,
+        private readonly OrderCheckoutCompletedDoctrineListener $doctrineListener,
     ) {
     }
 
@@ -30,12 +32,14 @@ final class OrderCheckoutCompletedListener
         }
 
         $quoteRequest = $this->quoteRequestRepository->findOneByOrder($order);
-        if (null === $quoteRequest || QuoteRequestStatuses::ACCEPTED !== $quoteRequest->getStatus()) {
+        if (null === $quoteRequest || QuoteRequestStatuses::ACCEPTED !== $quoteRequest->getStatus() || !QuoteCartInspector::holdsQuoteLines($order, $quoteRequest)) {
             return;
         }
 
         if ($this->quoteRequestManager->can($quoteRequest, QuoteRequestTransitions::TRANSITION_ORDER)) {
             $this->quoteRequestManager->markOrdered($quoteRequest);
+            // The "ordered" event is dispatched once the order is flushed, as on the Winzou path.
+            $this->doctrineListener->enqueue($quoteRequest);
         }
     }
 }

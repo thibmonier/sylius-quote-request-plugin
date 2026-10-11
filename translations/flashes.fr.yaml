@@ -33,3 +33,4 @@ tmonier_quote_request:
         pdf_failed: "Le PDF du devis n'a pas pu être généré : l'e-mail a été envoyé sans."
         too_many_requests: 'Trop de demandes : veuillez réessayer plus tard.'
         cart_of_another_customer: 'Le panier de ce devis appartient à un autre client.'
+        quote_changed: 'Le devis a été modifié entre-temps (par exemple commandé par notre équipe commerciale) : veuillez le consulter à nouveau.'

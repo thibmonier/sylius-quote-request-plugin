@@ -76,7 +76,7 @@ final class QuoteCartManager implements QuoteCartManagerInterface
         return $cart;
     }
 
-    public function release(QuoteRequestInterface $quoteRequest): void
+    public function release(QuoteRequestInterface $quoteRequest, bool $removeItems = false): void
     {
         $cart = $quoteRequest->getOrder();
         if (null === $cart || OrderInterface::STATE_CART !== $cart->getState()) {
@@ -87,9 +87,12 @@ final class QuoteCartManager implements QuoteCartManagerInterface
         $this->quoteOrderResolver->forget($cart);
         $this->objectManager->flush();
 
-        foreach ($cart->getItems() as $item) {
+        foreach ($cart->getItems()->toArray() as $item) {
             /** @var OrderItemInterface $item */
             $item->setImmutable(false);
+            if ($removeItems) {
+                $cart->removeItem($item);
+            }
         }
         $this->orderProcessor->process($cart);
         $this->objectManager->flush();
