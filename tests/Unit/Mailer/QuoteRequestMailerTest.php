@@ -107,12 +107,11 @@ final class QuoteRequestMailerTest extends TestCase
         self::assertSame([[QuoteRequestEmails::CUSTOMER_PROPOSAL, ['buyer@example.com'], []]], $this->sent);
         self::assertCount(1, $this->attachments);
         $path = (string) array_key_first($this->attachments);
-        self::assertStringEndsWith('/quote-Q000042.pdf', $path);
+        self::assertMatchesRegularExpression('#/quote-Q000042-[0-9a-f]{16}\.pdf$#', $path);
         self::assertSame('%PDF-fake Q000042', $this->attachments[$path]);
         self::assertFileExists($path, 'The file stays for an async mailer worker.');
-        self::assertStringStartsWith($this->directory . '/' . QuoteRequestMailer::DIRECTORY_PREFIX, $path);
+        self::assertSame($this->directory, dirname($path));
         self::assertSame('0644', substr(sprintf('%o', fileperms($path)), -4), 'Readable by a worker running as another user.');
-        self::assertSame('0711', substr(sprintf('%o', fileperms(dirname($path))), -4), 'Not listable.');
     }
 
     public function testAPdfFailureDoesNotPreventTheProposalEmail(): void
@@ -191,11 +190,24 @@ final class QuoteRequestMailerTest extends TestCase
         }
 
         $path = (string) array_key_first($this->attachments);
-        self::assertStringStartsWith($base . '/' . QuoteRequestMailer::DIRECTORY_PREFIX, $path);
-        self::assertSame('0711', substr(sprintf('%o', fileperms($this->directory . '/nested')), -4));
-        self::assertSame('0711', substr(sprintf('%o', fileperms($base)), -4));
-        self::assertSame('0711', substr(sprintf('%o', fileperms(dirname($path))), -4));
+        self::assertSame($base, dirname($path), 'One file directly in the configured directory.');
+        self::assertSame('0775', substr(sprintf('%o', fileperms($this->directory . '/nested')), -4));
+        self::assertSame('0775', substr(sprintf('%o', fileperms($base)), -4));
         self::assertSame('0644', substr(sprintf('%o', fileperms($path)), -4));
+    }
+
+    public function testAnExistingDirectoryKeepsItsPermissions(): void
+    {
+        mkdir($this->directory, 0750);
+        chmod($this->directory, 0750);
+        $mailer = new QuoteRequestMailer($this->recordingSender(), new FakePdfGenerator(true), null, new NullLogger(), $this->requestStack, $this->directory);
+        $quote = $this->quote();
+        $quote->setNumber('Q000045');
+
+        $mailer->onProposed(new QuoteRequestEvent($quote));
+
+        self::assertSame('0750', substr(sprintf('%o', fileperms($this->directory)), -4));
+        self::assertCount(1, $this->attachments);
     }
 
     private function recordingSender(): SenderInterface

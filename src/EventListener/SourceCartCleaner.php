@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace Tmonier\SyliusQuoteRequestPlugin\EventListener;
 
+use Doctrine\ORM\EntityManagerInterface;
 use Tmonier\SyliusQuoteRequestPlugin\Checkout\QuoteCartManagerInterface;
+use Tmonier\SyliusQuoteRequestPlugin\Entity\QuoteRequestInterface;
 use Tmonier\SyliusQuoteRequestPlugin\Event\QuoteRequestEvent;
 
 /**
@@ -13,13 +15,21 @@ use Tmonier\SyliusQuoteRequestPlugin\Event\QuoteRequestEvent;
  */
 final class SourceCartCleaner
 {
-    public function __construct(private readonly QuoteCartManagerInterface $quoteCartManager)
-    {
+    public function __construct(
+        private readonly QuoteCartManagerInterface $quoteCartManager,
+        private readonly EntityManagerInterface $entityManager,
+    ) {
     }
 
     public function __invoke(QuoteRequestEvent $event): void
     {
-        $quoteRequest = $event->getQuoteRequest();
+        // Fresh, managed entities: the event may come after the entity manager was cleared.
+        $id = $event->getQuoteRequest()->getId();
+        $quoteRequest = null === $id ? null : $this->entityManager->find($event->getQuoteRequest()::class, $id);
+        if (!$quoteRequest instanceof QuoteRequestInterface) {
+            return;
+        }
+
         $source = $quoteRequest->getSourceOrder();
         if (null !== $source) {
             $this->quoteCartManager->removeQuotedProducts($source, $quoteRequest);

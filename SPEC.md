@@ -159,6 +159,13 @@ Source-cart cleaning moved to the "ordered" event (customer checkout and merchan
 limited to the recorded source cart, the requested quantities and carts not in checkout. PDF
 directory in the project by default, created with explicit permissions.
 
+## 2g. Round-5 simplification (2026-10-12)
+
+Event verification for foreign transactions removed: events of the plugin's own transactions
+after commit, everything else right away (documented, outbox recommended). Source cart also
+cleaned when its checkout has not reached the payment step or is idle. PDFs written as unique
+files in a 0775 directory (ACL / shared group documented).
+
 ## 3. Model
 
 - `QuoteRequest` (`tmonier_quote_request`): number (`Q000042`, from the id), status, token,

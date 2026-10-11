@@ -25,7 +25,8 @@ interface QuoteCartManagerInterface
 
     /**
      * Once a quote is ordered: removes the requested quantities of its products from the cart
-     * the request was made from, keeping the rest; never a cart in checkout (flushed).
+     * the request was made from, keeping the rest; never a cart at the payment step used within
+     * `checkout_idle_minutes` (flushed).
      */
     public function removeQuotedProducts(OrderInterface $cart, QuoteRequestInterface $quoteRequest): void;
 }

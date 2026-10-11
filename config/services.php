@@ -185,6 +185,8 @@ return static function (ContainerConfigurator $container): void {
             service('sylius_shop.storage.cart_session'),
             service('tmonier_quote_request.order_resolver'),
             service('sylius.modifier.order_item_quantity'),
+            service('clock'),
+            param('tmonier_quote_request.checkout_idle_minutes'),
         ])
     ;
     $services->alias(QuoteCartManagerInterface::class, 'tmonier_quote_request.cart_manager');
@@ -226,11 +228,8 @@ return static function (ContainerConfigurator $container): void {
         ->set('tmonier_quote_request.event_queue', QuoteEventQueue::class)
         ->args([
             service('event_dispatcher'),
-            service('doctrine.dbal.default_connection'),
             service('doctrine.orm.entity_manager'),
-            param('tmonier_quote_request.transaction_baseline'),
         ])
-        ->tag('kernel.event_subscriber')
     ;
 
     $services
@@ -281,7 +280,7 @@ return static function (ContainerConfigurator $container): void {
 
     $services
         ->set('tmonier_quote_request.listener.source_cart_cleaner', SourceCartCleaner::class)
-        ->args([service('tmonier_quote_request.cart_manager')])
+        ->args([service('tmonier_quote_request.cart_manager'), service('tmonier_quote_request.manager.quote_request')])
         ->tag('kernel.event_listener', ['event' => QuoteRequestEvents::ORDERED])
     ;
 

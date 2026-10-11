@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tmonier\SyliusQuoteRequestPlugin\Checkout;
 
 use Doctrine\ORM\EntityManagerInterface;
+use Psr\Clock\ClockInterface;
 use Sylius\Component\Core\Model\CustomerInterface;
 use Sylius\Component\Core\Model\OrderInterface;
 use Sylius\Component\Core\Model\OrderItemInterface;
@@ -29,6 +30,8 @@ final class QuoteCartManager implements QuoteCartManagerInterface
         private readonly CartStorageInterface $cartStorage,
         private readonly QuoteOrderResolverInterface $quoteOrderResolver,
         private readonly OrderItemQuantityModifierInterface $orderItemQuantityModifier,
+        private readonly ClockInterface $clock,
+        private readonly int $checkoutIdleMinutes = 30,
     ) {
     }
 
@@ -110,11 +113,11 @@ final class QuoteCartManager implements QuoteCartManagerInterface
             return;
         }
 
-        // Locks the cart row (a checkout step of the customer waits) and reads its real state:
-        // a cart in checkout is never changed under the customer's feet.
+        // Locks the cart row (a checkout step of the customer waits) and reads its real state: a
+        // cart at the payment step, used recently, is never changed under the customer's feet.
         $table = $this->objectManager->getClassMetadata($cart::class)->getTableName();
-        $checkoutState = $this->objectManager->getConnection()->fetchOne(sprintf('SELECT checkout_state FROM %s WHERE id = ? FOR UPDATE', $table), [$cart->getId()]);
-        if (OrderCheckoutStates::STATE_CART !== $checkoutState) {
+        $row = $this->objectManager->getConnection()->fetchAssociative(sprintf('SELECT checkout_state, updated_at FROM %s WHERE id = ? FOR UPDATE', $table), [$cart->getId()]);
+        if (!is_array($row) || $this->isInActiveCheckout($row)) {
             return;
         }
 
@@ -149,6 +152,19 @@ final class QuoteCartManager implements QuoteCartManagerInterface
             $this->orderProcessor->process($cart);
             $this->objectManager->flush();
         }
+    }
+
+    /** @param array<string, mixed> $row */
+    private function isInActiveCheckout(array $row): bool
+    {
+        $notAtPaymentYet = [OrderCheckoutStates::STATE_CART, OrderCheckoutStates::STATE_ADDRESSED, OrderCheckoutStates::STATE_SHIPPING_SELECTED, OrderCheckoutStates::STATE_SHIPPING_SKIPPED];
+        if (in_array($row['checkout_state'] ?? null, $notAtPaymentYet, true)) {
+            return false;
+        }
+
+        $updatedAt = is_string($row['updated_at'] ?? null) ? new \DateTimeImmutable($row['updated_at']) : null;
+
+        return null === $updatedAt || $updatedAt > $this->clock->now()->modify(sprintf('-%d minutes', $this->checkoutIdleMinutes));
     }
 
     /**

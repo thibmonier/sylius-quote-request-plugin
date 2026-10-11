@@ -177,7 +177,7 @@ tmonier_sylius_quote_request:
     pdf_binary: ~               # wkhtmltopdf path, with knplabs/knp-snappy, when KnpSnappyBundle is not installed
     base_url: ~                 # base of the links in the e-mails; the channel hostname when null
     checkout_idle_minutes: 30   # the merchant converts a quote whose cart checkout was abandoned that long ago
-    pdf_attachment_directory: '%kernel.project_dir%/var/tmonier_quote_request/pdf' # proposal PDFs, kept 48 h
+    pdf_attachment_directory: '%kernel.project_dir%/var/tmonier_quote_request/pdf' # proposal PDFs, kept 48 h (created 0775)
     rate_limit:                 # valid quote requests (guests and customers) and messages
         enabled: true
         per_ip: 10              # IPv6: per /56 network; IPv4-mapped addresses count as IPv4
@@ -212,12 +212,17 @@ public function onAccepted(QuoteRequestEvent $event): void
 }
 ```
 
-Events are dispatched once the change is committed, in the order of the changes (`accepted`
-before `ordered` in a merchant conversion): after the plugin's own transactions, or, inside a
-transaction of somebody else (e.g. the messenger `doctrine_transaction` middleware of the API),
-at the end of the request, command or message, each one only if the database holds the change
-it reports. Nothing is dispatched for a rolled back change; a failed operation drops only its
-own events. What the `ordered` listeners persist is
+Events of the operations the plugin runs in its own transaction (accept, merchant conversion,
+merchant and customer transitions) are dispatched right after that transaction commits, in
+the order of the changes (`accepted` before `ordered`), and not at all if it rolls back.
+
+**Limitation:** events raised inside a transaction the plugin does not own (a Sylius API
+command behind the messenger `doctrine_transaction` middleware, the checkout completion flush
+that makes a quote `ordered`, any caller wrapping the plugin in its own transaction) are
+dispatched right away, on postFlush, like the Sylius core events: listeners may run before the
+outer transaction commits, and are not undone if it rolls back. For reliable integrations
+(ERP, webhooks), record the events in an outbox, e.g.
+[tmonier/sylius-webhook-outbox-plugin](https://github.com/thibmonier/sylius-webhook-outbox-plugin). What the `ordered` listeners persist is
 flushed right after them, whatever the state machine adapter. The Symfony Workflow events of
 `tmonier_quote_request` are available too.
 
@@ -258,7 +263,8 @@ flushed right after them, whatever the state machine adapter. The Symfony Workfl
   in its checkout: then it waits until the cart has been idle for `checkout_idle_minutes`.
 - Once a quote is ordered (customer checkout or merchant conversion), the requested quantities
   of its products leave the cart the request was made from ("Request a quote for this cart"),
-  unless that cart is in checkout; the rest of the cart and the other carts are not touched.
+  unless that cart is at the payment step and was used within `checkout_idle_minutes`; the
+  rest of the cart and the other carts are not touched.
 - The rate limiters use the lock component (the plugin enables `framework.lock` with the flock
   store unless the application configures it): parallel requests respect the limits (tested).
 
@@ -270,12 +276,14 @@ flushed right after them, whatever the state machine adapter. The Symfony Workfl
 - Amount volume discounts assume a currency with 2 decimals.
 - Rate limit keys only fold `+tag` sub-addressing (all providers) and Gmail dots; other
   provider aliases count as distinct mailboxes.
-- The PDF of the proposal e-mail is attached by path (Sylius mailer): it is kept 48 hours in
-  an unguessable directory of `pdf_attachment_directory` (default
-  `%kernel.project_dir%/var/tmonier_quote_request/pdf`; directories 0711 and files 0644 set
-  explicitly, whatever the umask) so that an async mailer worker on the same host, even as
-  another user, can read it. With workers on other hosts, use a shared directory or send the
-  e-mails synchronously.
+- The PDF of the proposal e-mail is attached by path (Sylius mailer): each PDF is written as a
+  uniquely named file (0644) in `pdf_attachment_directory` (default
+  `%kernel.project_dir%/var/tmonier_quote_request/pdf`) and removed after 48 hours, so that an
+  async mailer worker can read it. The directory is created 0775 when missing (an existing one
+  keeps its permissions): run php-fpm, the console and the workers with a common group, or
+  grant them an ACL, e.g.
+  `setfacl -R -m u:www-data:rwX -m d:u:www-data:rwX var/tmonier_quote_request`. With workers on
+  other hosts, use a shared directory or send the e-mails synchronously.
 - A PDF engine that fails sends the proposal without attachment and warns the merchant.
 - A product disabled or removed from the channel after the acceptance leaves the quote cart
   (with its share of a fixed global discount); the customer is told on the quote page.

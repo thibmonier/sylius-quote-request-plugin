@@ -367,50 +367,6 @@ final class QuoteToOrderTest extends KernelTestCase
         ], $log);
     }
 
-    public function testEventsOfARolledBackForeignTransactionAreDropped(): void
-    {
-        [$first] = $this->variants();
-        $log = $this->eventLog();
-        $quote = $this->proposedQuote([[$first, 2, 1000]]);
-        $connection = $this->entityManager()->getConnection();
-
-        // E.g. the messenger doctrine_transaction middleware around an API command.
-        $connection->beginTransaction();
-        $this->converter()->convert($quote, $this->usAddress(), null, null);
-        self::assertSame([], $log->entries, 'Held until the end of the foreign transaction.');
-        $connection->rollBack();
-        $this->eventQueue()->flush(); // kernel.terminate / console.terminate
-
-        self::assertSame([], $log->entries, 'Nothing was stored: no "accepted", no "ordered".');
-    }
-
-    public function testAFailedOperationKeepsTheEventsOfAnEarlierOneInTheSameTransaction(): void
-    {
-        [$first, $second] = $this->variants();
-        $log = $this->eventLog();
-        $converted = $this->proposedQuote([[$first, 2, 1000]]);
-        $failing = $this->proposedQuote([[$second, 1, 1000]]);
-        $second->setEnabled(false);
-        $this->entityManager()->flush();
-        $connection = $this->entityManager()->getConnection();
-
-        $connection->beginTransaction();
-        $this->converter()->convert($converted, $this->usAddress(), null, null);
-
-        try {
-            $this->converter()->convert($failing, $this->usAddress(), null, null);
-            self::fail('The second conversion must fail.');
-        } catch (\RuntimeException) {
-        }
-        $connection->commit();
-        $this->eventQueue()->flush();
-
-        self::assertSame([
-            [\Tmonier\SyliusQuoteRequestPlugin\Event\QuoteRequestEvents::ACCEPTED, $converted->getNumber()],
-            [\Tmonier\SyliusQuoteRequestPlugin\Event\QuoteRequestEvents::ORDERED, $converted->getNumber()],
-        ], $log->entries);
-    }
-
     public function testTheCustomerCheckoutRemovesTheRequestedQuantitiesFromTheSourceCartOnly(): void
     {
         [$quoted, $kept] = $this->variants();
@@ -454,6 +410,41 @@ final class QuoteToOrderTest extends KernelTestCase
         self::assertSame(2, $this->items($source)[0]->getQuantity());
     }
 
+    public function testASourceCartLeftAtTheAddressStepIsCleanedAfterTheCustomerCheckout(): void
+    {
+        [$quoted, $kept] = $this->variants();
+        // The customer went to the address step, came back and requested a quote for the cart.
+        $source = $this->cartOf($this->customer(), [[$quoted, 2], [$kept, 1]]);
+        $source->setCheckoutState(\Sylius\Component\Core\OrderCheckoutStates::STATE_ADDRESSED);
+        $this->entityManager()->flush();
+        $quote = $this->proposedQuote([[$quoted, 2, 999]]);
+        $quote->setSourceOrder($source);
+        $this->entityManager()->flush();
+
+        $cart = $this->manager()->accept($quote, $this->customer(), false);
+        $this->checkout($cart, $quote);
+
+        $this->entityManager()->refresh($source);
+        self::assertSame([$kept], array_map(static fn (OrderItemInterface $item) => $item->getVariant(), $this->items($source)));
+    }
+
+    public function testASourceCartAbandonedAtThePaymentStepIsCleaned(): void
+    {
+        [$quoted] = $this->variants();
+        $source = $this->cartOf($this->customer(), [[$quoted, 2]]);
+        $source->setCheckoutState(\Sylius\Component\Core\OrderCheckoutStates::STATE_PAYMENT_SELECTED);
+        $this->entityManager()->flush();
+        $this->entityManager()->getConnection()->executeStatement('UPDATE sylius_order SET updated_at = ? WHERE id = ?', [(new \DateTimeImmutable('-2 hours'))->format('Y-m-d H:i:s'), $source->getId()]);
+        $quote = $this->proposedQuote([[$quoted, 2, 999]]);
+        $quote->setSourceOrder($source);
+        $this->entityManager()->flush();
+
+        $this->converter()->convert($quote, $this->usAddress(), null, null);
+
+        $this->entityManager()->refresh($source);
+        self::assertCount(0, $source->getItems(), 'Idle for more than checkout_idle_minutes.');
+    }
+
     /** @param list<array{0: ProductVariantInterface, 1: int}> $lines */
     private function cartOf(CustomerInterface $customer, array $lines): OrderInterface
     {
@@ -474,34 +465,12 @@ final class QuoteToOrderTest extends KernelTestCase
         return $cart;
     }
 
-    private function eventLog(): EventLog
-    {
-        $log = new EventLog();
-        /** @var \Symfony\Component\EventDispatcher\EventDispatcherInterface $dispatcher */
-        $dispatcher = self::getContainer()->get('event_dispatcher');
-        foreach ([\Tmonier\SyliusQuoteRequestPlugin\Event\QuoteRequestEvents::ACCEPTED, \Tmonier\SyliusQuoteRequestPlugin\Event\QuoteRequestEvents::ORDERED] as $eventName) {
-            $dispatcher->addListener($eventName, static function (\Tmonier\SyliusQuoteRequestPlugin\Event\QuoteRequestEvent $event) use ($log, $eventName): void {
-                $log->entries[] = [$eventName, $event->getQuoteRequest()->getNumber()];
-            });
-        }
-
-        return $log;
-    }
-
     private function converter(): \Tmonier\SyliusQuoteRequestPlugin\Conversion\QuoteOrderConverterInterface
     {
         /** @var \Tmonier\SyliusQuoteRequestPlugin\Conversion\QuoteOrderConverterInterface $converter */
         $converter = self::getContainer()->get('tmonier_quote_request.order_converter');
 
         return $converter;
-    }
-
-    private function eventQueue(): \Tmonier\SyliusQuoteRequestPlugin\Event\QuoteEventQueue
-    {
-        /** @var \Tmonier\SyliusQuoteRequestPlugin\Event\QuoteEventQueue $queue */
-        $queue = self::getContainer()->get('tmonier_quote_request.event_queue');
-
-        return $queue;
     }
 
     /**

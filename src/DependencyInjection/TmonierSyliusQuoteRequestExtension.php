@@ -19,12 +19,12 @@ final class TmonierSyliusQuoteRequestExtension extends AbstractResourceExtension
 
     public function load(array $configs, ContainerBuilder $container): void
     {
-        /** @var array{allow_guests: bool, default_validity_days: int, admin_email: string|null, from_product_page: bool, from_cart: bool, allow_promotions: bool, max_lines: int, customer_group_discounts: array<string, float>, pdf_binary: string|null, base_url: string|null, transaction_baseline: int, checkout_idle_minutes: int, pdf_attachment_directory: string, driver: string, resources: array<string, mixed>} $config */
+        /** @var array{allow_guests: bool, default_validity_days: int, admin_email: string|null, from_product_page: bool, from_cart: bool, allow_promotions: bool, max_lines: int, customer_group_discounts: array<string, float>, pdf_binary: string|null, base_url: string|null, checkout_idle_minutes: int, pdf_attachment_directory: string, driver: string, resources: array<string, mixed>} $config */
         $config = $this->processConfiguration(new Configuration(), $configs);
 
         $this->registerResources('tmonier_quote_request', $config['driver'], $config['resources'], $container);
 
-        foreach (['allow_guests', 'default_validity_days', 'admin_email', 'from_product_page', 'from_cart', 'allow_promotions', 'max_lines', 'customer_group_discounts', 'pdf_binary', 'base_url', 'transaction_baseline', 'checkout_idle_minutes', 'pdf_attachment_directory'] as $key) {
+        foreach (['allow_guests', 'default_validity_days', 'admin_email', 'from_product_page', 'from_cart', 'allow_promotions', 'max_lines', 'customer_group_discounts', 'pdf_binary', 'base_url', 'checkout_idle_minutes', 'pdf_attachment_directory'] as $key) {
             $container->setParameter('tmonier_quote_request.' . $key, $config[$key]);
         }
 

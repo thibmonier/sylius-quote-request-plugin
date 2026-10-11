@@ -70,9 +70,9 @@ fixture (8 quotes in every status, ordered included when the random fixtures all
   test transaction; functional and integration tests never skip on fixtures
   (`NoSkippedTestsTest`). `tests/Integration/QuoteConcurrencyTest` and
   `RateLimitParallelTest` commit data / spawn processes and clean up after themselves.
-- Events: `Event/QuoteEventQueue` (after the plugin transaction commit, or at the end of the
-  request/command/message inside a foreign transaction). The test app sets
-  `transaction_baseline: 1` (every test runs in a transaction).
+- Events: `Event/QuoteEventQueue` holds the events of the plugin's own transactions until
+  commit (dropped on rollback); everything else is dispatched right away (documented
+  limitation for foreign transactions, outbox recommended).
 - Invariant: quote-price items carry a `tmonier_quote_lock` adjustment;
   `QuotePriceLockProcessor` reprices them in carts without accepted quote,
   `QuoteCartCompletionGuardListener` and the Doctrine listener refuse their completion.
