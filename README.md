@@ -176,9 +176,11 @@ tmonier_sylius_quote_request:
         wholesale: 12.5
     pdf_binary: ~               # wkhtmltopdf path, with knplabs/knp-snappy, when KnpSnappyBundle is not installed
     base_url: ~                 # base of the links in the e-mails; the channel hostname when null
+    checkout_idle_minutes: 30   # the merchant converts a quote whose cart checkout was abandoned that long ago
+    pdf_attachment_directory: ~ # PDFs attached to the proposal e-mail (kept 48 h); runtime temp dir when null
     rate_limit:                 # valid quote requests (guests and customers) and messages
         enabled: true
-        per_ip: 10              # IPv6: per /64 network
+        per_ip: 10              # IPv6: per /56 network; IPv4-mapped addresses count as IPv4
         per_email: 3            # case, +tag and Gmail dots ignored
         messages_per_ip: 30
         messages_per_quote: 10
@@ -210,11 +212,12 @@ public function onAccepted(QuoteRequestEvent $event): void
 }
 ```
 
-`created`, `proposed`, `accepted`, `declined`, `cancelled`, `expired` and the messages events
-are dispatched once the change is committed (accept, convert and the merchant transitions run
-in a transaction holding a lock on the quote row). `ordered` is dispatched after the order
-flush, whatever the state machine adapter, only if the quote is stored as ordered; what its
-listeners persist is flushed right after. The Symfony Workflow events of
+Events are dispatched once the change is committed, in the order of the changes (`accepted`
+before `ordered` in a merchant conversion): after the plugin's own transactions, or, inside a
+transaction of somebody else (e.g. the messenger `doctrine_transaction` middleware of the API),
+at the end of the request, command or message, `ordered` only if the database confirms it.
+Nothing is dispatched for a rolled back change. What the `ordered` listeners persist is
+flushed right after them, whatever the state machine adapter. The Symfony Workflow events of
 `tmonier_quote_request` are available too.
 
 ## Security
@@ -225,7 +228,7 @@ listeners persist is flushed right after. The Symfony Workflow events of
 - The quotes of a **shop account** need their owner logged in, link or not (other customers get
   a 403, visitors the login page); their e-mails link to *My quotes*. The cart of an accepted
   quote is never handed to another customer.
-- Quote requests are rate limited per IP (IPv6 /64) and per mailbox (sub-addresses and Gmail
+- Quote requests are rate limited per IP (IPv6 /56) and per mailbox (sub-addresses and Gmail
   dots count as one), messages per quote and per IP; only valid submissions count. A honeypot
   field drops robots. E-mails
   to the customer never repeat the contact details typed in the form (the recipient may not be
@@ -241,11 +244,21 @@ listeners persist is flushed right after. The Symfony Workflow events of
   the channel, stock for tracked variants): no partial or empty order. The conversion runs the
   `sylius_checkout_complete` validation of the shop checkout, keeps the chosen shipping method
   or fails, and is atomic.
-- Concurrency: quotes carry an optimistic-lock version; accept, checkout start, conversion and
-  merchant transitions lock the quote row and refuse a quote changed meanwhile (tested with two
-  connections). A conversion is refused while the customer is in the checkout of the quote
-  cart, and empties that cart otherwise. An order that does not hold the quote lines at their
-  locked prices never makes the quote "ordered".
+- Concurrency: every change of a quote locks its row; the decisions on its cart (accept,
+  checkout start, conversion) also check and bump a version, so a decision taken on an outdated
+  quote is refused (tested with two connections). Messages and merchant edits never make a
+  concurrent request fail, nor does the quote ever make a checkout completion fail.
+- Invariant: a cart holds items at quote prices only while it is the cart of the accepted
+  quote holding them (items marked by a `tmonier_quote_lock` adjustment). Any other cart gets
+  the catalog prices back at its next processing, and its checkout completion is refused
+  (Symfony Workflow guard and a Doctrine check for any adapter). An order that does not hold
+  the quote lines never makes the quote "ordered".
+- A merchant conversion takes over the customer's quote cart (emptied), unless the customer is
+  in its checkout: then it waits until the cart has been idle for `checkout_idle_minutes`. The
+  quoted products also leave the cart the request was made from and the other carts of the
+  customer (the rest of those carts is kept).
+- The rate limiters use the lock component (the plugin enables `framework.lock` with the flock
+  store unless the application configures it): parallel requests respect the limits (tested).
 
 ## Limitations
 
@@ -253,9 +266,13 @@ listeners persist is flushed right after. The Symfony Workflow events of
 - Shipping costs are not part of the quote; they are chosen and charged at checkout.
 - Lines are product variants of the catalog (no free-text line, no attachment).
 - Amount volume discounts assume a currency with 2 decimals.
-- The PDF of the proposal e-mail is attached by path (Sylius mailer): it is kept in
-  `<tmp>/tmonier_quote_request_pdf` for 48 hours so that an async mailer worker on the same
-  host can read it. With workers on other hosts, send the e-mails synchronously.
+- Rate limit keys only fold `+tag` sub-addressing (all providers) and Gmail dots; other
+  provider aliases count as distinct mailboxes.
+- The PDF of the proposal e-mail is attached by path (Sylius mailer): it is kept 48 hours in
+  an unguessable directory (0711, file 0644) of `pdf_attachment_directory` (the runtime
+  temporary directory by default) so that an async mailer worker on the same host, even as
+  another user, can read it. With workers on other hosts, use a shared directory or send the
+  e-mails synchronously.
 - A PDF engine that fails sends the proposal without attachment and warns the merchant.
 - A product disabled or removed from the channel after the acceptance leaves the quote cart
   (with its share of a fixed global discount); the customer is told on the quote page.

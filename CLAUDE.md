@@ -66,6 +66,16 @@ fixture (8 quotes in every status, ordered included when the random fixtures all
 - Twig: `Twig/QuoteRequestExtension` (`tmonier_quote_request_totals`, `_can`, `_cart_quote`,
   `_setting`, `_shows_prices`, `_status_color`). Hooks in `config/twig_hooks`.
 
+- Test data: `tests/TestCatalog.php` creates zones, shipping/payment methods and products in the
+  test transaction; functional and integration tests never skip on fixtures
+  (`NoSkippedTestsTest`). `tests/Integration/QuoteConcurrencyTest` and
+  `RateLimitParallelTest` commit data / spawn processes and clean up after themselves.
+- Events: `Event/QuoteEventQueue` (after the plugin transaction commit, or at the end of the
+  request/command/message inside a foreign transaction). The test app sets
+  `transaction_baseline: 1` (every test runs in a transaction).
+- Invariant: quote-price items carry a `tmonier_quote_lock` adjustment;
+  `QuotePriceLockProcessor` reprices them in carts without accepted quote,
+  `QuoteCartCompletionGuardListener` and the Doctrine listener refuse their completion.
 - Locks and atomicity: `QuoteRequestManager::transactional()` (transaction + `SELECT ... FOR
   UPDATE` on the quote with a status re-check, events dispatched after commit, EM cleared on
   failure). Accept, startCheckout, apply and the conversion use it.

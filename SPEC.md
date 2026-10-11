@@ -141,6 +141,16 @@ never for a failed flush; expirer continues past a quote changed meanwhile; rate
 absolute e-mail links via UrlHelper and `sylius.unsecured_urls`; refused proposals keep the
 merchant edits; per-PDF private temporary directories; binary paths with spaces.
 
+## 2e. Round-3 fixes (2026-10-12)
+
+Quote-price invariant (marker adjustment, repricing of unlinked carts, completion guards for
+every adapter); event queue dispatching after the outermost commit, in order, with a database
+check for "ordered"; version checked and bumped only by cart decisions; locked rate limiters,
+IPv4-mapped addresses unwrapped, IPv6 per /56; source cart remembered and cleaned on merchant
+orders (proposed or accepted quotes), other customer carts too; abandoned checkouts taken over
+after `checkout_idle_minutes`; PDF attachment directory resolved at runtime, readable by other
+local users; tests build their own catalog (no skips), two-connection and parallel-process tests.
+
 ## 3. Model
 
 - `QuoteRequest` (`tmonier_quote_request`): number (`Q000042`, from the id), status, token,

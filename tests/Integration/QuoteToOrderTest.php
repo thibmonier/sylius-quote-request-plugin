@@ -344,6 +344,7 @@ final class QuoteToOrderTest extends KernelTestCase
             throw new \RuntimeException('ERP down');
         };
         $dispatcher->addListener('workflow.sylius_order_checkout.completed.complete', $failing, -100);
+
         try {
             $converter->convert($quote, $this->usAddress(), null, null);
             self::fail('The conversion must fail.');
