@@ -53,6 +53,9 @@ final class QuoteToOrderTest extends KernelTestCase
     {
         [$first, $second] = $this->variants();
         $this->createApplicablePromotion();
+        // The quote preview uses the customer's default address: the same one as the checkout.
+        $this->customer()->setDefaultAddress($this->usAddress());
+        $this->entityManager()->flush();
         $quote = $this->proposedQuote([[$first, 3, 1999], [$second, 7, 1234]], 10.0);
         $expectedTotals = $this->totalsCalculator()->calculate($quote);
 
@@ -215,6 +218,20 @@ final class QuoteToOrderTest extends KernelTestCase
     {
         /** @var StateMachineInterface $stateMachine */
         $stateMachine = self::getContainer()->get('sylius_abstraction.state_machine');
+        $address = $this->usAddress();
+        $cart->setShippingAddress($address);
+        $cart->setBillingAddress(clone $address);
+
+        foreach ([OrderCheckoutTransitions::TRANSITION_ADDRESS, OrderCheckoutTransitions::TRANSITION_SELECT_SHIPPING, OrderCheckoutTransitions::TRANSITION_SELECT_PAYMENT, OrderCheckoutTransitions::TRANSITION_COMPLETE] as $transition) {
+            self::assertTrue($stateMachine->can($cart, OrderCheckoutTransitions::GRAPH, $transition), sprintf('Checkout transition "%s".', $transition));
+            $stateMachine->apply($cart, OrderCheckoutTransitions::GRAPH, $transition);
+            $this->orderProcessor()->process($cart);
+        }
+        $this->entityManager()->flush();
+    }
+
+    private function usAddress(): AddressInterface
+    {
         /** @var FactoryInterface<AddressInterface> $addressFactory */
         $addressFactory = self::getContainer()->get('sylius.factory.address');
 
@@ -225,15 +242,8 @@ final class QuoteToOrderTest extends KernelTestCase
         $address->setCity('New York');
         $address->setPostcode('10001');
         $address->setCountryCode('US');
-        $cart->setShippingAddress($address);
-        $cart->setBillingAddress(clone $address);
 
-        foreach ([OrderCheckoutTransitions::TRANSITION_ADDRESS, OrderCheckoutTransitions::TRANSITION_SELECT_SHIPPING, OrderCheckoutTransitions::TRANSITION_SELECT_PAYMENT, OrderCheckoutTransitions::TRANSITION_COMPLETE] as $transition) {
-            self::assertTrue($stateMachine->can($cart, OrderCheckoutTransitions::GRAPH, $transition), sprintf('Checkout transition "%s".', $transition));
-            $stateMachine->apply($cart, OrderCheckoutTransitions::GRAPH, $transition);
-            $this->orderProcessor()->process($cart);
-        }
-        $this->entityManager()->flush();
+        return $address;
     }
 
     private function createApplicablePromotion(): void
