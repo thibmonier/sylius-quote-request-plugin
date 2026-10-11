@@ -34,6 +34,14 @@ final class WinzouStateMachineTest extends KernelTestCase
         $_SERVER['TEST_SYLIUS_STATE_MACHINE_ADAPTER'] = $_ENV['TEST_SYLIUS_STATE_MACHINE_ADAPTER'] = 'winzou_state_machine';
         self::bootKernel();
         $this->entityManager()->getConnection()->beginTransaction();
+        // The checkout of the tests ships to the US and pays: methods created here, not taken
+        // from the random fixtures.
+        $channel = $this->entityManager()->getRepository(ChannelInterface::class)->findOneBy(['hostname' => 'localhost']);
+        self::assertInstanceOf(ChannelInterface::class, $channel);
+        $catalog = new \Tests\Tmonier\SyliusQuoteRequestPlugin\TestCatalog(self::getContainer());
+        $catalog->shippingMethod($channel, ['US']);
+        $catalog->paymentMethod($channel);
+        $this->entityManager()->flush();
     }
 
     protected function tearDown(): void
@@ -117,7 +125,7 @@ final class WinzouStateMachineTest extends KernelTestCase
             ->getResult()
         ;
         if ([] === $variants) {
-            self::markTestSkipped('No sellable untracked variant in the fixtures.');
+            $variants = [(new \Tests\Tmonier\SyliusQuoteRequestPlugin\TestCatalog(self::getContainer()))->variant($channel)];
         }
 
         /** @var QuoteRequestFactoryInterface $factory */

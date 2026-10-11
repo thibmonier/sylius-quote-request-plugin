@@ -8,9 +8,7 @@ use Sylius\Component\Core\Model\Address;
 use Sylius\Component\Core\Model\CustomerInterface;
 use Sylius\Component\Core\Model\OrderInterface;
 use Sylius\Component\Core\Model\ProductInterface;
-use Sylius\Component\Core\Model\ShippingMethodInterface;
 use Sylius\Component\Core\OrderCheckoutStates;
-use Sylius\Component\Core\Repository\ShippingMethodRepositoryInterface;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Tmonier\SyliusQuoteRequestPlugin\Workflow\QuoteRequestStatuses;
 
@@ -74,19 +72,19 @@ final class AdminQuoteConversionGuardsTest extends WebTestCase
         [$variant] = $this->sellableVariants(1);
         $quote = $this->createQuote([[$variant, 2, 1000]], $customer, QuoteRequestStatuses::ACCEPTED);
         $this->loginAdmin();
-        $usMethods = array_filter($this->shippingMethods(), static fn (ShippingMethodInterface $method): bool => 'US' === $method->getZone()?->getCode());
-        $worldMethods = array_filter($this->shippingMethods(), static fn (ShippingMethodInterface $method): bool => 'WORLD' === $method->getZone()?->getCode());
-        if (1 !== count($usMethods) || [] === $worldMethods) {
-            self::markTestSkipped('Needs a single US shipping method and a WORLD one.');
-        }
-
+        // A single method eligible for the address (shipping step skipped by Sylius) and the
+        // merchant chooses another one.
+        $usMethod = $this->catalog()->shippingMethod($channel, ['US']);
+        $frMethod = $this->catalog()->shippingMethod($channel, ['FR']);
+        $this->catalog()->disableShippingMethodsBut($channel, $usMethod, $frMethod);
+        $this->entityManager()->flush();
         $crawler = $this->client->request('GET', sprintf('/admin/quote-requests/%d/convert', $this->idOf($quote)));
         $this->client->submit($crawler->filter('[data-test-tmonier-quote-convert-submit]')->form([
             'tmonier_quote_request_admin_convert[address][street]' => '1 Main Street',
             'tmonier_quote_request_admin_convert[address][city]' => 'New York',
             'tmonier_quote_request_admin_convert[address][postcode]' => '10001',
             'tmonier_quote_request_admin_convert[address][countryCode]' => 'US',
-            'tmonier_quote_request_admin_convert[shippingMethod]' => (string) array_values($worldMethods)[0]->getCode(),
+            'tmonier_quote_request_admin_convert[shippingMethod]' => (string) $frMethod->getCode(),
         ]));
 
         self::assertResponseStatusCodeSame(422);
@@ -176,17 +174,5 @@ final class AdminQuoteConversionGuardsTest extends WebTestCase
         $this->entityManager()->flush();
 
         return $customer;
-    }
-
-    /** @return list<ShippingMethodInterface> */
-    private function shippingMethods(): array
-    {
-        /** @var ShippingMethodRepositoryInterface<ShippingMethodInterface> $repository */
-        $repository = self::getContainer()->get('sylius.repository.shipping_method');
-
-        /** @var list<ShippingMethodInterface> $methods */
-        $methods = $repository->findEnabledForChannel($this->channel());
-
-        return $methods;
     }
 }

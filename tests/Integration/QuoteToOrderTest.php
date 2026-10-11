@@ -38,6 +38,14 @@ final class QuoteToOrderTest extends KernelTestCase
     {
         self::bootKernel();
         $this->entityManager()->getConnection()->beginTransaction();
+        // The checkout of the tests ships to the US and pays: methods created here, not taken
+        // from the random fixtures.
+        $channel = $this->entityManager()->getRepository(ChannelInterface::class)->findOneBy(['hostname' => 'localhost']);
+        self::assertInstanceOf(ChannelInterface::class, $channel);
+        $catalog = new \Tests\Tmonier\SyliusQuoteRequestPlugin\TestCatalog(self::getContainer());
+        $catalog->shippingMethod($channel, ['US']);
+        $catalog->paymentMethod($channel);
+        $this->entityManager()->flush();
     }
 
     protected function tearDown(): void
@@ -417,8 +425,10 @@ final class QuoteToOrderTest extends KernelTestCase
             }
         }
         $variants = array_slice(array_values($variants), 0, 2);
-        if (count($variants) < 2) {
-            self::markTestSkipped('The fixtures contain not enough sellable untracked variants.');
+        // Not enough in the random fixtures: products created by the test.
+        $catalog = new \Tests\Tmonier\SyliusQuoteRequestPlugin\TestCatalog(self::getContainer());
+        while (count($variants) < 2) {
+            $variants[] = $catalog->variant($channel);
         }
 
         return $variants;

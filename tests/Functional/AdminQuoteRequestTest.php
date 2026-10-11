@@ -9,7 +9,6 @@ use Sylius\Component\Core\Model\OrderItemInterface;
 use Sylius\Component\Core\Model\PaymentMethodInterface;
 use Sylius\Component\Core\Model\ShippingMethodInterface;
 use Sylius\Component\Core\Repository\PaymentMethodRepositoryInterface;
-use Sylius\Component\Core\Repository\ShippingMethodRepositoryInterface;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Tmonier\SyliusQuoteRequestPlugin\Entity\QuoteRequestLineInterface;
 use Tmonier\SyliusQuoteRequestPlugin\Workflow\QuoteRequestStatuses;
@@ -302,6 +301,9 @@ final class AdminQuoteRequestTest extends WebTestCase
         $customer = $this->shopCustomer();
         [$variant] = $this->sellableVariants(1);
         $quote = $this->createQuote([[$variant, 3, 1111]], $customer, QuoteRequestStatuses::PROPOSED);
+        $this->catalog()->shippingMethod($this->channel(), ['US']);
+        $franceOnly = $this->shippingMethodOfZone('WORLD');
+        $paymentMethod = $this->firstEnabled($this->paymentMethods());
         $this->loginAdmin();
 
         $crawler = $this->client->request('GET', sprintf('/admin/quote-requests/%d/convert', $this->idOf($quote)));
@@ -312,8 +314,8 @@ final class AdminQuoteRequestTest extends WebTestCase
             'tmonier_quote_request_admin_convert[address][city]' => 'New York',
             'tmonier_quote_request_admin_convert[address][postcode]' => '10001',
             'tmonier_quote_request_admin_convert[address][countryCode]' => 'US',
-            'tmonier_quote_request_admin_convert[shippingMethod]' => (string) $this->shippingMethodOfZone('WORLD')->getCode(),
-            'tmonier_quote_request_admin_convert[paymentMethod]' => (string) $this->firstEnabled($this->paymentMethods())->getCode(),
+            'tmonier_quote_request_admin_convert[shippingMethod]' => (string) $franceOnly->getCode(),
+            'tmonier_quote_request_admin_convert[paymentMethod]' => (string) $paymentMethod->getCode(),
         ]));
 
         self::assertResponseStatusCodeSame(422);
@@ -407,18 +409,6 @@ final class AdminQuoteRequestTest extends WebTestCase
         self::assertSame($date->format('Y-m-d') . ' 23:59:59', $this->reloadQuote($quote)->getValidUntil()?->format('Y-m-d H:i:s'));
     }
 
-    /** @return list<ShippingMethodInterface> */
-    private function shippingMethods(): array
-    {
-        /** @var ShippingMethodRepositoryInterface<ShippingMethodInterface> $repository */
-        $repository = self::getContainer()->get('sylius.repository.shipping_method');
-
-        /** @var list<ShippingMethodInterface> $methods */
-        $methods = $repository->findEnabledForChannel($this->channel());
-
-        return $methods;
-    }
-
     private function customerWithDefaultAddress(): \Sylius\Component\Core\Model\CustomerInterface
     {
         $customer = $this->shopCustomer();
@@ -435,15 +425,13 @@ final class AdminQuoteRequestTest extends WebTestCase
         return $customer;
     }
 
+    /** "US": ships to the United States; any other zone code: ships to France only. */
     private function shippingMethodOfZone(string $zoneCode): ShippingMethodInterface
     {
-        foreach ($this->shippingMethods() as $method) {
-            if ($zoneCode === $method->getZone()?->getCode()) {
-                return $method;
-            }
-        }
+        $method = $this->catalog()->shippingMethod($this->channel(), ['US' === $zoneCode ? 'US' : 'FR']);
+        $this->entityManager()->flush();
 
-        self::markTestSkipped(sprintf('No shipping method of the "%s" zone in the fixtures.', $zoneCode));
+        return $method;
     }
 
     /** @return list<PaymentMethodInterface> */
@@ -458,19 +446,13 @@ final class AdminQuoteRequestTest extends WebTestCase
         return $methods;
     }
 
-    /**
-     * @template T of object
-     *
-     * @param list<T> $methods
-     *
-     * @return T
-     */
-    private function firstEnabled(array $methods): object
+    /** @param list<PaymentMethodInterface> $methods */
+    private function firstEnabled(array $methods): PaymentMethodInterface
     {
-        if ([] === $methods) {
-            self::markTestSkipped('No enabled method in the channel.');
-        }
+        // A method created by the test, whatever the fixtures provide.
+        $method = $this->catalog()->paymentMethod($this->channel());
+        $this->entityManager()->flush();
 
-        return $methods[0];
+        return $method;
     }
 }

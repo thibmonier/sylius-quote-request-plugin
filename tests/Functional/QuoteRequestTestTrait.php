@@ -98,23 +98,21 @@ trait QuoteRequestTestTrait
     }
 
     /**
-     * A country where an enabled shipping method of the channel ships (random fixtures may put
-     * every method in the WORLD zone, without the US).
+     * A country with a shipping method of the channel (created by the test: the random fixtures
+     * may ship nowhere useful).
      */
     private function shippableCountry(): string
     {
-        /** @var \Sylius\Component\Core\Repository\ShippingMethodRepositoryInterface<\Sylius\Component\Core\Model\ShippingMethodInterface> $repository */
-        $repository = self::getContainer()->get('sylius.repository.shipping_method');
-        foreach ($repository->findEnabledForChannel($this->channel()) as $method) {
-            $zone = $method->getZone();
-            if (null !== $zone && 'country' === $zone->getType()) {
-                foreach ($zone->getMembers() as $member) {
-                    return (string) $member->getCode();
-                }
-            }
-        }
+        $this->catalog()->shippingMethod($this->channel(), ['US']);
+        $this->catalog()->paymentMethod($this->channel());
+        $this->entityManager()->flush();
 
-        self::markTestSkipped('No shipping zone of countries in the fixtures.');
+        return 'US';
+    }
+
+    private function catalog(): \Tests\Tmonier\SyliusQuoteRequestPlugin\TestCatalog
+    {
+        return new \Tests\Tmonier\SyliusQuoteRequestPlugin\TestCatalog(self::getContainer());
     }
 
     private function localeCode(): string
@@ -166,7 +164,12 @@ trait QuoteRequestTestTrait
             }
         }
 
-        self::markTestSkipped('The fixtures contain not enough sellable untracked variants.');
+        // Not enough in the random fixtures: products created by the test.
+        while (count($variants) < $count) {
+            $variants[] = $this->catalog()->variant($channel);
+        }
+
+        return $variants;
     }
 
     /**

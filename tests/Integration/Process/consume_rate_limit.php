@@ -15,7 +15,9 @@ require $root . '/vendor/sylius/test-application/config/bootstrap.php';
 
 $kernel = new Kernel('test', false);
 $kernel->boot();
-$limiter = $kernel->getContainer()->get('test.service_container')->get('limiter.tmonier_quote_request_email');
+$container = $kernel->getContainer()->get('test.service_container');
+assert($container instanceof Psr\Container\ContainerInterface);
+$limiter = $container->get('limiter.tmonier_quote_request_email');
 assert($limiter instanceof RateLimiterFactory);
 
 $start = (float) ($argv[1] ?? 0);

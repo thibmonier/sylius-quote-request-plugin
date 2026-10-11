@@ -64,7 +64,7 @@ final class OrderCheckoutCompletedDoctrineListener
             $backing = $quoteRequest instanceof QuoteRequestInterface && in_array($quoteRequest->getStatus(), [QuoteRequestStatuses::ACCEPTED, QuoteRequestStatuses::ORDERED], true) ? $quoteRequest : null;
             if (!QuoteCartInspector::isBackedByQuote($order, $backing)) {
                 // Any adapter: never place an order at quote prices without its accepted quote.
-                throw new \LogicException(sprintf('Order %s holds quote prices without its accepted quote: checkout refused.', (string) $order->getId()));
+                throw new \LogicException(sprintf('Order %s holds quote prices without its accepted quote: checkout refused.', is_scalar($order->getId()) ? (string) $order->getId() : 'new'));
             }
             if (!$quoteRequest instanceof QuoteRequestInterface) {
                 continue;
