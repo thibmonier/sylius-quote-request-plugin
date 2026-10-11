@@ -41,6 +41,8 @@ use Tmonier\SyliusQuoteRequestPlugin\Workflow\QuoteRequestTransitions;
 
 final class QuoteRequestController extends AbstractController
 {
+    private const SOURCE_CART_KEY = '_tmonier_quote_request.source_cart.';
+
     /** Customer actions on a quote, by URL action name. */
     private const ACTIONS = [
         'accept' => QuoteRequestTransitions::TRANSITION_ACCEPT,
@@ -51,6 +53,7 @@ final class QuoteRequestController extends AbstractController
     /**
      * @param RepositoryInterface<ProductInterface> $productRepository
      * @param RepositoryInterface<ProductVariantInterface> $variantRepository
+     * @param RepositoryInterface<OrderInterface>|null $orderRepository
      */
     public function __construct(
         private readonly QuoteRequestRepositoryInterface $quoteRequestRepository,
@@ -73,6 +76,7 @@ final class QuoteRequestController extends AbstractController
         private readonly ?RateLimiterFactory $emailLimiter = null,
         private readonly ?RateLimiterFactory $messageIpLimiter = null,
         private readonly ?RateLimiterFactory $messageQuoteLimiter = null,
+        private readonly ?RepositoryInterface $orderRepository = null,
     ) {
     }
 
@@ -116,8 +120,9 @@ final class QuoteRequestController extends AbstractController
             throw new NotFoundHttpException();
         }
 
+        $cart = $this->currentCart();
         $quantities = [];
-        foreach ($this->currentCart()?->getItems() ?? [] as $item) {
+        foreach ($cart?->getItems() ?? [] as $item) {
             /** @var OrderItemInterface $item */
             $variantId = $item->getVariant()?->getId();
             if (is_int($variantId)) {
@@ -132,6 +137,8 @@ final class QuoteRequestController extends AbstractController
         }
 
         $this->basket->replace($this->channel(), $quantities);
+        // Remembered so that the cart loses these products if the merchant places the order.
+        $request->getSession()->set(self::SOURCE_CART_KEY . $this->channel()->getCode(), $cart?->getId());
 
         return $this->redirectToRoute('tmonier_quote_request_shop_new');
     }
@@ -204,6 +211,12 @@ final class QuoteRequestController extends AbstractController
             $message = null;
             if (null !== $body && '' !== trim($body)) {
                 $message = $this->quoteRequestFactory->createMessage(QuoteMessageInterface::AUTHOR_CUSTOMER, $quoteRequest->getFullName(), trim($body));
+            }
+
+            $sourceCartId = $request->getSession()->remove(self::SOURCE_CART_KEY . $channel->getCode());
+            $sourceCart = null !== $sourceCartId && null !== $this->orderRepository ? $this->orderRepository->find($sourceCartId) : null;
+            if ($sourceCart instanceof OrderInterface && OrderInterface::STATE_CART === $sourceCart->getState()) {
+                $quoteRequest->setSourceOrder($sourceCart);
             }
 
             $this->quoteRequestManager->submit($quoteRequest, $message);
@@ -329,8 +342,15 @@ final class QuoteRequestController extends AbstractController
         $message = $this->quoteRequestFactory->createMessage(QuoteMessageInterface::AUTHOR_CUSTOMER, $quoteRequest->getFullName(), trim($data['body']));
 
         if ($request->request->has('request_changes') && $this->quoteRequestManager->can($quoteRequest, QuoteRequestTransitions::TRANSITION_REQUEST_CHANGES)) {
-            $this->quoteRequestManager->apply($quoteRequest, QuoteRequestTransitions::TRANSITION_REQUEST_CHANGES, $message);
-            $this->addFlash('success', 'tmonier_quote_request.flash.changes_requested');
+            try {
+                $this->quoteRequestManager->apply($quoteRequest, QuoteRequestTransitions::TRANSITION_REQUEST_CHANGES, $message);
+                $this->addFlash('success', 'tmonier_quote_request.flash.changes_requested');
+            } catch (QuoteTransitionException) {
+                // Changed meanwhile (e.g. proposal revised by the merchant): the customer retries.
+                $this->addFlash('error', 'tmonier_quote_request.flash.quote_changed');
+
+                return $this->redirectToRoute('tmonier_quote_request_shop_show_by_token', ['token' => $token]);
+            }
         } elseif ($this->isOpen($quoteRequest)) {
             $this->quoteRequestManager->postMessage($quoteRequest, $message);
             $this->addFlash('success', 'tmonier_quote_request.flash.message_sent');

@@ -9,6 +9,7 @@ parameters:
 tmonier_sylius_quote_request:
     # Every test runs inside a transaction: level 1 is "no transaction".
     transaction_baseline: 1
+    pdf_attachment_directory: '%kernel.cache_dir%/tmonier_quote_request_pdf'
     allow_guests: '%env(bool:TMONIER_QUOTE_ALLOW_GUESTS)%'
     rate_limit:
         cache_pool: cache.tmonier_quote_request_limiter

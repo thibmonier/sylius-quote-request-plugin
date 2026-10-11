@@ -12,7 +12,11 @@
             <generator strategy="AUTO" />
         </id>
 
-        <field name="version" column="version" type="integer" />
+        <field name="version" column="version" type="integer">
+            <options>
+                <option name="default">1</option>
+            </options>
+        </field>
         <field name="number" column="number" type="string" length="32" nullable="true" unique="true" />
         <field name="status" column="status" type="string" length="32" />
         <field name="token" column="token" type="string" length="64" unique="true" />
@@ -44,6 +48,10 @@
 
         <many-to-one field="order" target-entity="Sylius\Component\Core\Model\OrderInterface">
             <join-column name="order_id" referenced-column-name="id" nullable="true" on-delete="SET NULL" />
+        </many-to-one>
+
+        <many-to-one field="sourceOrder" target-entity="Sylius\Component\Core\Model\OrderInterface">
+            <join-column name="source_order_id" referenced-column-name="id" nullable="true" on-delete="SET NULL" />
         </many-to-one>
 
         <one-to-many field="lines" target-entity="Tmonier\SyliusQuoteRequestPlugin\Entity\QuoteRequestLineInterface" mapped-by="quoteRequest" orphan-removal="true">

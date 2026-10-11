@@ -22,4 +22,10 @@ interface QuoteCartManagerInterface
      * keeps its status, an accepted quote can start a new cart later.
      */
     public function release(QuoteRequestInterface $quoteRequest, bool $removeItems = false): void;
+
+    /**
+     * Once the merchant placed the order of a quote: removes its products from another cart of
+     * the customer (the cart the request was made from, other carts), keeping the rest (flushed).
+     */
+    public function removeQuotedProducts(OrderInterface $cart, QuoteRequestInterface $quoteRequest): void;
 }

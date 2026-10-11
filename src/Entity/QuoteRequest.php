@@ -54,6 +54,8 @@ class QuoteRequest implements QuoteRequestInterface
 
     protected ?OrderInterface $order = null;
 
+    protected ?OrderInterface $sourceOrder = null;
+
     /** @var Collection<int, QuoteRequestLineInterface> */
     protected Collection $lines;
 
@@ -280,6 +282,16 @@ class QuoteRequest implements QuoteRequestInterface
     public function setOrder(?OrderInterface $order): void
     {
         $this->order = $order;
+    }
+
+    public function getSourceOrder(): ?OrderInterface
+    {
+        return $this->sourceOrder;
+    }
+
+    public function setSourceOrder(?OrderInterface $sourceOrder): void
+    {
+        $this->sourceOrder = $sourceOrder;
     }
 
     public function getLines(): Collection

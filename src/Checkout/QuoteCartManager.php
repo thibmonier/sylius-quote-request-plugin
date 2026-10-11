@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Tmonier\SyliusQuoteRequestPlugin\Checkout;
 
-use Doctrine\Persistence\ObjectManager;
+use Doctrine\ORM\EntityManagerInterface;
 use Sylius\Component\Core\Model\CustomerInterface;
 use Sylius\Component\Core\Model\OrderInterface;
 use Sylius\Component\Core\Model\OrderItemInterface;
@@ -23,7 +23,7 @@ final class QuoteCartManager implements QuoteCartManagerInterface
     public function __construct(
         private readonly FactoryInterface $orderFactory,
         private readonly OrderProcessorInterface $orderProcessor,
-        private readonly ObjectManager $objectManager,
+        private readonly EntityManagerInterface $objectManager,
         private readonly CartStorageInterface $cartStorage,
         private readonly QuoteOrderResolverInterface $quoteOrderResolver,
     ) {
@@ -99,6 +99,37 @@ final class QuoteCartManager implements QuoteCartManagerInterface
         }
         $this->orderProcessor->process($cart);
         $this->objectManager->flush();
+    }
+
+    public function removeQuotedProducts(OrderInterface $cart, QuoteRequestInterface $quoteRequest): void
+    {
+        if (OrderInterface::STATE_CART !== $cart->getState() || null === $cart->getId() || $cart === $quoteRequest->getOrder()) {
+            return;
+        }
+
+        $variants = [];
+        foreach ($quoteRequest->getLines() as $line) {
+            if (null !== $line->getVariant()) {
+                $variants[] = $line->getVariant();
+            }
+        }
+
+        // Waits for a checkout step of the customer on this cart, if any.
+        $table = $this->objectManager->getClassMetadata($cart::class)->getTableName();
+        $this->objectManager->getConnection()->fetchOne(sprintf('SELECT id FROM %s WHERE id = ? FOR UPDATE', $table), [$cart->getId()]);
+
+        $removed = false;
+        foreach ($cart->getItems()->toArray() as $item) {
+            /** @var OrderItemInterface $item */
+            if (in_array($item->getVariant(), $variants, true)) {
+                $cart->removeItem($item);
+                $removed = true;
+            }
+        }
+        if ($removed) {
+            $this->orderProcessor->process($cart);
+            $this->objectManager->flush();
+        }
     }
 
     /**

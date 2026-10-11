@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tmonier\SyliusQuoteRequestPlugin\Conversion;
 
 use Doctrine\ORM\EntityManagerInterface;
+use Psr\Clock\ClockInterface;
 use Sylius\Abstraction\StateMachine\StateMachineInterface;
 use Sylius\Component\Core\Model\AddressInterface;
 use Sylius\Component\Core\Model\CustomerInterface;
@@ -31,6 +32,7 @@ final class QuoteOrderConverter implements QuoteOrderConverterInterface
     /**
      * @param RepositoryInterface<CustomerInterface> $customerRepository
      * @param FactoryInterface<CustomerInterface> $customerFactory
+     * @param RepositoryInterface<OrderInterface> $orderRepository
      */
     public function __construct(
         private readonly QuoteRequestManagerInterface $quoteRequestManager,
@@ -42,6 +44,9 @@ final class QuoteOrderConverter implements QuoteOrderConverterInterface
         private readonly EntityManagerInterface $entityManager,
         private readonly ValidatorInterface $validator,
         private readonly QuoteOrderabilityCheckerInterface $orderabilityChecker,
+        private readonly RepositoryInterface $orderRepository,
+        private readonly ClockInterface $clock,
+        private readonly int $checkoutIdleMinutes = 30,
     ) {
     }
 
@@ -128,6 +133,12 @@ final class QuoteOrderConverter implements QuoteOrderConverterInterface
             $this->applyIfPossible($cart, OrderCheckoutTransitions::TRANSITION_COMPLETE, true);
             $this->entityManager->flush();
 
+            // The products are ordered: they leave the other carts of the customer (the cart the
+            // request was made from included), the rest of those carts is kept.
+            foreach ($this->otherCarts($quoteRequest, $customer, $cart) as $otherCart) {
+                $this->quoteCartManager->removeQuotedProducts($otherCart, $quoteRequest);
+            }
+
             return $cart;
         }, true);
     }
@@ -174,9 +185,11 @@ final class QuoteOrderConverter implements QuoteOrderConverterInterface
 
     /**
      * The merchant places the order of an accepted quote in a dedicated cart. The customer's
-     * quote cart is emptied (no duplicate order at catalog prices) unless the customer is
-     * already in the checkout: then the conversion is refused. The cart row is locked so that a
-     * checkout step of the customer waits for the end of the conversion.
+     * quote cart is emptied (no duplicate order) unless the customer is in its checkout: then
+     * the conversion is refused until the cart has been idle for `checkout_idle_minutes`. The
+     * cart row is locked so that a checkout step of the customer waits for the conversion; a
+     * late write of the customer cannot keep quote prices (QuotePriceLockProcessor and the
+     * completion guards).
      */
     private function takeOverCustomerCart(QuoteRequestInterface $quoteRequest): void
     {
@@ -186,15 +199,37 @@ final class QuoteOrderConverter implements QuoteOrderConverterInterface
         }
 
         $table = $this->entityManager->getClassMetadata($cart::class)->getTableName();
-        $row = $this->entityManager->getConnection()->fetchAssociative(sprintf('SELECT state, checkout_state FROM %s WHERE id = ? FOR UPDATE', $table), [$cart->getId()]);
+        $row = $this->entityManager->getConnection()->fetchAssociative(sprintf('SELECT state, checkout_state, updated_at FROM %s WHERE id = ? FOR UPDATE', $table), [$cart->getId()]);
         if (!is_array($row) || OrderInterface::STATE_CART !== $row['state']) {
             return;
         }
-        if (OrderCheckoutStates::STATE_CART !== $row['checkout_state']) {
-            throw new \RuntimeException('The customer is checking out this quote: wait for the order or cancel the quote.');
+        // A checkout in progress is left alone; an abandoned one (idle) is taken over.
+        $updatedAt = is_string($row['updated_at'] ?? null) ? new \DateTimeImmutable($row['updated_at']) : null;
+        $idleSince = $this->clock->now()->modify(sprintf('-%d minutes', $this->checkoutIdleMinutes));
+        if (OrderCheckoutStates::STATE_CART !== $row['checkout_state'] && (null === $updatedAt || $updatedAt > $idleSince)) {
+            throw new \RuntimeException(sprintf('The customer is checking out this quote: wait for the order, retry once the cart has been idle for %d minutes, or cancel the quote.', $this->checkoutIdleMinutes));
         }
 
         $this->quoteCartManager->release($quoteRequest, true);
+    }
+
+    /** @return list<OrderInterface> */
+    private function otherCarts(QuoteRequestInterface $quoteRequest, CustomerInterface $customer, OrderInterface $order): array
+    {
+        $carts = [];
+        $source = $quoteRequest->getSourceOrder();
+        if (null !== $source) {
+            $carts[] = $source;
+        }
+        /** @var list<OrderInterface> $customerCarts */
+        $customerCarts = $this->orderRepository->findBy(['customer' => $customer, 'channel' => $quoteRequest->getChannel(), 'state' => OrderInterface::STATE_CART]);
+        foreach ($customerCarts as $customerCart) {
+            if (!in_array($customerCart, $carts, true)) {
+                $carts[] = $customerCart;
+            }
+        }
+
+        return array_values(array_filter($carts, static fn (OrderInterface $cart): bool => $cart !== $order));
     }
 
     private function applyIfPossible(OrderInterface $cart, string $transition, bool $required = false): bool

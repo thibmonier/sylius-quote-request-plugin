@@ -19,14 +19,27 @@ final class QuoteRequestMailer implements EventSubscriberInterface
 {
     public const ATTACHMENT_TTL = 172800;
 
+    public const DIRECTORY_PREFIX = 'tmonier_quote_request_pdf_';
+
     public function __construct(
         private readonly SenderInterface $sender,
         private readonly QuotePdfGeneratorInterface $pdfGenerator,
         private readonly ?string $adminEmail,
         private readonly LoggerInterface $logger,
         private readonly RequestStack $requestStack,
-        private readonly string $attachmentDirectory,
+        private readonly ?string $attachmentBaseDirectory = null,
     ) {
+    }
+
+    /** Resolved when used (not when the container is compiled): the runtime temporary directory by default. */
+    public function attachmentDirectory(): string
+    {
+        $directory = $this->attachmentBaseDirectory ?? sys_get_temp_dir();
+        if (!is_dir($directory)) {
+            @mkdir($directory, 0711, true);
+        }
+
+        return rtrim($directory, '/');
     }
 
     public static function getSubscribedEvents(): array
@@ -69,16 +82,19 @@ final class QuoteRequestMailer implements EventSubscriberInterface
         try {
             $content = $this->pdfGenerator->generate($quoteRequest);
             $this->removeOldAttachments();
-            // One private directory per PDF directly in the temporary directory: no shared parent
-            // whose owner/permissions would depend on who wrote first.
-            $directory = sprintf('%s_%s', $this->attachmentDirectory, bin2hex(random_bytes(8)));
-            if (!mkdir($directory, 0700) && !is_dir($directory)) {
+            // One directory per PDF, with an unguessable name, directly in the base directory (no
+            // shared parent whose owner would depend on who wrote first). 0711 + 0644: another
+            // local user (an async mailer worker) reads the file by its path, nobody lists them.
+            $directory = sprintf('%s/%s%s', $this->attachmentDirectory(), self::DIRECTORY_PREFIX, bin2hex(random_bytes(16)));
+            if (!mkdir($directory, 0711) && !is_dir($directory)) {
                 throw new \RuntimeException(sprintf('Cannot create "%s".', $directory));
             }
+            chmod($directory, 0711);
             $path = $directory . '/' . $this->pdfGenerator->getFilename($quoteRequest);
             if (false === file_put_contents($path, $content)) {
                 throw new \RuntimeException(sprintf('Cannot write "%s".', $path));
             }
+            chmod($path, 0644);
 
             return $path;
         } catch (\Throwable $exception) {
@@ -96,7 +112,7 @@ final class QuoteRequestMailer implements EventSubscriberInterface
     private function removeOldAttachments(): void
     {
         $limit = time() - self::ATTACHMENT_TTL;
-        foreach (glob($this->attachmentDirectory . '_*/*.pdf') ?: [] as $file) {
+        foreach (glob($this->attachmentDirectory() . '/' . self::DIRECTORY_PREFIX . '*/*.pdf') ?: [] as $file) {
             if (filemtime($file) < $limit) {
                 @unlink($file);
                 @rmdir(dirname($file));

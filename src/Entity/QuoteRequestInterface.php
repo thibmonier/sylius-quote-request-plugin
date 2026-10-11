@@ -104,6 +104,11 @@ interface QuoteRequestInterface extends ResourceInterface, VersionedInterface
 
     public function setOrder(?OrderInterface $order): void;
 
+    /** The cart the request was made from ("Request a quote for this cart"), if any. */
+    public function getSourceOrder(): ?OrderInterface;
+
+    public function setSourceOrder(?OrderInterface $sourceOrder): void;
+
     /** @return Collection<int, QuoteRequestLineInterface> */
     public function getLines(): Collection;
 

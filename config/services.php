@@ -198,6 +198,9 @@ return static function (ContainerConfigurator $container): void {
             service('sylius.manager.order'),
             service('validator'),
             service('tmonier_quote_request.orderability_checker'),
+            service('sylius.repository.order'),
+            service('clock'),
+            param('tmonier_quote_request.checkout_idle_minutes'),
         ])
     ;
     $services->alias(QuoteOrderConverterInterface::class, 'tmonier_quote_request.order_converter');
@@ -268,7 +271,7 @@ return static function (ContainerConfigurator $container): void {
             param('tmonier_quote_request.admin_email'),
             service('logger'),
             service('request_stack'),
-            sprintf('%s/tmonier_quote_request_pdf', sys_get_temp_dir()),
+            param('tmonier_quote_request.pdf_attachment_directory'),
         ])
         ->tag('monolog.logger', ['channel' => 'tmonier_quote_request'])
         ->tag('kernel.event_subscriber')
@@ -313,6 +316,7 @@ return static function (ContainerConfigurator $container): void {
             service('limiter.tmonier_quote_request_email')->nullOnInvalid(),
             service('limiter.tmonier_quote_request_message_ip')->nullOnInvalid(),
             service('limiter.tmonier_quote_request_message_quote')->nullOnInvalid(),
+            service('sylius.repository.order'),
         ])
         ->call('setContainer', [service(\Psr\Container\ContainerInterface::class)])
         ->tag('controller.service_arguments')

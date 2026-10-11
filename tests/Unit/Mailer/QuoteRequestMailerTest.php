@@ -29,9 +29,25 @@ final class QuoteRequestMailerTest extends TestCase
 
     private RequestStack $requestStack;
 
+    private string $directory;
+
     protected function setUp(): void
     {
         $this->requestStack = new RequestStack();
+        $this->directory = sprintf('%s/tmonier_mailer_test_%s', sys_get_temp_dir(), bin2hex(random_bytes(4)));
+    }
+
+    protected function tearDown(): void
+    {
+        foreach (glob($this->directory . '/*/*') ?: [] as $file) {
+            unlink($file);
+        }
+        foreach (glob($this->directory . '/*') ?: [] as $directory) {
+            rmdir($directory);
+        }
+        if (is_dir($this->directory)) {
+            rmdir($this->directory);
+        }
     }
 
     public function testANewRequestNotifiesTheConfiguredAdminAndTheCustomer(): void
@@ -100,8 +116,9 @@ final class QuoteRequestMailerTest extends TestCase
         self::assertStringEndsWith('/quote-Q000042.pdf', $path);
         self::assertSame('%PDF-fake Q000042', $this->attachments[$path]);
         self::assertFileExists($path, 'The file stays for an async mailer worker.');
-        unlink($path);
-        rmdir(dirname($path));
+        self::assertStringStartsWith($this->directory . '/' . QuoteRequestMailer::DIRECTORY_PREFIX, $path);
+        self::assertSame('0644', substr(sprintf('%o', fileperms($path)), -4), 'Readable by a worker running as another user.');
+        self::assertSame('0711', substr(sprintf('%o', fileperms(dirname($path))), -4), 'Not listable.');
     }
 
     public function testAPdfFailureDoesNotPreventTheProposalEmail(): void
@@ -149,7 +166,7 @@ final class QuoteRequestMailerTest extends TestCase
             $adminEmail,
             new NullLogger(),
             $this->requestStack,
-            sys_get_temp_dir() . '/tmonier_quote_request_pdf_test',
+            $this->directory,
         );
     }
 
@@ -162,5 +179,25 @@ final class QuoteRequestMailerTest extends TestCase
         $quote->setEmail('buyer@example.com');
 
         return $quote;
+    }
+
+    public function testTheDirectoryIsResolvedAtRuntime(): void
+    {
+        $mailer = new QuoteRequestMailer(new class() implements SenderInterface {
+            public function send(string $code, array $recipients, array $data = [], array $attachments = [], array $replyTo = []): void
+            {
+            }
+        }, new FakePdfGenerator(true), null, new NullLogger(), $this->requestStack);
+        $previous = getenv('TMPDIR');
+        $temp = sprintf('%s/tmonier_tmpdir_%s', sys_get_temp_dir(), bin2hex(random_bytes(4)));
+        mkdir($temp);
+        putenv('TMPDIR=' . $temp);
+
+        try {
+            self::assertSame(rtrim(sys_get_temp_dir(), '/'), $mailer->attachmentDirectory());
+        } finally {
+            putenv(false === $previous ? 'TMPDIR' : 'TMPDIR=' . $previous);
+            rmdir($temp);
+        }
     }
 }

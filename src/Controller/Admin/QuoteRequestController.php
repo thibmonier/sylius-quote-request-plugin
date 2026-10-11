@@ -117,8 +117,10 @@ final class QuoteRequestController extends AbstractController
         try {
             $this->quoteRequestManager->apply($quoteRequest, $transition);
             $this->addFlash('success', 'tmonier_quote_request.flash.admin.' . $transition);
-        } catch (QuoteTransitionException) {
-            $this->addFlash('error', 'tmonier_quote_request.flash.transition_not_allowed');
+        } catch (QuoteTransitionException $exception) {
+            $this->addFlash('error', $exception->isConcurrentChange() ? 'tmonier_quote_request.flash.quote_changed' : 'tmonier_quote_request.flash.transition_not_allowed');
+
+            return $this->redirectToRoute('tmonier_quote_request_admin_quote_request_show', ['id' => $id]);
         }
 
         return $this->redirectToQuote($quoteRequest);
