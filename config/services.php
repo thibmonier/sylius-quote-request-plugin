@@ -6,6 +6,8 @@ namespace Symfony\Component\DependencyInjection\Loader\Configurator;
 
 use Tmonier\SyliusQuoteRequestPlugin\Basket\QuoteBasketInterface;
 use Tmonier\SyliusQuoteRequestPlugin\Basket\SessionQuoteBasket;
+use Tmonier\SyliusQuoteRequestPlugin\Checkout\QuoteCartChecker;
+use Tmonier\SyliusQuoteRequestPlugin\Checkout\QuoteCartCheckerInterface;
 use Tmonier\SyliusQuoteRequestPlugin\Checkout\QuoteCartManager;
 use Tmonier\SyliusQuoteRequestPlugin\Checkout\QuoteCartManagerInterface;
 use Tmonier\SyliusQuoteRequestPlugin\Checkout\QuoteOrderabilityChecker;
@@ -156,11 +158,17 @@ return static function (ContainerConfigurator $container): void {
     $services->alias(QuoteOrderResolverInterface::class, 'tmonier_quote_request.order_resolver');
 
     $services
+        ->set('tmonier_quote_request.quote_cart_checker', QuoteCartChecker::class)
+        ->args([service('tmonier_quote_request.order_resolver')])
+    ;
+    $services->alias(QuoteCartCheckerInterface::class, 'tmonier_quote_request.quote_cart_checker')->public();
+
+    $services
         ->set('tmonier_quote_request.order_processing.price_lock', QuotePriceLockProcessor::class)
         ->args([
             service('tmonier_quote_request.order_resolver'),
             service('tmonier_quote_request.order_synchronizer'),
-            service('sylius.calculator.product_variant_price'),
+            service('sylius.order_processing.order_prices_recalculator'),
         ])
         // After the prices recalculator (50), before shipping (40), promotions (20) and taxes (10).
         ->tag('sylius.order_processor', ['priority' => 45])

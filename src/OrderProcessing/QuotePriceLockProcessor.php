@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Tmonier\SyliusQuoteRequestPlugin\OrderProcessing;
 
-use Sylius\Component\Core\Calculator\ProductVariantPricesCalculatorInterface;
 use Sylius\Component\Core\Model\OrderInterface;
 use Sylius\Component\Order\Model\OrderInterface as BaseOrderInterface;
 use Sylius\Component\Order\Processor\OrderProcessorInterface;
@@ -23,7 +22,7 @@ final class QuotePriceLockProcessor implements OrderProcessorInterface
     public function __construct(
         private readonly QuoteOrderResolverInterface $quoteOrderResolver,
         private readonly QuoteOrderSynchronizerInterface $synchronizer,
-        private readonly ProductVariantPricesCalculatorInterface $pricesCalculator,
+        private readonly OrderProcessorInterface $pricesRecalculator,
     ) {
     }
 
@@ -40,17 +39,19 @@ final class QuotePriceLockProcessor implements OrderProcessorInterface
             return;
         }
 
-        $channel = $order->getChannel();
-        foreach (QuoteCartInspector::lockedItems($order) as $item) {
+        $lockedItems = QuoteCartInspector::lockedItems($order);
+        if ([] === $lockedItems) {
+            return;
+        }
+
+        foreach ($lockedItems as $item) {
             foreach ($item->getAdjustments(QuoteRequestInterface::LOCK_ADJUSTMENT)->toArray() as $marker) {
                 $item->removeAdjustment($marker);
             }
             $item->setImmutable(false);
-            $variant = $item->getVariant();
-            if (null !== $variant && null !== $channel && null !== $variant->getChannelPricingForChannel($channel)) {
-                $item->setUnitPrice($this->pricesCalculator->calculate($variant, ['channel' => $channel]));
-                $item->setOriginalUnitPrice($this->pricesCalculator->calculateOriginal($variant, ['channel' => $channel]));
-            }
         }
+        // Back to the catalog prices through the normal Sylius path (the prices recalculator):
+        // the processors registered after this one (e.g. tier pricing, priority <= 44) apply.
+        $this->pricesRecalculator->process($order);
     }
 }

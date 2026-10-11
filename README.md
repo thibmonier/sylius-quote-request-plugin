@@ -105,7 +105,7 @@ Screenshots go in `docs/images/`.
 | | Version |
 |---|---|
 | PHP | 8.2+ |
-| Sylius | 2.2, 2.3 |
+| Sylius | 2.2.9+, 2.3 (security fixes GHSA-2rv4-pjmm-7fxf, GHSA-vv4h-q2x8-74g4) |
 | Symfony | 6.4, 7.4, 8.0 |
 
 State machines: the quote graph `tmonier_quote_request` is always mapped to the Symfony
@@ -227,6 +227,23 @@ listeners and events still run and the operation is not reported as failed. For 
 [tmonier/sylius-webhook-outbox-plugin](https://github.com/thibmonier/sylius-webhook-outbox-plugin). What the `ordered` listeners persist is
 flushed right after them, whatever the state machine adapter. The Symfony Workflow events of
 `tmonier_quote_request` are available too.
+
+## Integration with other plugins
+
+- **Order processors.** `QuotePriceLockProcessor` is a `sylius.order_processor` at priority
+  **45**: after the adjustments clearer (60) and the prices recalculator (50), before shipping
+  (40), promotions (20) and taxes (10). A pricing plugin (e.g. tier pricing) must run at
+  priority **<= 44** and must leave `immutable` items alone.
+- **The `immutable` contract.** Items of a quote cart are `OrderItem::$immutable` (the Sylius
+  prices recalculator skips them) and carry a `tmonier_quote_lock` adjustment. When a cart
+  loses its quote (released, cancelled, conversion by the merchant), the plugin makes the items
+  mutable again and runs the Sylius prices recalculator: catalog prices first, then any
+  processor registered after 45 applies as usual. Do not set `immutable` on items of a quote
+  cart yourself, and do not unlock them.
+- **Quote carts.** `Tmonier\SyliusQuoteRequestPlugin\Checkout\QuoteCartCheckerInterface::isQuoteCart($order)`
+  tells whether a cart is the cart of an accepted quote: its content is restored at every
+  processing, so a bulk add-to-cart (quick order...) should refuse or divert to a regular cart.
+- **Events**: see above; for integrations, prefer an outbox.
 
 ## Security
 

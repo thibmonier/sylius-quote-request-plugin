@@ -18,6 +18,12 @@ return static function (ContainerConfigurator $container): void {
         return;
     }
 
+    // Stands for a tier pricing plugin (disabled unless a test enables it).
+    $container->services()
+        ->set('tests.tmonier_quote_request.tier_pricing_probe', \Tests\Tmonier\SyliusQuoteRequestPlugin\Pricing\TierPricingProbeProcessor::class)
+        ->tag('sylius.order_processor', ['priority' => 44])
+    ;
+
     $binary = $_SERVER['WKHTMLTOPDF_PATH'] ?? $_ENV['WKHTMLTOPDF_PATH'] ?? null;
     if (is_string($binary) && is_executable($binary)) {
         $container->extension('tmonier_sylius_quote_request', ['pdf_binary' => $binary]);

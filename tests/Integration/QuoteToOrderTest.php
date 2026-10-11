@@ -482,6 +482,56 @@ final class QuoteToOrderTest extends KernelTestCase
         ], $received);
     }
 
+    public function testUnlockedItemsGoThroughTheNormalPricingSoLaterProcessorsApply(): void
+    {
+        [$first] = $this->variants();
+        $quote = $this->proposedQuote([[$first, 2, 1]]);
+        $catalogPrice = $quote->getLines()->first() ? $quote->getLines()->first()->getCatalogUnitPrice() : 0;
+        $cart = $this->manager()->accept($quote, $this->customer(), false);
+        \Tests\Tmonier\SyliusQuoteRequestPlugin\Pricing\TierPricingProbeProcessor::$enabled = true;
+
+        try {
+            self::assertSame([1], $this->unitPrices($cart), 'Locked items are left alone by the tier pricing processor.');
+
+            /** @var QuoteCartManagerInterface $cartManager */
+            $cartManager = self::getContainer()->get('tmonier_quote_request.cart_manager');
+            $cartManager->release($quote);
+            self::assertSame([$catalogPrice - 100], $this->unitPrices($cart), 'Catalog price, then the tier pricing processor (priority 44).');
+
+            // A cart keeping quote prices without its quote (QuotePriceLockProcessor unlocks it).
+            $orphan = $this->cartOf($this->customer(), [[$first, 1]]);
+            $item = $this->items($orphan)[0];
+            $item->setImmutable(true);
+            $item->setUnitPrice(1);
+            /** @var \Sylius\Component\Order\Factory\AdjustmentFactoryInterface<\Sylius\Component\Order\Model\AdjustmentInterface> $adjustmentFactory */
+            $adjustmentFactory = self::getContainer()->get('sylius.factory.adjustment');
+            $item->addAdjustment($adjustmentFactory->createWithData(QuoteRequestInterface::LOCK_ADJUSTMENT, 'Quote price', 0, true));
+            $this->orderProcessor()->process($orphan);
+            self::assertFalse($item->isImmutable());
+            self::assertSame($catalogPrice - 100, $item->getUnitPrice());
+        } finally {
+            \Tests\Tmonier\SyliusQuoteRequestPlugin\Pricing\TierPricingProbeProcessor::$enabled = false;
+        }
+    }
+
+    public function testOtherPluginsCanTellAQuoteCart(): void
+    {
+        [$first] = $this->variants();
+        /** @var \Tmonier\SyliusQuoteRequestPlugin\Checkout\QuoteCartCheckerInterface $checker */
+        $checker = self::getContainer()->get(\Tmonier\SyliusQuoteRequestPlugin\Checkout\QuoteCartCheckerInterface::class);
+        $regular = $this->cartOf($this->customer(), [[$first, 1]]);
+        $quote = $this->proposedQuote([[$first, 2, 1000]]);
+        $cart = $this->manager()->accept($quote, $this->customer(), false);
+
+        self::assertTrue($checker->isQuoteCart($cart));
+        self::assertFalse($checker->isQuoteCart($regular));
+
+        /** @var QuoteCartManagerInterface $cartManager */
+        $cartManager = self::getContainer()->get('tmonier_quote_request.cart_manager');
+        $cartManager->release($quote);
+        self::assertFalse($checker->isQuoteCart($cart), 'Released: a regular cart again.');
+    }
+
     /** @param list<array{0: ProductVariantInterface, 1: int}> $lines */
     private function cartOf(CustomerInterface $customer, array $lines): OrderInterface
     {

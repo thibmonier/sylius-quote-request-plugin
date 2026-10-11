@@ -35,6 +35,13 @@ jobs:
                 database: ["mysql:8.4"]
                 node: ["22.x"]
 
+                # Sylius 2.3 needs PHP ^8.3; Sylius 2.2 does not support Symfony 8.
+                exclude:
+                    - sylius: "~2.3.0"
+                      php: "8.2"
+                    - sylius: "~2.2.0"
+                      symfony: "^8.0"
+
                 include:
                     - php: "8.2"
                       symfony: "^6.4"
