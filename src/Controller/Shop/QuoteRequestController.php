@@ -19,6 +19,7 @@ use Sylius\Resource\Doctrine\Persistence\RepositoryInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Tmonier\SyliusQuoteRequestPlugin\Basket\QuoteBasketInterface;
 use Tmonier\SyliusQuoteRequestPlugin\Checkout\QuoteCartManagerInterface;
@@ -351,7 +352,7 @@ final class QuoteRequestController extends AbstractController
     private function checkCsrf(Request $request, string $action, QuoteRequestInterface $quoteRequest): void
     {
         if (!$this->isCsrfTokenValid(sprintf('tmonier_quote_request_%s_%s', $action, (string) $quoteRequest->getId()), (string) $request->request->get('_csrf_token'))) {
-            throw $this->createAccessDeniedException('Invalid CSRF token.');
+            throw new AccessDeniedHttpException('Invalid CSRF token.');
         }
     }
 

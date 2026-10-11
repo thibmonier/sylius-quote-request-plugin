@@ -19,6 +19,7 @@ use Symfony\Component\Form\FormInterface;
 use Symfony\Component\Form\SubmitButton;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Tmonier\SyliusQuoteRequestPlugin\Conversion\QuoteOrderConverterInterface;
@@ -99,7 +100,7 @@ final class QuoteRequestController extends AbstractController
             throw new NotFoundHttpException();
         }
         if (!$this->isCsrfTokenValid(sprintf('tmonier_quote_request_admin_%s_%d', $transition, $id), (string) $request->request->get('_csrf_token'))) {
-            throw $this->createAccessDeniedException('Invalid CSRF token.');
+            throw new AccessDeniedHttpException('Invalid CSRF token.');
         }
 
         try {
