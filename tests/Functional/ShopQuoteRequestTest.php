@@ -249,7 +249,7 @@ final class ShopQuoteRequestTest extends WebTestCase
         }
 
         self::assertResponseStatusCodeSame(429);
-        self::assertSame(3, \Tests\Tmonier\SyliusQuoteRequestPlugin\DbValue::int($this->connection()->fetchOne("SELECT COUNT(*) FROM tmonier_quote_request WHERE email LIKE 'victim+%@example.com'")));
+        self::assertSame(3, \Tests\Tmonier\SyliusQuoteRequestPlugin\DbValue::int($this->connection()->fetchOne("SELECT COUNT(*) FROM tmonier_quote_request WHERE LOWER(email) LIKE 'victim+%@example.com'")));
     }
 
     public function testInvalidSubmissionsDoNotCountAndCustomersAreLimitedToo(): void

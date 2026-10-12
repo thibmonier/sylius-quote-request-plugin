@@ -1,6 +1,7 @@
 imports:
     - { resource: "@TmonierSyliusQuoteRequestPlugin/config/config.yaml" }
     - { resource: "fake_quote_pdf.php" }
+    - { resource: "dbal_savepoints.php" }
 
 parameters:
     # Functional tests switch guests off by booting a kernel with this variable set to 0.
