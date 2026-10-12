@@ -291,6 +291,10 @@ flushed right after them, whatever the state machine adapter. The Symfony Workfl
 
 ## Limitations
 
+- Doctrine DBAL 3 (Sylius 2.2): when the plugin runs inside a caller's transaction (e.g. an API
+  command behind the messenger `doctrine_transaction` middleware) and `use_savepoints` is off,
+  a failed plugin operation marks the caller's transaction rollback-only. Enable
+  `doctrine.dbal.use_savepoints: true` (always on with DBAL 4).
 - One currency per quote: the base currency of the channel.
 - Shipping costs are not part of the quote; they are chosen and charged at checkout.
 - Lines are product variants of the catalog (no free-text line, no attachment).
