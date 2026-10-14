@@ -290,6 +290,32 @@ final class ShopQuoteRequestTest extends WebTestCase
         }
     }
 
+    public function testTransitionsShareTheConversationBudgetAndAreRateLimited(): void
+    {
+        [$variant] = $this->sellableVariants(1);
+        $quote = $this->createQuote([[$variant, 5, 1000]], null, QuoteRequestStatuses::PROPOSED);
+        $id = $this->idOf($quote);
+        $quoteToken = (string) $quote->getToken();
+
+        // "cancel" on a PROPOSED quote is always rejected by the status guard (PROPOSED is not
+        // in EDITABLE), so the quote never changes status.  Each attempt still consumes one
+        // token from the conversation budget (messages_per_quote = 10 in the test app).
+        // On the 11th call the per-quote budget is exhausted.
+        $csrfManager = self::getContainer()->get('security.csrf.token_manager');
+        self::assertInstanceOf(\Symfony\Component\Security\Csrf\CsrfTokenManagerInterface::class, $csrfManager);
+
+        $lastFlashes = [];
+        for ($attempt = 1; $attempt <= 11; ++$attempt) {
+            $csrf = $csrfManager->getToken(sprintf('tmonier_quote_request_cancel_%d', $id))->getValue();
+            $this->client->request('POST', $this->tokenUrl($quote, '/cancel'), ['_csrf_token' => $csrf]);
+            $crawler = $this->client->followRedirect();
+            $lastFlashes = $this->flashes($crawler);
+        }
+
+        self::assertSame(['Too many requests: please try again later.'], $lastFlashes);
+        self::assertSame(QuoteRequestStatuses::PROPOSED, $this->reloadQuote($quote)->getStatus());
+    }
+
     public function testEmailLinksStayAbsoluteWithoutChannelHostname(): void
     {
         $this->channel()->setHostname(null);

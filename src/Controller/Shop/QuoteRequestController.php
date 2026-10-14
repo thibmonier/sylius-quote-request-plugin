@@ -288,6 +288,14 @@ final class QuoteRequestController extends AbstractController
         }
         $this->checkCsrf($request, $action, $quoteRequest);
 
+        // Transitions on a quote (accept / decline / cancel) share the conversation budget so
+        // that a token holder cannot hammer the transition endpoint.
+        if ($this->isRateLimited($this->messageIpLimiter, $this->messageQuoteLimiter, $request, 'quote-' . $quoteRequest->getId())) {
+            $this->addFlash('error', 'tmonier_quote_request.flash.too_many_requests');
+
+            return $this->redirectToQuote($quoteRequest);
+        }
+
         // Customers cancel a request in progress and decline a proposal, nothing else.
         if ((QuoteRequestTransitions::TRANSITION_CANCEL === $transition && !in_array($quoteRequest->getStatus(), QuoteRequestStatuses::EDITABLE, true)) ||
             (QuoteRequestTransitions::TRANSITION_DECLINE === $transition && QuoteRequestStatuses::PROPOSED !== $quoteRequest->getStatus())) {
