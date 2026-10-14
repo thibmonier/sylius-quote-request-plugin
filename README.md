@@ -98,7 +98,17 @@ address or the default tax zone of the channel.
 
 ## Screenshots
 
-Screenshots go in `docs/images/`.
+![Product page with the "Need large quantities or a business price?" box to add a variant and quantity to a quote request](docs/images/shop-product-quote.jpg)
+
+![Quote request form in the shop: collected products with desired quantities and the buyer's company details](docs/images/shop-quote-request-form.jpg)
+
+![Proposal received by the customer: negotiated unit prices against catalog prices, global discount, totals, accept or decline, and message thread](docs/images/shop-quote-proposal.jpg)
+
+![Cart created from an accepted quote with the negotiated prices locked before checkout](docs/images/shop-quote-cart.jpg)
+
+![Quote requests in the back office with customer, status, validity and line count](docs/images/admin-quote-requests.jpg)
+
+![Admin negotiation of a quote: negotiated unit prices, volume discount tiers, global discount, internal note and message to the customer](docs/images/admin-quote-request-negotiation.jpg)
 
 ## Requirements
 

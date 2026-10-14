@@ -12,7 +12,7 @@
         {{ form_start(form, {'attr': {'novalidate': 'novalidate', 'id': 'tmonier-quote-request-form'}}) }}
         {{ form_errors(form) }}
         <div class="row g-3">
-            <div class="col-12 col-lg-8">
+            <div class="col-12">
                 <div class="card mb-3" {{ sylius_test_html_attribute('tmonier-quote-lines') }}>
                     <div class="card-header">
                         <h3 class="card-title">{{ 'tmonier_quote_request.ui.lines'|trans }}</h3>
@@ -133,7 +133,9 @@
                         <div class="text-secondary small mt-2">{{ quote_request.channel.name }} · {{ quote_request.localeCode }} · {{ quote_request.currencyCode }}</div>
                     </div>
                 </div>
+            </div>
 
+            <div class="col-12 col-lg-8">
                 <div class="card mb-3" {{ sylius_test_html_attribute('tmonier-quote-conditions') }}>
                     <div class="card-header"><h3 class="card-title">{{ 'tmonier_quote_request.ui.conditions'|trans }}</h3></div>
                     <div class="card-body">
@@ -146,15 +148,19 @@
                             </div>
                         {% endif %}
                         {% if form.applyGroupDiscount is defined and not editable %}{% do form.applyGroupDiscount.setRendered %}{% endif %}
-                        {{ form_row(form.discountAmount) }}
-                        {{ form_row(form.discountPercentage) }}
-                        {{ form_row(form.validUntil) }}
-                        {{ form_row(form.internalNote, {'attr': {'rows': 3}}) }}
-                        {% if editable %}
-                            {{ form_row(form.message, {'attr': {'rows': 3}}) }}
-                        {% else %}
-                            {% do form.message.setRendered %}
-                        {% endif %}
+                        <div class="row">
+                            <div class="col-12 col-md-4">{{ form_row(form.discountAmount) }}</div>
+                            <div class="col-12 col-md-4">{{ form_row(form.discountPercentage) }}</div>
+                            <div class="col-12 col-md-4">{{ form_row(form.validUntil) }}</div>
+                        </div>
+                        <div class="row">
+                            <div class="col-12{% if editable %} col-md-6{% endif %}">{{ form_row(form.internalNote, {'attr': {'rows': 3}}) }}</div>
+                            {% if editable %}
+                                <div class="col-12 col-md-6">{{ form_row(form.message, {'attr': {'rows': 3}}) }}</div>
+                            {% else %}
+                                {% do form.message.setRendered %}
+                            {% endif %}
+                        </div>
                     </div>
                     {% if editable %}
                         <div class="card-footer d-flex flex-wrap gap-2 justify-content-end">
