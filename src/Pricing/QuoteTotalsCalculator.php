@@ -15,13 +15,13 @@ use Tmonier\SyliusQuoteRequestPlugin\Entity\QuoteRequestInterface;
  * Builds a transient (never persisted) order from the quote and runs the Sylius taxes processor
  * on it, so that the displayed totals are the ones of the future order.
  */
-final class QuoteTotalsCalculator implements QuoteTotalsCalculatorInterface
+final readonly class QuoteTotalsCalculator implements QuoteTotalsCalculatorInterface
 {
     /** @param FactoryInterface<OrderInterface> $orderFactory */
     public function __construct(
-        private readonly FactoryInterface $orderFactory,
-        private readonly QuoteOrderSynchronizerInterface $synchronizer,
-        private readonly OrderProcessorInterface $taxesProcessor,
+        private FactoryInterface $orderFactory,
+        private QuoteOrderSynchronizerInterface $synchronizer,
+        private OrderProcessorInterface $taxesProcessor,
     ) {
     }
 
@@ -35,7 +35,7 @@ final class QuoteTotalsCalculator implements QuoteTotalsCalculatorInterface
         }
 
         $channel = $quoteRequest->getChannel();
-        if (null === $channel) {
+        if (!$channel instanceof \Sylius\Component\Core\Model\ChannelInterface) {
             return new QuoteTotals($subtotal, 0, 0, 0, 0, $subtotal);
         }
 
@@ -45,7 +45,7 @@ final class QuoteTotalsCalculator implements QuoteTotalsCalculatorInterface
         $order->setCurrencyCode($quoteRequest->getCurrencyCode() ?? $channel->getBaseCurrency()?->getCode());
 
         $address = $quoteRequest->getCustomer()?->getDefaultAddress();
-        if (null !== $address) {
+        if ($address instanceof \Sylius\Component\Core\Model\AddressInterface) {
             $billingAddress = clone $address;
             $billingAddress->setCustomer(null);
             $order->setBillingAddress($billingAddress);

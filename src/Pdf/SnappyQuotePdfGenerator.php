@@ -46,13 +46,13 @@ final class SnappyQuotePdfGenerator implements QuotePdfGeneratorInterface
 
     public function isAvailable(): bool
     {
-        return null !== $this->engine();
+        return $this->engine() instanceof \Knp\Snappy\GeneratorInterface;
     }
 
     public function generate(QuoteRequestInterface $quoteRequest): string
     {
         $engine = $this->engine();
-        if (null === $engine) {
+        if (!$engine instanceof \Knp\Snappy\GeneratorInterface) {
             throw new \LogicException('No PDF engine: install knplabs/knp-snappy-bundle or set tmonier_sylius_quote_request.pdf_binary.');
         }
 
@@ -72,7 +72,7 @@ final class SnappyQuotePdfGenerator implements QuotePdfGeneratorInterface
         $this->resolved = true;
 
         $engine = $this->snappy;
-        if (null === $engine && null !== $this->binary) {
+        if (!$engine instanceof \Knp\Snappy\GeneratorInterface && null !== $this->binary) {
             if (!class_exists(Pdf::class)) {
                 $this->logger?->warning('tmonier_sylius_quote_request.pdf_binary is set but knplabs/knp-snappy is not installed: quote PDFs are disabled.');
 
@@ -82,7 +82,7 @@ final class SnappyQuotePdfGenerator implements QuotePdfGeneratorInterface
         }
 
         // A configured engine whose binary is missing would fail on every PDF: treat it as absent.
-        if ($engine instanceof AbstractGenerator && !self::isExecutable((string) $engine->getBinary())) {
+        if ($engine instanceof AbstractGenerator && !$this->isExecutable((string) $engine->getBinary())) {
             $this->logger?->warning('The wkhtmltopdf binary "{binary}" is not executable: quote PDFs are disabled.', ['binary' => $engine->getBinary()]);
 
             return null;
@@ -91,7 +91,7 @@ final class SnappyQuotePdfGenerator implements QuotePdfGeneratorInterface
         return $this->engine = $engine;
     }
 
-    private static function isExecutable(string $binary): bool
+    private function isExecutable(string $binary): bool
     {
         // A full path, spaces included (knp-snappy escapes it), or Windows path.
         if (is_file($binary) && is_executable($binary)) {

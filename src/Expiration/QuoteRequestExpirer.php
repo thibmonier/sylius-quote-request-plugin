@@ -13,13 +13,13 @@ use Tmonier\SyliusQuoteRequestPlugin\Manager\QuoteTransitionException;
 use Tmonier\SyliusQuoteRequestPlugin\Repository\QuoteRequestRepositoryInterface;
 use Tmonier\SyliusQuoteRequestPlugin\Workflow\QuoteRequestTransitions;
 
-final class QuoteRequestExpirer implements QuoteRequestExpirerInterface
+final readonly class QuoteRequestExpirer implements QuoteRequestExpirerInterface
 {
     public function __construct(
-        private readonly QuoteRequestRepositoryInterface $quoteRequestRepository,
-        private readonly QuoteRequestManagerInterface $quoteRequestManager,
-        private readonly ClockInterface $clock,
-        private readonly LoggerInterface $logger = new NullLogger(),
+        private QuoteRequestRepositoryInterface $quoteRequestRepository,
+        private QuoteRequestManagerInterface $quoteRequestManager,
+        private ClockInterface $clock,
+        private LoggerInterface $logger = new NullLogger(),
     ) {
     }
 

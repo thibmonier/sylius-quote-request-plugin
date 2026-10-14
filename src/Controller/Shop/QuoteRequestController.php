@@ -80,7 +80,7 @@ final class QuoteRequestController extends AbstractController
     ) {
     }
 
-    public function addToBasketAction(Request $request, int $productId): Response
+    public function addToBasketAction(Request $request, int $productId): \Symfony\Component\HttpFoundation\RedirectResponse
     {
         $channel = $this->channel();
         $product = $this->productRepository->find($productId);
@@ -114,7 +114,7 @@ final class QuoteRequestController extends AbstractController
         return $this->redirectToRoute('tmonier_quote_request_shop_new');
     }
 
-    public function fromCartAction(Request $request): Response
+    public function fromCartAction(Request $request): \Symfony\Component\HttpFoundation\RedirectResponse
     {
         if (!$this->fromCart || !$this->isCsrfTokenValid('tmonier_quote_request_from_cart', (string) $request->request->get('_csrf_token'))) {
             throw new NotFoundHttpException();
@@ -146,7 +146,7 @@ final class QuoteRequestController extends AbstractController
     public function newAction(Request $request): Response
     {
         $customer = $this->shopCustomer();
-        if (null === $customer && !$this->allowGuests) {
+        if (!$customer instanceof \Sylius\Component\Core\Model\CustomerInterface && !$this->allowGuests) {
             $this->addFlash('info', 'tmonier_quote_request.flash.login_required');
 
             return $this->redirectToRoute('sylius_shop_login');
@@ -158,16 +158,16 @@ final class QuoteRequestController extends AbstractController
             $variant = $this->variantRepository->find($variantId);
             if ($variant instanceof ProductVariantInterface) {
                 $line = $this->quoteRequestFactory->createLine($quoteRequest, $variant, $quantity);
-                if (null !== $line) {
+                if ($line instanceof \Tmonier\SyliusQuoteRequestPlugin\Entity\QuoteRequestLineInterface) {
                     $quoteRequest->addLine($line);
                 }
             }
         }
 
-        $form = $this->createForm(QuoteRequestType::class, $quoteRequest, ['email_editable' => null === $customer]);
+        $form = $this->createForm(QuoteRequestType::class, $quoteRequest, ['email_editable' => !$customer instanceof \Sylius\Component\Core\Model\CustomerInterface]);
         $form->handleRequest($request);
 
-        if ($form->isSubmitted() && null === $customer) {
+        if ($form->isSubmitted() && !$customer instanceof \Sylius\Component\Core\Model\CustomerInterface) {
             // Honeypot: robots fill the hidden "website" field; they get the usual answer, nothing is sent.
             $honeypot = $form->get(QuoteRequestType::HONEYPOT)->getData();
             if (is_string($honeypot) && '' !== trim($honeypot)) {
@@ -185,7 +185,7 @@ final class QuoteRequestController extends AbstractController
             return $this->render('@TmonierSyliusQuoteRequestPlugin/shop/quote_request/new.html.twig', [
                 'quote_request' => $quoteRequest,
                 'form' => $form->createView(),
-                'is_guest' => null === $customer,
+                'is_guest' => !$customer instanceof \Sylius\Component\Core\Model\CustomerInterface,
             ], new Response(null, Response::HTTP_TOO_MANY_REQUESTS));
         }
 
@@ -214,7 +214,7 @@ final class QuoteRequestController extends AbstractController
             }
 
             $sourceCartId = $request->getSession()->remove(self::SOURCE_CART_KEY . $channel->getCode());
-            $sourceCart = null !== $sourceCartId && null !== $this->orderRepository ? $this->orderRepository->find($sourceCartId) : null;
+            $sourceCart = null !== $sourceCartId && $this->orderRepository instanceof \Sylius\Resource\Doctrine\Persistence\RepositoryInterface ? $this->orderRepository->find($sourceCartId) : null;
             if ($sourceCart instanceof OrderInterface && OrderInterface::STATE_CART === $sourceCart->getState()) {
                 $quoteRequest->setSourceOrder($sourceCart);
             }
@@ -229,13 +229,13 @@ final class QuoteRequestController extends AbstractController
         return $this->render('@TmonierSyliusQuoteRequestPlugin/shop/quote_request/new.html.twig', [
             'quote_request' => $quoteRequest,
             'form' => $form->createView(),
-            'is_guest' => null === $customer,
+            'is_guest' => !$customer instanceof \Sylius\Component\Core\Model\CustomerInterface,
         ], new Response(null, $form->isSubmitted() ? Response::HTTP_UNPROCESSABLE_ENTITY : Response::HTTP_OK));
     }
 
     public function showByTokenAction(Request $request, string $token): Response
     {
-        return $this->renderQuote($request, $this->findByToken($token), false);
+        return $this->renderQuote($this->findByToken($token), false);
     }
 
     /** PDF of the proposal (from the proposal on: proposed, accepted, ordered, expired). */
@@ -255,7 +255,7 @@ final class QuoteRequestController extends AbstractController
     public function accountIndexAction(): Response
     {
         $customer = $this->shopCustomer();
-        if (null === $customer) {
+        if (!$customer instanceof \Sylius\Component\Core\Model\CustomerInterface) {
             return $this->redirectToRoute('sylius_shop_login');
         }
 
@@ -267,16 +267,16 @@ final class QuoteRequestController extends AbstractController
     public function accountShowAction(Request $request, string $number): Response
     {
         $customer = $this->shopCustomer();
-        if (null === $customer) {
+        if (!$customer instanceof \Sylius\Component\Core\Model\CustomerInterface) {
             return $this->redirectToRoute('sylius_shop_login');
         }
 
         $quoteRequest = $this->quoteRequestRepository->findOneByNumberAndCustomer($number, $customer);
-        if (null === $quoteRequest) {
+        if (!$quoteRequest instanceof \Tmonier\SyliusQuoteRequestPlugin\Entity\QuoteRequestInterface) {
             throw new NotFoundHttpException('Quote request not found.');
         }
 
-        return $this->renderQuote($request, $quoteRequest, true);
+        return $this->renderQuote($quoteRequest, true);
     }
 
     public function transitionAction(Request $request, string $token, string $action): Response
@@ -331,7 +331,7 @@ final class QuoteRequestController extends AbstractController
             return $this->redirectToQuote($quoteRequest);
         }
         // Conversations have their own budget, per quote (and per IP).
-        if ($this->isRateLimited($this->messageIpLimiter, $this->messageQuoteLimiter, $request, 'quote-' . (string) $quoteRequest->getId())) {
+        if ($this->isRateLimited($this->messageIpLimiter, $this->messageQuoteLimiter, $request, 'quote-' . $quoteRequest->getId())) {
             $this->addFlash('error', 'tmonier_quote_request.flash.too_many_requests');
 
             return $this->redirectToQuote($quoteRequest);
@@ -384,11 +384,11 @@ final class QuoteRequestController extends AbstractController
     }
 
     /** Leaves the quote mode of the current cart: the items get back the catalog prices. */
-    public function releaseCartAction(Request $request): Response
+    public function releaseCartAction(Request $request): \Symfony\Component\HttpFoundation\RedirectResponse
     {
         $cart = $this->currentCart();
-        $quoteRequest = null === $cart ? null : $this->quoteRequestRepository->findOneByOrder($cart);
-        if (null === $quoteRequest || !$this->isCsrfTokenValid('tmonier_quote_request_release_cart', (string) $request->request->get('_csrf_token'))) {
+        $quoteRequest = $cart instanceof \Sylius\Component\Core\Model\OrderInterface ? $this->quoteRequestRepository->findOneByOrder($cart) : null;
+        if (!$quoteRequest instanceof \Tmonier\SyliusQuoteRequestPlugin\Entity\QuoteRequestInterface || !$this->isCsrfTokenValid('tmonier_quote_request_release_cart', (string) $request->request->get('_csrf_token'))) {
             throw new NotFoundHttpException();
         }
 
@@ -398,7 +398,7 @@ final class QuoteRequestController extends AbstractController
         return $this->redirectToRoute('sylius_shop_cart_summary');
     }
 
-    private function renderQuote(Request $request, QuoteRequestInterface $quoteRequest, bool $fromAccount): Response
+    private function renderQuote(QuoteRequestInterface $quoteRequest, bool $fromAccount): Response
     {
         $messageForm = $this->createForm(QuoteMessageType::class, null, [
             'action' => $this->generateUrl('tmonier_quote_request_shop_message', ['token' => $quoteRequest->getToken()]),
@@ -415,11 +415,11 @@ final class QuoteRequestController extends AbstractController
     private function isRateLimited(?RateLimiterFactory $ipLimiter, ?RateLimiterFactory $keyLimiter, Request $request, string $key): bool
     {
         $limited = false;
-        if (null !== $ipLimiter) {
+        if ($ipLimiter instanceof \Symfony\Component\RateLimiter\RateLimiterFactory) {
             $limited = !$ipLimiter->create(RateLimitKeys::ip($request->getClientIp()))->consume()->isAccepted();
         }
-        if (null !== $keyLimiter && '' !== $key) {
-            $limited = !$keyLimiter->create($key)->consume()->isAccepted() || $limited;
+        if ($keyLimiter instanceof \Symfony\Component\RateLimiter\RateLimiterFactory && '' !== $key) {
+            return !$keyLimiter->create($key)->consume()->isAccepted() || $limited;
         }
 
         return $limited;
@@ -430,10 +430,10 @@ final class QuoteRequestController extends AbstractController
         return in_array($quoteRequest->getStatus(), [QuoteRequestStatuses::NEW, QuoteRequestStatuses::IN_REVIEW, QuoteRequestStatuses::PROPOSED, QuoteRequestStatuses::ACCEPTED], true);
     }
 
-    private function redirectToQuote(QuoteRequestInterface $quoteRequest): Response
+    private function redirectToQuote(QuoteRequestInterface $quoteRequest): \Symfony\Component\HttpFoundation\RedirectResponse
     {
         $customer = $this->shopCustomer();
-        if (null !== $customer && $quoteRequest->getCustomer() === $customer) {
+        if ($customer instanceof \Sylius\Component\Core\Model\CustomerInterface && $quoteRequest->getCustomer() === $customer) {
             return $this->redirectToRoute('tmonier_quote_request_shop_account_show', ['number' => $quoteRequest->getNumber()]);
         }
 
@@ -443,14 +443,14 @@ final class QuoteRequestController extends AbstractController
     private function findByToken(string $token): QuoteRequestInterface
     {
         $quoteRequest = $this->quoteRequestRepository->findOneByToken($token);
-        if (null === $quoteRequest || $quoteRequest->getChannel() !== $this->channel()) {
+        if (!$quoteRequest instanceof \Tmonier\SyliusQuoteRequestPlugin\Entity\QuoteRequestInterface || $quoteRequest->getChannel() !== $this->channel()) {
             throw new NotFoundHttpException('Quote request not found.');
         }
 
         // The token is the key of guest quotes only: the quote of a shop account needs its owner
         // logged in (anonymous visitors are sent to the login page, other customers get a 403).
         $owner = $quoteRequest->getCustomer();
-        if (null !== $owner && null !== $owner->getUser() && $this->shopCustomer() !== $owner) {
+        if ($owner instanceof \Sylius\Component\Core\Model\CustomerInterface && $owner->getUser() instanceof \Sylius\Component\User\Model\UserInterface && $this->shopCustomer() !== $owner) {
             throw $this->createAccessDeniedException('This quote belongs to a shop account.');
         }
 
@@ -469,7 +469,7 @@ final class QuoteRequestController extends AbstractController
     {
         $variants = [];
         foreach ($product->getEnabledVariants() as $variant) {
-            if ($variant instanceof ProductVariantInterface && null !== $variant->getChannelPricingForChannel($channel)) {
+            if ($variant instanceof ProductVariantInterface && $variant->getChannelPricingForChannel($channel) instanceof \Sylius\Component\Core\Model\ChannelPricingInterface) {
                 $variants[] = $variant;
             }
         }
@@ -490,7 +490,7 @@ final class QuoteRequestController extends AbstractController
     {
         $customer = $this->customerContext->getCustomer();
 
-        return $customer instanceof CustomerInterface && null !== $customer->getUser() ? $customer : null;
+        return $customer instanceof CustomerInterface && $customer->getUser() instanceof \Sylius\Component\User\Model\UserInterface ? $customer : null;
     }
 
     private function currentCart(): ?OrderInterface

@@ -24,9 +24,9 @@ use Webmozart\Assert\Assert;
  * Catalog data created by the tests themselves (inside their rolled-back transaction), so that
  * no test depends on the random Sylius fixtures: zones, shipping and payment methods, products.
  */
-final class TestCatalog
+final readonly class TestCatalog
 {
-    public function __construct(private readonly ContainerInterface $container)
+    public function __construct(private ContainerInterface $container)
     {
     }
 

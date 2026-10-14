@@ -92,7 +92,7 @@ final class QuoteRequestExtension extends AbstractExtension
             return ($this->unsecuredUrls ? 'http://' : 'https://') . $hostname . $path;
         }
 
-        return null !== $this->urlHelper ? $this->urlHelper->getAbsoluteUrl($path) : $path;
+        return $this->urlHelper?->getAbsoluteUrl($path) ?? $path;
     }
 
     public function setting(string $name): mixed

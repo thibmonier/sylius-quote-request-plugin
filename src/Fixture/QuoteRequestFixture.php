@@ -76,7 +76,7 @@ final class QuoteRequestFixture extends AbstractFixture
         /** @var list<CustomerInterface> $customers */
         $customers = array_values(array_filter(
             $this->customerRepository->findBy([], ['id' => 'ASC'], 20),
-            static fn (CustomerInterface $customer): bool => null !== $customer->getUser(),
+            static fn (CustomerInterface $customer): bool => $customer->getUser() instanceof \Sylius\Component\User\Model\UserInterface,
         ));
         /** @var list<ProductVariantInterface> $variants */
         $variants = $this->variantRepository->findBy(['enabled' => true, 'tracked' => false], ['id' => 'ASC'], 60);
@@ -109,7 +109,7 @@ final class QuoteRequestFixture extends AbstractFixture
         $localeCode = (string) $channel->getDefaultLocale()?->getCode();
         $quote = $this->factory->createForChannel($channel, $localeCode, $customer);
         $quote->setCompany(self::COMPANIES[$index % count(self::COMPANIES)]);
-        if (null === $customer) {
+        if (!$customer instanceof \Sylius\Component\Core\Model\CustomerInterface) {
             $quote->setEmail(sprintf('buyer%d@example.com', $index + 1));
             $quote->setFirstName('Alex');
             $quote->setLastName(sprintf('Buyer %d', $index + 1));
@@ -121,7 +121,7 @@ final class QuoteRequestFixture extends AbstractFixture
         for ($line = 0; $line < 2 + $index % 3; ++$line) {
             $variant = $variants[($index * 3 + $line * 7) % count($variants)];
             $quoteLine = $this->factory->createLine($quote, $variant, 10 * ($line + 1) + 5 * $index);
-            if (null !== $quoteLine && !$this->hasVariant($quote, $variant)) {
+            if ($quoteLine instanceof \Tmonier\SyliusQuoteRequestPlugin\Entity\QuoteRequestLineInterface && !$this->hasVariant($quote, $variant)) {
                 $quote->addLine($quoteLine);
             }
         }
@@ -177,7 +177,7 @@ final class QuoteRequestFixture extends AbstractFixture
     private function order(QuoteRequestInterface $quote): void
     {
         $address = $quote->getCustomer()?->getDefaultAddress();
-        if (null === $address) {
+        if (!$address instanceof \Sylius\Component\Core\Model\AddressInterface) {
             $address = $this->addressFactory->createNew();
             $address->setFirstName($quote->getFirstName() ?? 'Alex');
             $address->setLastName($quote->getLastName() ?? 'Buyer');

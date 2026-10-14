@@ -14,18 +14,18 @@ use Sylius\Component\Order\Processor\OrderProcessorInterface;
  * adjustments are already cleared by the adjustments clearer, the applied promotions and the
  * coupon are removed here so that their usage is not counted).
  */
-final class QuoteAwarePromotionProcessor implements OrderProcessorInterface
+final readonly class QuoteAwarePromotionProcessor implements OrderProcessorInterface
 {
     public function __construct(
-        private readonly OrderProcessorInterface $decorated,
-        private readonly QuoteOrderResolverInterface $quoteOrderResolver,
-        private readonly bool $allowPromotions,
+        private OrderProcessorInterface $decorated,
+        private QuoteOrderResolverInterface $quoteOrderResolver,
+        private bool $allowPromotions,
     ) {
     }
 
     public function process(BaseOrderInterface $order): void
     {
-        if ($this->allowPromotions || !$order instanceof OrderInterface || null === $this->quoteOrderResolver->resolveLockingQuote($order)) {
+        if ($this->allowPromotions || !$order instanceof OrderInterface || !$this->quoteOrderResolver->resolveLockingQuote($order) instanceof \Tmonier\SyliusQuoteRequestPlugin\Entity\QuoteRequestInterface) {
             $this->decorated->process($order);
 
             return;

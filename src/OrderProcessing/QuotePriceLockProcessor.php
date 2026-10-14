@@ -17,12 +17,12 @@ use Tmonier\SyliusQuoteRequestPlugin\Pricing\QuoteOrderSynchronizerInterface;
  * whatever the customer changes in the cart. A cart that is not (or no longer) linked to an
  * accepted quote loses its quote prices: its locked items get back the catalog prices.
  */
-final class QuotePriceLockProcessor implements OrderProcessorInterface
+final readonly class QuotePriceLockProcessor implements OrderProcessorInterface
 {
     public function __construct(
-        private readonly QuoteOrderResolverInterface $quoteOrderResolver,
-        private readonly QuoteOrderSynchronizerInterface $synchronizer,
-        private readonly OrderProcessorInterface $pricesRecalculator,
+        private QuoteOrderResolverInterface $quoteOrderResolver,
+        private QuoteOrderSynchronizerInterface $synchronizer,
+        private OrderProcessorInterface $pricesRecalculator,
     ) {
     }
 
@@ -33,7 +33,7 @@ final class QuotePriceLockProcessor implements OrderProcessorInterface
         }
 
         $quoteRequest = $this->quoteOrderResolver->resolveLockingQuote($order);
-        if (null !== $quoteRequest) {
+        if ($quoteRequest instanceof \Tmonier\SyliusQuoteRequestPlugin\Entity\QuoteRequestInterface) {
             $this->synchronizer->synchronize($quoteRequest, $order);
 
             return;

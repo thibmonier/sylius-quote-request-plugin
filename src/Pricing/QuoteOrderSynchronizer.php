@@ -18,21 +18,21 @@ use Tmonier\SyliusQuoteRequestPlugin\Checkout\QuoteOrderabilityCheckerInterface;
 use Tmonier\SyliusQuoteRequestPlugin\Entity\QuoteRequestInterface;
 use Tmonier\SyliusQuoteRequestPlugin\Entity\QuoteRequestLineInterface;
 
-final class QuoteOrderSynchronizer implements QuoteOrderSynchronizerInterface
+final readonly class QuoteOrderSynchronizer implements QuoteOrderSynchronizerInterface
 {
     /**
      * @param FactoryInterface<OrderItemInterface> $orderItemFactory
      * @param AdjustmentFactoryInterface<AdjustmentInterface> $adjustmentFactory
      */
     public function __construct(
-        private readonly FactoryInterface $orderItemFactory,
-        private readonly OrderItemQuantityModifierInterface $orderItemQuantityModifier,
-        private readonly AdjustmentFactoryInterface $adjustmentFactory,
-        private readonly ProportionalIntegerDistributorInterface $proportionalDistributor,
-        private readonly IntegerDistributorInterface $integerDistributor,
-        private readonly QuoteDiscountCalculatorInterface $discountCalculator,
-        private readonly TranslatorInterface $translator,
-        private readonly QuoteOrderabilityCheckerInterface $orderabilityChecker,
+        private FactoryInterface $orderItemFactory,
+        private OrderItemQuantityModifierInterface $orderItemQuantityModifier,
+        private AdjustmentFactoryInterface $adjustmentFactory,
+        private ProportionalIntegerDistributorInterface $proportionalDistributor,
+        private IntegerDistributorInterface $integerDistributor,
+        private QuoteDiscountCalculatorInterface $discountCalculator,
+        private TranslatorInterface $translator,
+        private QuoteOrderabilityCheckerInterface $orderabilityChecker,
     ) {
     }
 

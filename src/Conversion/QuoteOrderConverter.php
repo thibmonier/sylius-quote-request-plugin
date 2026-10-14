@@ -27,24 +27,24 @@ use Tmonier\SyliusQuoteRequestPlugin\Workflow\QuoteRequestStatuses;
 use Tmonier\SyliusQuoteRequestPlugin\Workflow\QuoteRequestTransitions;
 use Webmozart\Assert\Assert;
 
-final class QuoteOrderConverter implements QuoteOrderConverterInterface
+final readonly class QuoteOrderConverter implements QuoteOrderConverterInterface
 {
     /**
      * @param RepositoryInterface<CustomerInterface> $customerRepository
      * @param FactoryInterface<CustomerInterface> $customerFactory
      */
     public function __construct(
-        private readonly QuoteRequestManagerInterface $quoteRequestManager,
-        private readonly QuoteCartManagerInterface $quoteCartManager,
-        private readonly StateMachineInterface $stateMachine,
-        private readonly OrderProcessorInterface $orderProcessor,
-        private readonly RepositoryInterface $customerRepository,
-        private readonly FactoryInterface $customerFactory,
-        private readonly EntityManagerInterface $entityManager,
-        private readonly ValidatorInterface $validator,
-        private readonly QuoteOrderabilityCheckerInterface $orderabilityChecker,
-        private readonly ClockInterface $clock,
-        private readonly int $checkoutIdleMinutes = 30,
+        private QuoteRequestManagerInterface $quoteRequestManager,
+        private QuoteCartManagerInterface $quoteCartManager,
+        private StateMachineInterface $stateMachine,
+        private OrderProcessorInterface $orderProcessor,
+        private RepositoryInterface $customerRepository,
+        private FactoryInterface $customerFactory,
+        private EntityManagerInterface $entityManager,
+        private ValidatorInterface $validator,
+        private QuoteOrderabilityCheckerInterface $orderabilityChecker,
+        private ClockInterface $clock,
+        private int $checkoutIdleMinutes = 30,
     ) {
     }
 
@@ -103,7 +103,7 @@ final class QuoteOrderConverter implements QuoteOrderConverterInterface
 
             // Same for the payment step (nothing to pay, single method).
             if (in_array($cart->getCheckoutState(), [OrderCheckoutStates::STATE_SHIPPING_SELECTED, OrderCheckoutStates::STATE_SHIPPING_SKIPPED], true)) {
-                if (null !== $paymentMethod) {
+                if ($paymentMethod instanceof \Sylius\Component\Core\Model\PaymentMethodInterface) {
                     $cart->getLastPayment()?->setMethod($paymentMethod);
                 }
                 if (!$this->applyIfPossible($cart, OrderCheckoutTransitions::TRANSITION_SELECT_PAYMENT)) {
@@ -138,7 +138,7 @@ final class QuoteOrderConverter implements QuoteOrderConverterInterface
     private function resolveCustomer(QuoteRequestInterface $quoteRequest): CustomerInterface
     {
         $customer = $quoteRequest->getCustomer();
-        if (null !== $customer) {
+        if ($customer instanceof \Sylius\Component\Core\Model\CustomerInterface) {
             return $customer;
         }
 
@@ -160,7 +160,7 @@ final class QuoteOrderConverter implements QuoteOrderConverterInterface
 
     private function useShippingMethod(OrderInterface $cart, ?ShippingMethodInterface $shippingMethod): void
     {
-        if (null === $shippingMethod || !$cart->hasShipments()) {
+        if (!$shippingMethod instanceof \Sylius\Component\Core\Model\ShippingMethodInterface || !$cart->hasShipments()) {
             return;
         }
 
@@ -186,7 +186,7 @@ final class QuoteOrderConverter implements QuoteOrderConverterInterface
     private function takeOverCustomerCart(QuoteRequestInterface $quoteRequest): void
     {
         $cart = $quoteRequest->getOrder();
-        if (null === $cart || null === $cart->getId()) {
+        if (!$cart instanceof \Sylius\Component\Core\Model\OrderInterface || null === $cart->getId()) {
             return;
         }
 
@@ -198,7 +198,7 @@ final class QuoteOrderConverter implements QuoteOrderConverterInterface
         // A checkout in progress is left alone; an abandoned one (idle) is taken over.
         $updatedAt = is_string($row['updated_at'] ?? null) ? new \DateTimeImmutable($row['updated_at']) : null;
         $idleSince = $this->clock->now()->modify(sprintf('-%d minutes', $this->checkoutIdleMinutes));
-        if (OrderCheckoutStates::STATE_CART !== $row['checkout_state'] && (null === $updatedAt || $updatedAt > $idleSince)) {
+        if (OrderCheckoutStates::STATE_CART !== $row['checkout_state'] && (!$updatedAt instanceof \DateTimeImmutable || $updatedAt > $idleSince)) {
             throw new \RuntimeException(sprintf('The customer is checking out this quote: wait for the order, retry once the cart has been idle for %d minutes, or cancel the quote.', $this->checkoutIdleMinutes));
         }
 

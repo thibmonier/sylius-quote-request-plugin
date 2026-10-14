@@ -53,7 +53,7 @@ final class QuoteCartInspector
             return true;
         }
 
-        return null !== $quoteRequest && $quoteRequest->getOrder() === $order && self::holdsQuoteLines($order, $quoteRequest);
+        return $quoteRequest instanceof \Tmonier\SyliusQuoteRequestPlugin\Entity\QuoteRequestInterface && $quoteRequest->getOrder() === $order && self::holdsQuoteLines($order, $quoteRequest);
     }
 
     private function __construct()

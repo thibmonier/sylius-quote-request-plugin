@@ -218,7 +218,7 @@ final class ShopQuoteRequestTest extends WebTestCase
             'tmonier_quote_request[email]' => 'someone@example.com',
         ]);
 
-        $this->client->request('POST', (string) $form->getUri(), $form->getPhpValues(), [], ['HTTP_HOST' => 'localhost', 'HTTP_X_FORWARDED_HOST' => 'evil.example']);
+        $this->client->request('POST', $form->getUri(), $form->getPhpValues(), [], ['HTTP_HOST' => 'localhost', 'HTTP_X_FORWARDED_HOST' => 'evil.example']);
 
         self::assertEmailCount(2);
         $adminEmail = self::getMailerMessage(0);

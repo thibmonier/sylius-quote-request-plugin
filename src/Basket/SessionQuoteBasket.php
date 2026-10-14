@@ -9,22 +9,22 @@ use Symfony\Component\HttpFoundation\Exception\SessionNotFoundException;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\HttpFoundation\Session\SessionInterface;
 
-final class SessionQuoteBasket implements QuoteBasketInterface
+final readonly class SessionQuoteBasket implements QuoteBasketInterface
 {
     public const SESSION_KEY = '_tmonier_quote_request.basket';
 
     public const MAX_QUANTITY = 1000000;
 
     public function __construct(
-        private readonly RequestStack $requestStack,
-        private readonly int $maxLines,
+        private RequestStack $requestStack,
+        private int $maxLines,
     ) {
     }
 
     public function all(ChannelInterface $channel): array
     {
         $session = $this->session();
-        if (null === $session) {
+        if (!$session instanceof \Symfony\Component\HttpFoundation\Session\SessionInterface) {
             return [];
         }
 

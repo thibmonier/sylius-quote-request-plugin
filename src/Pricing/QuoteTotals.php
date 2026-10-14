@@ -4,15 +4,15 @@ declare(strict_types=1);
 
 namespace Tmonier\SyliusQuoteRequestPlugin\Pricing;
 
-final class QuoteTotals
+final readonly class QuoteTotals
 {
     public function __construct(
-        public readonly int $subtotal,
-        public readonly int $discount,
-        public readonly int $taxTotal,
-        public readonly int $taxIncludedTotal,
-        public readonly int $taxExcludedTotal,
-        public readonly int $total,
+        public int $subtotal,
+        public int $discount,
+        public int $taxTotal,
+        public int $taxIncludedTotal,
+        public int $taxExcludedTotal,
+        public int $total,
     ) {
     }
 

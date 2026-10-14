@@ -15,7 +15,7 @@ use Tmonier\SyliusQuoteRequestPlugin\Entity\QuoteRequestInterface;
 use Tmonier\SyliusQuoteRequestPlugin\Entity\QuoteRequestLineInterface;
 use Tmonier\SyliusQuoteRequestPlugin\Token\TokenGeneratorInterface;
 
-final class QuoteRequestFactory implements QuoteRequestFactoryInterface
+final readonly class QuoteRequestFactory implements QuoteRequestFactoryInterface
 {
     /**
      * @param FactoryInterface<QuoteRequestInterface> $quoteRequestFactory
@@ -23,12 +23,12 @@ final class QuoteRequestFactory implements QuoteRequestFactoryInterface
      * @param FactoryInterface<QuoteMessageInterface> $messageFactory
      */
     public function __construct(
-        private readonly FactoryInterface $quoteRequestFactory,
-        private readonly FactoryInterface $lineFactory,
-        private readonly FactoryInterface $messageFactory,
-        private readonly TokenGeneratorInterface $tokenGenerator,
-        private readonly ProductVariantPricesCalculatorInterface $pricesCalculator,
-        private readonly ClockInterface $clock,
+        private FactoryInterface $quoteRequestFactory,
+        private FactoryInterface $lineFactory,
+        private FactoryInterface $messageFactory,
+        private TokenGeneratorInterface $tokenGenerator,
+        private ProductVariantPricesCalculatorInterface $pricesCalculator,
+        private ClockInterface $clock,
     ) {
     }
 
@@ -41,14 +41,14 @@ final class QuoteRequestFactory implements QuoteRequestFactoryInterface
         $quoteRequest->setToken($this->tokenGenerator->generate());
         $quoteRequest->setCreatedAt($this->clock->now());
 
-        if (null !== $customer) {
+        if ($customer instanceof \Sylius\Component\Core\Model\CustomerInterface) {
             $quoteRequest->setCustomer($customer);
             $quoteRequest->setEmail($customer->getEmail());
             $quoteRequest->setFirstName($customer->getFirstName());
             $quoteRequest->setLastName($customer->getLastName());
             $quoteRequest->setPhoneNumber($customer->getPhoneNumber());
             $address = $customer->getDefaultAddress();
-            if (null !== $address) {
+            if ($address instanceof \Sylius\Component\Core\Model\AddressInterface) {
                 $quoteRequest->setCompany($address->getCompany());
                 $quoteRequest->setPhoneNumber($customer->getPhoneNumber() ?? $address->getPhoneNumber());
             }
@@ -60,7 +60,7 @@ final class QuoteRequestFactory implements QuoteRequestFactoryInterface
     public function createLine(QuoteRequestInterface $quoteRequest, ProductVariantInterface $variant, int $quantity): ?QuoteRequestLineInterface
     {
         $channel = $quoteRequest->getChannel();
-        if (null === $channel || null === $variant->getChannelPricingForChannel($channel)) {
+        if (!$channel instanceof \Sylius\Component\Core\Model\ChannelInterface || !$variant->getChannelPricingForChannel($channel) instanceof \Sylius\Component\Core\Model\ChannelPricingInterface) {
             return null;
         }
 

@@ -14,7 +14,7 @@ use Tmonier\SyliusQuoteRequestPlugin\Entity\QuoteRequestInterface;
  * A proposal needs at least one line with a product; it can be accepted only while valid and
  * when every line can still be ordered (product sold in the channel, stock sufficient).
  */
-final class QuoteRequestGuardListener
+final readonly class QuoteRequestGuardListener
 {
     public const CODE_NO_LINE = 'tmonier_quote_request.no_line';
 
@@ -23,8 +23,8 @@ final class QuoteRequestGuardListener
     public const CODE_UNAVAILABLE = 'tmonier_quote_request.unavailable';
 
     public function __construct(
-        private readonly ClockInterface $clock,
-        private readonly QuoteOrderabilityCheckerInterface $orderabilityChecker,
+        private ClockInterface $clock,
+        private QuoteOrderabilityCheckerInterface $orderabilityChecker,
     ) {
     }
 

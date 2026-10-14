@@ -320,7 +320,7 @@ final class QuoteToOrderTest extends KernelTestCase
         $converter->convert($quote, $this->usAddress(), null, null);
 
         self::assertSame(QuoteRequestStatuses::ORDERED, $quote->getStatus());
-        self::assertSame([$kept], array_map(static fn (OrderItemInterface $item) => $item->getVariant(), $this->items($guestCart)));
+        self::assertSame([$kept], array_map(static fn (OrderItemInterface $item): ?\Sylius\Component\Core\Model\ProductVariantInterface => $item->getVariant(), $this->items($guestCart)));
     }
 
     public function testConversionEventsComeAfterTheCommitInOrderAndNotOnRollback(): void
@@ -341,7 +341,7 @@ final class QuoteToOrderTest extends KernelTestCase
         // A failure after the checkout completion: everything is rolled back, no event.
         $quote = $this->proposedQuote([[$first, 2, 1000]]);
         $quoteId = $quote->getId();
-        $failing = static function (): void {
+        $failing = static function (): never {
             throw new \RuntimeException('ERP down');
         };
         $dispatcher->addListener('workflow.sylius_order_checkout.completed.complete', $failing, -100);
@@ -426,7 +426,7 @@ final class QuoteToOrderTest extends KernelTestCase
         $this->checkout($cart, $quote);
 
         $this->entityManager()->refresh($source);
-        self::assertSame([$kept], array_map(static fn (OrderItemInterface $item) => $item->getVariant(), $this->items($source)));
+        self::assertSame([$kept], array_map(static fn (OrderItemInterface $item): ?\Sylius\Component\Core\Model\ProductVariantInterface => $item->getVariant(), $this->items($source)));
     }
 
     public function testASourceCartAbandonedAtThePaymentStepIsCleaned(): void
@@ -456,7 +456,7 @@ final class QuoteToOrderTest extends KernelTestCase
         /** @var \Symfony\Component\EventDispatcher\EventDispatcherInterface $dispatcher */
         $dispatcher = self::getContainer()->get('event_dispatcher');
         $received = [];
-        $dispatcher->addListener(QuoteRequestEvents::ACCEPTED, static function (): void {
+        $dispatcher->addListener(QuoteRequestEvents::ACCEPTED, static function (): never {
             throw new \RuntimeException('SMTP down');
         });
         foreach ([QuoteRequestEvents::ORDERED, QuoteRequestEvents::DECLINED] as $eventName) {
@@ -471,7 +471,7 @@ final class QuoteToOrderTest extends KernelTestCase
         self::assertSame(OrderInterface::STATE_NEW, $order->getState());
         self::assertSame([[QuoteRequestEvents::ORDERED, $quote->getNumber()]], $received, '"ordered" still dispatched.');
         $this->entityManager()->refresh($source);
-        self::assertSame([$kept], array_map(static fn (OrderItemInterface $item) => $item->getVariant(), $this->items($source)), 'Source cart cleaned.');
+        self::assertSame([$kept], array_map(static fn (OrderItemInterface $item): ?\Sylius\Component\Core\Model\ProductVariantInterface => $item->getVariant(), $this->items($source)), 'Source cart cleaned.');
 
         // The next, unrelated operation dispatches its own events only.
         $other = $this->proposedQuote([[$kept, 1, 500]]);
@@ -599,7 +599,7 @@ final class QuoteToOrderTest extends KernelTestCase
         }
 
         // The Symfony Workflow listener marks the quote before anything is flushed.
-        if (null !== $quote) {
+        if ($quote instanceof \Tmonier\SyliusQuoteRequestPlugin\Entity\QuoteRequestInterface) {
             self::assertSame(QuoteRequestStatuses::ORDERED, $quote->getStatus());
         }
         $this->entityManager()->flush();
