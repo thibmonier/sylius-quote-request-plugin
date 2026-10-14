@@ -188,12 +188,12 @@ tmonier_sylius_quote_request:
     base_url: ~                 # base of the links in the e-mails; the channel hostname when null
     checkout_idle_minutes: 30   # the merchant converts a quote whose cart checkout was abandoned that long ago
     pdf_attachment_directory: '%kernel.project_dir%/var/tmonier_quote_request/pdf' # proposal PDFs, kept 48 h (created 0775)
-    rate_limit:                 # valid quote requests (guests and customers) and messages
+    rate_limit:                 # valid quote requests (guests and customers), messages, and quote transitions (accept/decline/cancel)
         enabled: true
         per_ip: 10              # IPv6: per /56 network; IPv4-mapped addresses count as IPv4
         per_email: 3            # case, +tag and Gmail dots ignored
-        messages_per_ip: 30
-        messages_per_quote: 10
+        messages_per_ip: 30     # also caps transitions per IP
+        messages_per_quote: 10  # also caps transitions per quote (token)
         interval: '1 hour'
         cache_pool: cache.rate_limiter
 ```
@@ -266,8 +266,9 @@ flushed right after them, whatever the state machine adapter. The Symfony Workfl
   a 403, visitors the login page); their e-mails link to *My quotes*. The cart of an accepted
   quote is never handed to another customer.
 - Quote requests are rate limited per IP (IPv6 /56) and per mailbox (sub-addresses and Gmail
-  dots count as one), messages per quote and per IP; only valid submissions count. A honeypot
-  field drops robots. E-mails
+  dots count as one); messages and quote transitions (accept / decline / cancel) share the
+  `messages_per_ip` / `messages_per_quote` budget, preventing a token holder from hammering
+  the transition endpoint; only valid submissions count. A honeypot field drops robots. E-mails
   to the customer never repeat the contact details typed in the form (the recipient may not be
   the author); the merchant e-mail keeps them.
 - Links in e-mails come from `base_url` or the channel hostname (scheme following

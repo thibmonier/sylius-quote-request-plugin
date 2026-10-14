@@ -290,6 +290,32 @@ final class ShopQuoteRequestTest extends WebTestCase
         }
     }
 
+    public function testTransitionsShareTheConversationBudgetAndAreRateLimited(): void
+    {
+        [$variant] = $this->sellableVariants(1);
+        $quote = $this->createQuote([[$variant, 5, 1000]], null, QuoteRequestStatuses::PROPOSED);
+
+        // Exhaust the per-quote conversation budget (messages_per_quote = 10 in the test app)
+        // by sending 10 messages.  Messages and transitions share the same sliding-window key
+        // ('quote-' + id) so both endpoints draw from the same pool.
+        for ($message = 1; $message <= 10; ++$message) {
+            $crawler = $this->client->request('GET', $this->tokenUrl($quote));
+            $this->client->submit($crawler->filter('[data-test-tmonier-quote-send-message]')->form([
+                'tmonier_quote_request_message[body]' => 'Message ' . $message,
+            ]));
+            $crawler = $this->client->followRedirect();
+            self::assertSame(['Your message was sent.'], $this->flashes($crawler));
+        }
+
+        // The per-quote budget is now exhausted.  A decline attempt must be rate-limited and
+        // the quote status must remain PROPOSED.
+        $crawler = $this->client->request('GET', $this->tokenUrl($quote));
+        $this->client->submit($crawler->filter('[data-test-tmonier-quote-decline]')->form());
+        $crawler = $this->client->followRedirect();
+        self::assertSame(['Too many requests: please try again later.'], $this->flashes($crawler));
+        self::assertSame(QuoteRequestStatuses::PROPOSED, $this->reloadQuote($quote)->getStatus());
+    }
+
     public function testEmailLinksStayAbsoluteWithoutChannelHostname(): void
     {
         $this->channel()->setHostname(null);

@@ -65,7 +65,7 @@ final class Configuration implements ConfigurationInterface
                     ->floatPrototype()->min(0)->max(100)->end()
                 ->end()
                 ->arrayNode('rate_limit')
-                    ->info('Limits the quote requests and messages of guests (symfony/rate-limiter), per IP and per e-mail.')
+                    ->info('Limits the quote requests and messages of guests (symfony/rate-limiter), per IP and per e-mail. messages_per_ip / messages_per_quote also cap quote transitions (accept / decline / cancel) to prevent token-based abuse.')
                     ->addDefaultsIfNotSet()
                     ->canBeDisabled()
                     ->children()
