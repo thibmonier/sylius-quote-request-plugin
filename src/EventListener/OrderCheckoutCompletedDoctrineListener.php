@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Tmonier\SyliusQuoteRequestPlugin\EventListener;
 
-use Doctrine\ORM\Event\OnClearEventArgs;
 use Doctrine\ORM\Event\OnFlushEventArgs;
 use Doctrine\ORM\Event\PostFlushEventArgs;
 use Psr\Clock\ClockInterface;
@@ -108,7 +107,7 @@ final class OrderCheckoutCompletedDoctrineListener
         }
     }
 
-    public function onClear(OnClearEventArgs $args): void
+    public function onClear(): void
     {
         $this->ordered = [];
     }

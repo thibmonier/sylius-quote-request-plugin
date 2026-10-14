@@ -79,7 +79,7 @@ final class QuoteOrderSynchronizerTest extends TestCase
 
         $items = $this->items($order);
         self::assertCount(2, $items);
-        self::assertSame([$first, $second], array_map(static fn (OrderItemInterface $item) => $item->getVariant(), $items));
+        self::assertSame([$first, $second], array_map(static fn (OrderItemInterface $item): ?\Sylius\Component\Core\Model\ProductVariantInterface => $item->getVariant(), $items));
         self::assertSame([1500, 1000], array_map(static fn (OrderItemInterface $item): int => $item->getUnitPrice(), $items));
         self::assertSame([2000, 1000], array_map(static fn (OrderItemInterface $item): ?int => $item->getOriginalUnitPrice(), $items));
         self::assertSame([3, 2], array_map(static fn (OrderItemInterface $item): int => $item->getQuantity(), $items));
@@ -208,15 +208,15 @@ final class QuoteOrderSynchronizerTest extends TestCase
     /** @return FactoryInterface<OrderItemInterface> */
     private function orderItemFactory(): FactoryInterface
     {
-        return new CallbackFactory(self::newOrderItem(...));
+        return new CallbackFactory($this->newOrderItem(...));
     }
 
-    private static function newOrderItem(): OrderItemInterface
+    private function newOrderItem(): OrderItemInterface
     {
         return new OrderItem();
     }
 
-    private static function newAdjustment(): AdjustmentInterface
+    private function newAdjustment(): AdjustmentInterface
     {
         return new Adjustment();
     }
@@ -224,7 +224,7 @@ final class QuoteOrderSynchronizerTest extends TestCase
     /** @return FactoryInterface<AdjustmentInterface> */
     private function adjustmentFactory(): FactoryInterface
     {
-        return new CallbackFactory(self::newAdjustment(...));
+        return new CallbackFactory($this->newAdjustment(...));
     }
 
     /** @param list<array{0: ProductVariant, 1: int, 2: int, 3: int|null}> $lines */

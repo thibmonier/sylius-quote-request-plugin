@@ -15,12 +15,12 @@ use Tmonier\SyliusQuoteRequestPlugin\Workflow\QuoteRequestTransitions;
 /**
  * `sylius_order_checkout` → `complete`: the accepted quote of the cart becomes "ordered".
  */
-final class OrderCheckoutCompletedListener
+final readonly class OrderCheckoutCompletedListener
 {
     public function __construct(
-        private readonly QuoteRequestRepositoryInterface $quoteRequestRepository,
-        private readonly QuoteRequestManagerInterface $quoteRequestManager,
-        private readonly OrderCheckoutCompletedDoctrineListener $doctrineListener,
+        private QuoteRequestRepositoryInterface $quoteRequestRepository,
+        private QuoteRequestManagerInterface $quoteRequestManager,
+        private OrderCheckoutCompletedDoctrineListener $doctrineListener,
     ) {
     }
 
@@ -32,7 +32,7 @@ final class OrderCheckoutCompletedListener
         }
 
         $quoteRequest = $this->quoteRequestRepository->findOneByOrder($order);
-        if (null === $quoteRequest || QuoteRequestStatuses::ACCEPTED !== $quoteRequest->getStatus() || !QuoteCartInspector::holdsQuoteLines($order, $quoteRequest)) {
+        if (!$quoteRequest instanceof \Tmonier\SyliusQuoteRequestPlugin\Entity\QuoteRequestInterface || QuoteRequestStatuses::ACCEPTED !== $quoteRequest->getStatus() || !QuoteCartInspector::holdsQuoteLines($order, $quoteRequest)) {
             return;
         }
 

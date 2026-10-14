@@ -20,18 +20,18 @@ use Tmonier\SyliusQuoteRequestPlugin\Manager\QuoteTransitionException;
 use Tmonier\SyliusQuoteRequestPlugin\OrderProcessing\QuoteOrderResolverInterface;
 use Webmozart\Assert\Assert;
 
-final class QuoteCartManager implements QuoteCartManagerInterface
+final readonly class QuoteCartManager implements QuoteCartManagerInterface
 {
     /** @param FactoryInterface<OrderInterface> $orderFactory */
     public function __construct(
-        private readonly FactoryInterface $orderFactory,
-        private readonly OrderProcessorInterface $orderProcessor,
-        private readonly EntityManagerInterface $objectManager,
-        private readonly CartStorageInterface $cartStorage,
-        private readonly QuoteOrderResolverInterface $quoteOrderResolver,
-        private readonly OrderItemQuantityModifierInterface $orderItemQuantityModifier,
-        private readonly ClockInterface $clock,
-        private readonly int $checkoutIdleMinutes = 30,
+        private FactoryInterface $orderFactory,
+        private OrderProcessorInterface $orderProcessor,
+        private EntityManagerInterface $objectManager,
+        private CartStorageInterface $cartStorage,
+        private QuoteOrderResolverInterface $quoteOrderResolver,
+        private OrderItemQuantityModifierInterface $orderItemQuantityModifier,
+        private ClockInterface $clock,
+        private int $checkoutIdleMinutes = 30,
     ) {
     }
 
@@ -41,10 +41,10 @@ final class QuoteCartManager implements QuoteCartManagerInterface
         Assert::notNull($channel);
 
         $cart = $quoteRequest->getOrder();
-        if (null !== $cart && OrderInterface::STATE_CART === $cart->getState() && !$this->mayResume($cart, $customer)) {
+        if ($cart instanceof \Sylius\Component\Core\Model\OrderInterface && OrderInterface::STATE_CART === $cart->getState() && !$this->mayResume($cart, $customer)) {
             throw QuoteTransitionException::cartOfAnotherCustomer();
         }
-        if (null === $cart || OrderInterface::STATE_CART !== $cart->getState()) {
+        if (!$cart instanceof \Sylius\Component\Core\Model\OrderInterface || OrderInterface::STATE_CART !== $cart->getState()) {
             $cart = $this->orderFactory->createNew();
             $cart->setChannel($channel);
             $cart->setLocaleCode($quoteRequest->getLocaleCode());
@@ -53,10 +53,10 @@ final class QuoteCartManager implements QuoteCartManagerInterface
             $quoteRequest->setOrder($cart);
         }
 
-        if (null !== $customer) {
+        if ($customer instanceof \Sylius\Component\Core\Model\CustomerInterface) {
             $cart->setCustomerWithAuthorization($customer);
             $defaultAddress = $customer->getDefaultAddress();
-            if (null !== $defaultAddress && null === $cart->getBillingAddress()) {
+            if ($defaultAddress instanceof \Sylius\Component\Core\Model\AddressInterface && null === $cart->getBillingAddress()) {
                 $address = clone $defaultAddress;
                 $address->setCustomer(null);
                 $cart->setBillingAddress($address);
@@ -85,7 +85,7 @@ final class QuoteCartManager implements QuoteCartManagerInterface
     public function release(QuoteRequestInterface $quoteRequest, bool $removeItems = false): void
     {
         $cart = $quoteRequest->getOrder();
-        if (null === $cart || OrderInterface::STATE_CART !== $cart->getState()) {
+        if (!$cart instanceof \Sylius\Component\Core\Model\OrderInterface || OrderInterface::STATE_CART !== $cart->getState()) {
             return;
         }
 
@@ -164,7 +164,7 @@ final class QuoteCartManager implements QuoteCartManagerInterface
 
         $updatedAt = is_string($row['updated_at'] ?? null) ? new \DateTimeImmutable($row['updated_at']) : null;
 
-        return null === $updatedAt || $updatedAt > $this->clock->now()->modify(sprintf('-%d minutes', $this->checkoutIdleMinutes));
+        return !$updatedAt instanceof \DateTimeImmutable || $updatedAt > $this->clock->now()->modify(sprintf('-%d minutes', $this->checkoutIdleMinutes));
     }
 
     /**
@@ -174,10 +174,10 @@ final class QuoteCartManager implements QuoteCartManagerInterface
     private function mayResume(OrderInterface $cart, ?CustomerInterface $customer): bool
     {
         $owner = $cart->getCustomer();
-        if (null === $owner || $owner === $customer) {
+        if (!$owner instanceof \Sylius\Component\Customer\Model\CustomerInterface || $owner === $customer) {
             return true;
         }
 
-        return null === $customer && $owner instanceof CustomerInterface && null === $owner->getUser();
+        return !$customer instanceof \Sylius\Component\Core\Model\CustomerInterface && $owner instanceof CustomerInterface && !$owner->getUser() instanceof \Sylius\Component\User\Model\UserInterface;
     }
 }

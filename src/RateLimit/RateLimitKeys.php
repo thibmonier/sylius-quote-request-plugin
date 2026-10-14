@@ -49,7 +49,7 @@ final class RateLimitKeys
             return (string) inet_ntop(substr($packed, 12));
         }
 
-        return (string) inet_ntop(substr($packed, 0, 7) . str_repeat("\0", 9)) . '/56';
+        return inet_ntop(substr($packed, 0, 7) . str_repeat("\0", 9)) . '/56';
     }
 
     private function __construct()

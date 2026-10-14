@@ -15,19 +15,19 @@ use Tmonier\SyliusQuoteRequestPlugin\Event\QuoteRequestEvent;
 use Tmonier\SyliusQuoteRequestPlugin\Event\QuoteRequestEvents;
 use Tmonier\SyliusQuoteRequestPlugin\Pdf\QuotePdfGeneratorInterface;
 
-final class QuoteRequestMailer implements EventSubscriberInterface
+final readonly class QuoteRequestMailer implements EventSubscriberInterface
 {
     public const ATTACHMENT_TTL = 172800;
 
     public const FILE_PREFIX = 'tmonier_quote_';
 
     public function __construct(
-        private readonly SenderInterface $sender,
-        private readonly QuotePdfGeneratorInterface $pdfGenerator,
-        private readonly ?string $adminEmail,
-        private readonly LoggerInterface $logger,
-        private readonly RequestStack $requestStack,
-        private readonly string $attachmentBaseDirectory,
+        private SenderInterface $sender,
+        private QuotePdfGeneratorInterface $pdfGenerator,
+        private ?string $adminEmail,
+        private LoggerInterface $logger,
+        private RequestStack $requestStack,
+        private string $attachmentBaseDirectory,
     ) {
     }
 

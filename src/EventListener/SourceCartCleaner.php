@@ -13,11 +13,11 @@ use Tmonier\SyliusQuoteRequestPlugin\Event\QuoteRequestEvent;
  * "ordered" (customer checkout or merchant conversion): the quoted products leave the cart the
  * request was made from ("Request a quote for this cart"), so that they are not bought twice.
  */
-final class SourceCartCleaner
+final readonly class SourceCartCleaner
 {
     public function __construct(
-        private readonly QuoteCartManagerInterface $quoteCartManager,
-        private readonly EntityManagerInterface $entityManager,
+        private QuoteCartManagerInterface $quoteCartManager,
+        private EntityManagerInterface $entityManager,
     ) {
     }
 
@@ -31,7 +31,7 @@ final class SourceCartCleaner
         }
 
         $source = $quoteRequest->getSourceOrder();
-        if (null !== $source) {
+        if ($source instanceof \Sylius\Component\Core\Model\OrderInterface) {
             $this->quoteCartManager->removeQuotedProducts($source, $quoteRequest);
         }
     }

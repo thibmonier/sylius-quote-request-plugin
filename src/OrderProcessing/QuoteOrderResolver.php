@@ -31,9 +31,7 @@ final class QuoteOrderResolver implements QuoteOrderResolverInterface
             return null;
         }
 
-        if (!isset($this->resolved[$order])) {
-            $this->resolved[$order] = $this->quoteRequestRepository->findOneByOrder($order) ?? false;
-        }
+        $this->resolved[$order] ??= $this->quoteRequestRepository->findOneByOrder($order) ?? false;
 
         $quoteRequest = $this->resolved[$order];
         if (false === $quoteRequest || QuoteRequestStatuses::ACCEPTED !== $quoteRequest->getStatus() || $quoteRequest->getOrder() !== $order) {

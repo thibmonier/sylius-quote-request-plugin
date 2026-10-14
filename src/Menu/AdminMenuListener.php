@@ -11,7 +11,7 @@ final class AdminMenuListener
     public function __invoke(MenuBuilderEvent $event): void
     {
         $sales = $event->getMenu()->getChild('sales');
-        if (null === $sales) {
+        if (!$sales instanceof \Knp\Menu\ItemInterface) {
             return;
         }
 

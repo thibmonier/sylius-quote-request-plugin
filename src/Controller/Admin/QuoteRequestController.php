@@ -183,7 +183,7 @@ final class QuoteRequestController extends AbstractController
     }
 
     /** Places the order at once with the customer's default address and the default methods. */
-    public function convertNowAction(Request $request, int $id): Response
+    public function convertNowAction(Request $request, int $id): \Symfony\Component\HttpFoundation\RedirectResponse
     {
         $quoteRequest = $this->find($id);
         if (!$this->isCsrfTokenValid(sprintf('tmonier_quote_request_admin_convert_now_%d', $id), (string) $request->request->get('_csrf_token'))) {
@@ -191,8 +191,8 @@ final class QuoteRequestController extends AbstractController
         }
 
         $address = $quoteRequest->getCustomer()?->getDefaultAddress();
-        if (!$this->converter->canConvert($quoteRequest) || null === $address) {
-            $this->addFlash('error', null === $address ? 'tmonier_quote_request.flash.no_default_address' : 'tmonier_quote_request.flash.cannot_convert');
+        if (!$this->converter->canConvert($quoteRequest) || !$address instanceof \Sylius\Component\Core\Model\AddressInterface) {
+            $this->addFlash('error', $address instanceof \Sylius\Component\Core\Model\AddressInterface ? 'tmonier_quote_request.flash.cannot_convert' : 'tmonier_quote_request.flash.no_default_address');
 
             return $this->redirectToRoute('tmonier_quote_request_admin_quote_request_convert', ['id' => $id]);
         }
@@ -273,7 +273,7 @@ final class QuoteRequestController extends AbstractController
         }
 
         $line = $this->quoteRequestFactory->createLine($quoteRequest, $variant, $quantity);
-        if (null === $line) {
+        if (!$line instanceof \Tmonier\SyliusQuoteRequestPlugin\Entity\QuoteRequestLineInterface) {
             $form->get('newVariant')->addError(new FormError($this->translator->trans('tmonier_quote_request.flash.variant_not_in_channel', [], 'flashes')));
 
             return;
@@ -313,7 +313,7 @@ final class QuoteRequestController extends AbstractController
             return $this->redirectToQuote($quoteRequest);
         }
 
-        if (null !== $message) {
+        if ($message instanceof \Tmonier\SyliusQuoteRequestPlugin\Entity\QuoteMessageInterface) {
             $this->quoteRequestManager->postMessage($quoteRequest, $message);
         } else {
             $this->quoteRequestManager->save($quoteRequest);
@@ -337,7 +337,7 @@ final class QuoteRequestController extends AbstractController
     private function defaultAddress(QuoteRequestInterface $quoteRequest): AddressInterface
     {
         $customerAddress = $quoteRequest->getCustomer()?->getDefaultAddress();
-        if (null !== $customerAddress) {
+        if ($customerAddress instanceof \Sylius\Component\Core\Model\AddressInterface) {
             $address = clone $customerAddress;
             $address->setCustomer(null);
 
@@ -353,7 +353,7 @@ final class QuoteRequestController extends AbstractController
         return $address;
     }
 
-    private function redirectToQuote(QuoteRequestInterface $quoteRequest): Response
+    private function redirectToQuote(QuoteRequestInterface $quoteRequest): \Symfony\Component\HttpFoundation\RedirectResponse
     {
         return $this->redirectToRoute('tmonier_quote_request_admin_quote_request_show', ['id' => $quoteRequest->getId()]);
     }

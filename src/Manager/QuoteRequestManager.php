@@ -36,7 +36,7 @@ final class QuoteRequestManager implements QuoteRequestManagerInterface
 
     public function submit(QuoteRequestInterface $quoteRequest, ?QuoteMessageInterface $message = null): void
     {
-        if (null !== $message) {
+        if ($message instanceof \Tmonier\SyliusQuoteRequestPlugin\Entity\QuoteMessageInterface) {
             $quoteRequest->addMessage($message);
         }
         $quoteRequest->setCreatedAt($quoteRequest->getCreatedAt() ?? $this->clock->now());
@@ -98,9 +98,7 @@ final class QuoteRequestManager implements QuoteRequestManagerInterface
         }
 
         // The lock re-checks status and version: a concurrent start or conversion is refused.
-        return $this->transactional($quoteRequest, function () use ($quoteRequest, $customer): OrderInterface {
-            return $this->quoteCartManager->start($quoteRequest, $customer);
-        }, true);
+        return $this->transactional($quoteRequest, fn (): OrderInterface => $this->quoteCartManager->start($quoteRequest, $customer), true);
     }
 
     public function markOrdered(QuoteRequestInterface $quoteRequest): void
@@ -207,7 +205,7 @@ final class QuoteRequestManager implements QuoteRequestManagerInterface
             $quoteRequest->setProposedAt($now);
             // No date, or a date already over (re-proposal after a revision): default validity.
             $validUntil = $quoteRequest->getValidUntil();
-            if (null === $validUntil || $validUntil < $now) {
+            if (!$validUntil instanceof \DateTimeImmutable || $validUntil < $now) {
                 $quoteRequest->setValidUntil($now->modify(sprintf('+%d days', $this->defaultValidityDays)));
             }
         }
@@ -217,7 +215,7 @@ final class QuoteRequestManager implements QuoteRequestManagerInterface
         if (QuoteRequestTransitions::TRANSITION_ORDER === $transition) {
             $quoteRequest->setOrderedAt($now);
         }
-        if (null !== $message) {
+        if ($message instanceof \Tmonier\SyliusQuoteRequestPlugin\Entity\QuoteMessageInterface) {
             $quoteRequest->addMessage($message);
         }
 

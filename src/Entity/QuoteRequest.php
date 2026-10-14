@@ -261,7 +261,7 @@ class QuoteRequest implements QuoteRequestInterface
 
     public function isValidAt(\DateTimeInterface $date): bool
     {
-        return null === $this->validUntil || $this->validUntil >= $date;
+        return !$this->validUntil instanceof \DateTimeImmutable || $this->validUntil >= $date;
     }
 
     public function getInternalNote(): ?string

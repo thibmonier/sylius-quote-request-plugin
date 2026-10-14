@@ -7,11 +7,11 @@ namespace Tests\Tmonier\SyliusQuoteRequestPlugin\Unit\Mailer;
 use Tmonier\SyliusQuoteRequestPlugin\Entity\QuoteRequestInterface;
 use Tmonier\SyliusQuoteRequestPlugin\Pdf\QuotePdfGeneratorInterface;
 
-final class FakePdfGenerator implements QuotePdfGeneratorInterface
+final readonly class FakePdfGenerator implements QuotePdfGeneratorInterface
 {
     public function __construct(
-        private readonly bool $available,
-        private readonly bool $fails = false,
+        private bool $available,
+        private bool $fails = false,
     ) {
     }
 

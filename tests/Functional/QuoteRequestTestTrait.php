@@ -76,7 +76,7 @@ trait QuoteRequestTestTrait
             ->orderBy('c.id', 'ASC')
             ->setMaxResults(1)
         ;
-        if (null !== $except) {
+        if ($except instanceof \Sylius\Component\Core\Model\CustomerInterface) {
             $queryBuilder->andWhere('c != :except')->setParameter('except', $except);
         }
 
@@ -178,7 +178,7 @@ trait QuoteRequestTestTrait
     private function createQuote(array $lines, ?CustomerInterface $customer = null, string $status = QuoteRequestStatuses::NEW, ?float $discountPercentage = null): QuoteRequestInterface
     {
         $quote = $this->quoteFactory()->createForChannel($this->channel(), $this->localeCode(), $customer);
-        if (null === $customer) {
+        if (!$customer instanceof \Sylius\Component\Core\Model\CustomerInterface) {
             $quote->setEmail(sprintf('guest-%s@example.com', bin2hex(random_bytes(4))));
             $quote->setFirstName('Grace');
             $quote->setLastName('Guest');

@@ -10,9 +10,9 @@ use Sylius\Component\Inventory\Checker\AvailabilityCheckerInterface;
 use Tmonier\SyliusQuoteRequestPlugin\Entity\QuoteRequestInterface;
 use Tmonier\SyliusQuoteRequestPlugin\Entity\QuoteRequestLineInterface;
 
-final class QuoteOrderabilityChecker implements QuoteOrderabilityCheckerInterface
+final readonly class QuoteOrderabilityChecker implements QuoteOrderabilityCheckerInterface
 {
-    public function __construct(private readonly AvailabilityCheckerInterface $availabilityChecker)
+    public function __construct(private AvailabilityCheckerInterface $availabilityChecker)
     {
     }
 
@@ -20,12 +20,12 @@ final class QuoteOrderabilityChecker implements QuoteOrderabilityCheckerInterfac
     {
         $variant = $line->getVariant();
         $product = $variant?->getProduct();
-        if (null === $variant || !$product instanceof ProductInterface || null === $channel || $line->getQuantity() <= 0) {
+        if (!$variant instanceof \Sylius\Component\Core\Model\ProductVariantInterface || !$product instanceof ProductInterface || !$channel instanceof \Sylius\Component\Core\Model\ChannelInterface || $line->getQuantity() <= 0) {
             return false;
         }
 
         return $variant->isEnabled() && $product->isEnabled() && $product->hasChannel($channel) &&
-            null !== $variant->getChannelPricingForChannel($channel);
+            $variant->getChannelPricingForChannel($channel) instanceof \Sylius\Component\Core\Model\ChannelPricingInterface;
     }
 
     public function isOrderable(QuoteRequestLineInterface $line, ?ChannelInterface $channel): bool
@@ -33,7 +33,7 @@ final class QuoteOrderabilityChecker implements QuoteOrderabilityCheckerInterfac
         $variant = $line->getVariant();
 
         return $this->isSellable($line, $channel) &&
-            null !== $variant &&
+            $variant instanceof \Sylius\Component\Core\Model\ProductVariantInterface &&
             $this->availabilityChecker->isStockSufficient($variant, $line->getQuantity());
     }
 

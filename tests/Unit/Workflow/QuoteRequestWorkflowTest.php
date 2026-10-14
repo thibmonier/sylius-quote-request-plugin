@@ -50,12 +50,12 @@ final class QuoteRequestWorkflowTest extends TestCase
         $guard = new QuoteRequestGuardListener($this->clock, new class() implements QuoteOrderabilityCheckerInterface {
             public function isSellable(QuoteRequestLineInterface $line, ?ChannelInterface $channel): bool
             {
-                return null !== $line->getVariant();
+                return $line->getVariant() instanceof \Sylius\Component\Core\Model\ProductVariantInterface;
             }
 
             public function isOrderable(QuoteRequestLineInterface $line, ?ChannelInterface $channel): bool
             {
-                return null !== $line->getVariant() && 'OUT' !== $line->getVariantCode();
+                return $line->getVariant() instanceof \Sylius\Component\Core\Model\ProductVariantInterface && 'OUT' !== $line->getVariantCode();
             }
 
             public function getUnorderableLines(QuoteRequestInterface $quoteRequest): array

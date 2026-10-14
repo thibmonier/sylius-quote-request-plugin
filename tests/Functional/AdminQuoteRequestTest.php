@@ -8,7 +8,6 @@ use Sylius\Component\Core\Model\OrderInterface;
 use Sylius\Component\Core\Model\OrderItemInterface;
 use Sylius\Component\Core\Model\PaymentMethodInterface;
 use Sylius\Component\Core\Model\ShippingMethodInterface;
-use Sylius\Component\Core\Repository\PaymentMethodRepositoryInterface;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Tmonier\SyliusQuoteRequestPlugin\Entity\QuoteRequestLineInterface;
 use Tmonier\SyliusQuoteRequestPlugin\Workflow\QuoteRequestStatuses;
@@ -178,7 +177,7 @@ final class AdminQuoteRequestTest extends WebTestCase
         [$first, $second] = $this->sellableVariants(2);
         $quote = $this->createQuote([[$first, 3, 1111], [$second, 2, 2222]], $customer, QuoteRequestStatuses::PROPOSED);
         $shippingMethod = $this->shippingMethodOfZone('US');
-        $paymentMethod = $this->firstEnabled($this->paymentMethods());
+        $paymentMethod = $this->firstEnabled();
         $this->loginAdmin();
 
         $crawler = $this->client->request('GET', sprintf('/admin/quote-requests/%d', $this->idOf($quote)));
@@ -303,7 +302,7 @@ final class AdminQuoteRequestTest extends WebTestCase
         $quote = $this->createQuote([[$variant, 3, 1111]], $customer, QuoteRequestStatuses::PROPOSED);
         $this->catalog()->shippingMethod($this->channel(), ['US']);
         $franceOnly = $this->shippingMethodOfZone('WORLD');
-        $paymentMethod = $this->firstEnabled($this->paymentMethods());
+        $paymentMethod = $this->firstEnabled();
         $this->loginAdmin();
 
         $crawler = $this->client->request('GET', sprintf('/admin/quote-requests/%d/convert', $this->idOf($quote)));
@@ -434,20 +433,7 @@ final class AdminQuoteRequestTest extends WebTestCase
         return $method;
     }
 
-    /** @return list<PaymentMethodInterface> */
-    private function paymentMethods(): array
-    {
-        /** @var PaymentMethodRepositoryInterface<PaymentMethodInterface> $repository */
-        $repository = self::getContainer()->get('sylius.repository.payment_method');
-
-        /** @var list<PaymentMethodInterface> $methods */
-        $methods = $repository->findEnabledForChannel($this->channel());
-
-        return $methods;
-    }
-
-    /** @param list<PaymentMethodInterface> $methods */
-    private function firstEnabled(array $methods): PaymentMethodInterface
+    private function firstEnabled(): PaymentMethodInterface
     {
         // A method created by the test, whatever the fixtures provide.
         $method = $this->catalog()->paymentMethod($this->channel());

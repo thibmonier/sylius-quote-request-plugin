@@ -30,7 +30,7 @@ final class AddToQuoteType extends AbstractType
                 'label' => 'sylius.ui.variant',
                 'choices' => $variants,
                 'choice_value' => static fn (?ProductVariantInterface $variant): string => is_scalar($variant?->getId()) ? (string) $variant->getId() : '',
-                'choice_label' => static fn (ProductVariantInterface $variant): string => (string) ($variant->getName() ?? $variant->getDescriptor()),
+                'choice_label' => static fn (ProductVariantInterface $variant): string => $variant->getName() ?? $variant->getDescriptor(),
                 'data' => $variants[0] ?? null,
                 'constraints' => [new NotBlank()],
             ])
