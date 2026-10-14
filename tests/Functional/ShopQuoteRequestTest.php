@@ -294,25 +294,25 @@ final class ShopQuoteRequestTest extends WebTestCase
     {
         [$variant] = $this->sellableVariants(1);
         $quote = $this->createQuote([[$variant, 5, 1000]], null, QuoteRequestStatuses::PROPOSED);
-        $id = $this->idOf($quote);
-        $quoteToken = (string) $quote->getToken();
 
-        // "cancel" on a PROPOSED quote is always rejected by the status guard (PROPOSED is not
-        // in EDITABLE), so the quote never changes status.  Each attempt still consumes one
-        // token from the conversation budget (messages_per_quote = 10 in the test app).
-        // On the 11th call the per-quote budget is exhausted.
-        $csrfManager = self::getContainer()->get('security.csrf.token_manager');
-        self::assertInstanceOf(\Symfony\Component\Security\Csrf\CsrfTokenManagerInterface::class, $csrfManager);
-
-        $lastFlashes = [];
-        for ($attempt = 1; $attempt <= 11; ++$attempt) {
-            $csrf = $csrfManager->getToken(sprintf('tmonier_quote_request_cancel_%d', $id))->getValue();
-            $this->client->request('POST', $this->tokenUrl($quote, '/cancel'), ['_csrf_token' => $csrf]);
+        // Exhaust the per-quote conversation budget (messages_per_quote = 10 in the test app)
+        // by sending 10 messages.  Messages and transitions share the same sliding-window key
+        // ('quote-' + id) so both endpoints draw from the same pool.
+        for ($message = 1; $message <= 10; ++$message) {
+            $crawler = $this->client->request('GET', $this->tokenUrl($quote));
+            $this->client->submit($crawler->filter('[data-test-tmonier-quote-send-message]')->form([
+                'tmonier_quote_request_message[body]' => 'Message ' . $message,
+            ]));
             $crawler = $this->client->followRedirect();
-            $lastFlashes = $this->flashes($crawler);
+            self::assertSame(['Your message was sent.'], $this->flashes($crawler));
         }
 
-        self::assertSame(['Too many requests: please try again later.'], $lastFlashes);
+        // The per-quote budget is now exhausted.  A decline attempt must be rate-limited and
+        // the quote status must remain PROPOSED.
+        $crawler = $this->client->request('GET', $this->tokenUrl($quote));
+        $this->client->submit($crawler->filter('[data-test-tmonier-quote-decline]')->form());
+        $crawler = $this->client->followRedirect();
+        self::assertSame(['Too many requests: please try again later.'], $this->flashes($crawler));
         self::assertSame(QuoteRequestStatuses::PROPOSED, $this->reloadQuote($quote)->getStatus());
     }
 
