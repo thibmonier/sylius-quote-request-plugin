@@ -1,5 +1,7 @@
 # Sylius Quote Request Plugin
 
+> Français : [README.fr.md](README.fr.md) <!-- vitrine:lang -->
+
 [![Build](https://github.com/thibmonier/sylius-quote-request-plugin/actions/workflows/build.yaml/badge.svg)](https://github.com/thibmonier/sylius-quote-request-plugin/actions/workflows/build.yaml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
@@ -7,8 +9,8 @@
 the customer accepts and checks out at the negotiated prices.**
 
 Wholesale buyers rarely pay the catalog price: they ask for a quote for 200 units, the sales
-team answers with its prices, and the order follows. In Sylius 2 the only quote feature is the
-paid Sylius Plus RFQ module; the open-source quote plugins stopped at Sylius 1.
+team answers with its prices, and the order follows. Sylius 2 has no quote feature in its core,
+and the open-source quote plugins stopped at Sylius 1.
 
 This plugin adds the whole loop to the shop and the admin, and turns an accepted quote into a
 regular Sylius order whose prices cannot be changed by the cart processing. It is free and
@@ -336,6 +338,14 @@ flushed right after them, whatever the state machine adapter. The Symfony Workfl
 
 See [CLAUDE.md](CLAUDE.md) for the commands and [SPEC.md](SPEC.md) for the research and design
 decisions.
+
+<!-- vitrine:demo-b2b:start -->
+## B2B demo
+
+This plugin is used in the [Sylius B2B demo](https://github.com/thibmonier/sylius-b2b-demo): a Sylius 2.3 shop with fictitious sample data where the B2B plugins work together. The source code, setup and fixtures of the demo are in that repository.
+
+The demo is an example, not a production setup.
+<!-- vitrine:demo-b2b:end -->
 
 ## License
 
