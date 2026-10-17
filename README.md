@@ -9,8 +9,8 @@
 the customer accepts and checks out at the negotiated prices.**
 
 Wholesale buyers rarely pay the catalog price: they ask for a quote for 200 units, the sales
-team answers with its prices, and the order follows. In Sylius 2 the only quote feature is the
-paid Sylius Plus RFQ module; the open-source quote plugins stopped at Sylius 1.
+team answers with its prices, and the order follows. Sylius 2 has no quote feature in its core,
+and the open-source quote plugins stopped at Sylius 1.
 
 This plugin adds the whole loop to the shop and the admin, and turns an accepted quote into a
 regular Sylius order whose prices cannot be changed by the cart processing. It is free and

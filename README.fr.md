@@ -9,8 +9,8 @@
 le client accepte et passe commande aux prix négociés.**
 
 Les acheteurs en gros paient rarement le prix catalogue : ils demandent un devis pour 200 unités,
-l'équipe commerciale répond avec ses prix, puis la commande suit. Dans Sylius 2, la seule
-fonctionnalité de devis est le module RFQ payant de Sylius Plus ; les plugins de devis open source
+l'équipe commerciale répond avec ses prix, puis la commande suit. Le cœur de Sylius 2 n'a pas de
+fonctionnalité de devis, et les plugins de devis open source
 se sont arrêtés à Sylius 1.
 
 Ce plugin ajoute toute la boucle à la boutique et à l'administration, et transforme un devis
