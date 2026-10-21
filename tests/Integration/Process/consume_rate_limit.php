@@ -6,7 +6,7 @@ declare(strict_types=1);
 // Arguments: start timestamp (float), limiter key.
 
 use Sylius\TestApplication\Kernel;
-use Symfony\Component\RateLimiter\RateLimiterFactory;
+use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
 
 $root = dirname(__DIR__, 3);
 require $root . '/vendor/autoload.php';
@@ -18,7 +18,7 @@ $kernel->boot();
 $container = $kernel->getContainer()->get('test.service_container');
 assert($container instanceof Psr\Container\ContainerInterface);
 $limiter = $container->get('limiter.tmonier_quote_request_email');
-assert($limiter instanceof RateLimiterFactory);
+assert($limiter instanceof RateLimiterFactoryInterface);
 
 $start = (float) ($argv[1] ?? 0);
 while (microtime(true) < $start) {

@@ -22,7 +22,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
-use Symfony\Component\RateLimiter\RateLimiterFactory;
+use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
 use Tmonier\SyliusQuoteRequestPlugin\Basket\QuoteBasketInterface;
 use Tmonier\SyliusQuoteRequestPlugin\Checkout\QuoteCartManagerInterface;
 use Tmonier\SyliusQuoteRequestPlugin\Entity\QuoteMessageInterface;
@@ -72,10 +72,10 @@ final class QuoteRequestController extends AbstractController
         private readonly bool $fromCart,
         private readonly int $maxLines,
         private readonly QuotePdfGeneratorInterface $pdfGenerator,
-        private readonly ?RateLimiterFactory $ipLimiter = null,
-        private readonly ?RateLimiterFactory $emailLimiter = null,
-        private readonly ?RateLimiterFactory $messageIpLimiter = null,
-        private readonly ?RateLimiterFactory $messageQuoteLimiter = null,
+        private readonly ?RateLimiterFactoryInterface $ipLimiter = null,
+        private readonly ?RateLimiterFactoryInterface $emailLimiter = null,
+        private readonly ?RateLimiterFactoryInterface $messageIpLimiter = null,
+        private readonly ?RateLimiterFactoryInterface $messageQuoteLimiter = null,
         private readonly ?RepositoryInterface $orderRepository = null,
     ) {
     }
@@ -420,13 +420,13 @@ final class QuoteRequestController extends AbstractController
     }
 
     /** Consumes one token per limiter (IP or IPv6 /64, and the given key). */
-    private function isRateLimited(?RateLimiterFactory $ipLimiter, ?RateLimiterFactory $keyLimiter, Request $request, string $key): bool
+    private function isRateLimited(?RateLimiterFactoryInterface $ipLimiter, ?RateLimiterFactoryInterface $keyLimiter, Request $request, string $key): bool
     {
         $limited = false;
-        if ($ipLimiter instanceof \Symfony\Component\RateLimiter\RateLimiterFactory) {
+        if ($ipLimiter instanceof RateLimiterFactoryInterface) {
             $limited = !$ipLimiter->create(RateLimitKeys::ip($request->getClientIp()))->consume()->isAccepted();
         }
-        if ($keyLimiter instanceof \Symfony\Component\RateLimiter\RateLimiterFactory && '' !== $key) {
+        if ($keyLimiter instanceof RateLimiterFactoryInterface && '' !== $key) {
             return !$keyLimiter->create($key)->consume()->isAccepted() || $limited;
         }
 
