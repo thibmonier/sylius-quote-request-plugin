@@ -10,7 +10,7 @@ use Symfony\Component\Config\FileLocator;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Extension\PrependExtensionInterface;
 use Symfony\Component\DependencyInjection\Loader\PhpFileLoader;
-use Symfony\Component\RateLimiter\RateLimiterFactory;
+use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
 use Tmonier\SyliusQuoteRequestPlugin\Workflow\QuoteRequestTransitions;
 
 final class TmonierSyliusQuoteRequestExtension extends AbstractResourceExtension implements PrependExtensionInterface
@@ -66,7 +66,7 @@ final class TmonierSyliusQuoteRequestExtension extends AbstractResourceExtension
             static fn (array $config): array => isset($config['rate_limit']) ? ['rate_limit' => $config['rate_limit']] : [],
             $container->getExtensionConfig($this->getAlias()),
         ));
-        if ($limits['rate_limit']['enabled'] && class_exists(RateLimiterFactory::class)) {
+        if ($limits['rate_limit']['enabled'] && interface_exists(RateLimiterFactoryInterface::class)) {
             $limiter = static fn (int $limit): array => [
                 'policy' => 'sliding_window',
                 'limit' => $limit,

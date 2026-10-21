@@ -122,7 +122,7 @@ du client ou la zone de taxation par défaut du canal.
 |---|---|
 | PHP | 8.2+ |
 | Sylius | 2.2.9+, 2.3 (correctifs de sécurité GHSA-2rv4-pjmm-7fxf, GHSA-vv4h-q2x8-74g4) |
-| Symfony | 6.4, 7.4, 8.0 |
+| Symfony | 7.4, 8.0 |
 
 Machines à états : le graphe du devis `tmonier_quote_request` est toujours associé à l'adaptateur
 Symfony Workflow (`graphs_to_adapters_mapping`), il fonctionne donc même quand la boutique garde
