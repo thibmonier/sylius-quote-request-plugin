@@ -118,7 +118,7 @@ address or the default tax zone of the channel.
 |---|---|
 | PHP | 8.2+ |
 | Sylius | 2.2.9+, 2.3 (security fixes GHSA-2rv4-pjmm-7fxf, GHSA-vv4h-q2x8-74g4) |
-| Symfony | 6.4, 7.4, 8.0 |
+| Symfony | 7.4, 8.0 |
 
 State machines: the quote graph `tmonier_quote_request` is always mapped to the Symfony
 Workflow adapter (`graphs_to_adapters_mapping`), so it works when the shop keeps
