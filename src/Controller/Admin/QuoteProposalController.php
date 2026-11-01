@@ -11,7 +11,6 @@ use Symfony\Component\Form\FormInterface;
 use Symfony\Component\Form\SubmitButton;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Tmonier\SyliusQuoteRequestPlugin\Conversion\QuoteOrderConverterInterface;
 use Tmonier\SyliusQuoteRequestPlugin\Entity\QuoteMessageInterface;
@@ -177,5 +176,4 @@ final class QuoteProposalController extends AbstractController
 
         return $this->redirectToQuote($quoteRequest);
     }
-
 }
