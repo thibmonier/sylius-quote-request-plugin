@@ -6,6 +6,7 @@ namespace Tmonier\SyliusQuoteRequestPlugin\Controller\Shop;
 
 use Sylius\Component\Channel\Context\ChannelContextInterface;
 use Sylius\Component\Customer\Context\CustomerContextInterface;
+use Sylius\Component\Order\Context\CartContextInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\HeaderUtils;
 use Symfony\Component\HttpFoundation\Request;
@@ -25,6 +26,7 @@ final class QuoteRequestShowController extends AbstractController
         private readonly QuoteRequestRepositoryInterface $quoteRequestRepository,
         private readonly ChannelContextInterface $channelContext,
         private readonly CustomerContextInterface $customerContext,
+        private readonly CartContextInterface $cartContext,
         private readonly QuotePdfGeneratorInterface $pdfGenerator,
     ) {
     }

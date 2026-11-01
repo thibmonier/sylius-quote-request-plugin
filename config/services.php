@@ -322,6 +322,8 @@ return static function (ContainerConfigurator $container): void {
             service('sylius.repository.product'),
             service('sylius.context.channel'),
             service('sylius.context.cart'),
+            service('sylius.context.customer'),
+            service('tmonier_quote_request.repository.quote_request'),
             param('tmonier_quote_request.from_product_page'),
             param('tmonier_quote_request.from_cart'),
             param('tmonier_quote_request.max_lines'),
@@ -342,6 +344,8 @@ return static function (ContainerConfigurator $container): void {
             service('sylius.context.channel'),
             service('sylius.context.locale'),
             service('sylius.context.customer'),
+            service('tmonier_quote_request.repository.quote_request'),
+            service('sylius.context.cart'),
             param('tmonier_quote_request.allow_guests'),
             service('limiter.tmonier_quote_request_ip')->nullOnInvalid(),
             service('limiter.tmonier_quote_request_email')->nullOnInvalid(),
@@ -359,6 +363,7 @@ return static function (ContainerConfigurator $container): void {
             service('tmonier_quote_request.repository.quote_request'),
             service('sylius.context.channel'),
             service('sylius.context.customer'),
+            service('sylius.context.cart'),
             service('tmonier_quote_request.pdf_generator'),
         ])
         ->call('setContainer', [service(\Psr\Container\ContainerInterface::class)])

@@ -10,6 +10,7 @@ use Sylius\Component\Core\Model\OrderInterface;
 use Sylius\Component\Core\Model\OrderItemInterface;
 use Sylius\Component\Core\Model\ProductInterface;
 use Sylius\Component\Core\Model\ProductVariantInterface;
+use Sylius\Component\Customer\Context\CustomerContextInterface;
 use Sylius\Component\Order\Context\CartContextInterface;
 use Sylius\Resource\Doctrine\Persistence\RepositoryInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -18,6 +19,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Tmonier\SyliusQuoteRequestPlugin\Basket\QuoteBasketInterface;
 use Tmonier\SyliusQuoteRequestPlugin\Form\Type\Shop\AddToQuoteType;
+use Tmonier\SyliusQuoteRequestPlugin\Repository\QuoteRequestRepositoryInterface;
 
 final class QuoteBasketController extends AbstractController
 {
@@ -33,6 +35,8 @@ final class QuoteBasketController extends AbstractController
         private readonly RepositoryInterface $productRepository,
         private readonly ChannelContextInterface $channelContext,
         private readonly CartContextInterface $cartContext,
+        private readonly CustomerContextInterface $customerContext,
+        private readonly QuoteRequestRepositoryInterface $quoteRequestRepository,
         private readonly bool $fromProductPage,
         private readonly bool $fromCart,
         private readonly int $maxLines,

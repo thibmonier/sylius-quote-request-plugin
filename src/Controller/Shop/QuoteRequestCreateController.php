@@ -9,6 +9,7 @@ use Sylius\Component\Core\Model\OrderInterface;
 use Sylius\Component\Core\Model\ProductVariantInterface;
 use Sylius\Component\Customer\Context\CustomerContextInterface;
 use Sylius\Component\Locale\Context\LocaleContextInterface;
+use Sylius\Component\Order\Context\CartContextInterface;
 use Sylius\Resource\Doctrine\Persistence\RepositoryInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
@@ -20,6 +21,7 @@ use Tmonier\SyliusQuoteRequestPlugin\Factory\QuoteRequestFactoryInterface;
 use Tmonier\SyliusQuoteRequestPlugin\Form\Type\Shop\QuoteRequestType;
 use Tmonier\SyliusQuoteRequestPlugin\Manager\QuoteRequestManagerInterface;
 use Tmonier\SyliusQuoteRequestPlugin\RateLimit\RateLimitKeys;
+use Tmonier\SyliusQuoteRequestPlugin\Repository\QuoteRequestRepositoryInterface;
 
 final class QuoteRequestCreateController extends AbstractController
 {
@@ -39,6 +41,8 @@ final class QuoteRequestCreateController extends AbstractController
         private readonly ChannelContextInterface $channelContext,
         private readonly LocaleContextInterface $localeContext,
         private readonly CustomerContextInterface $customerContext,
+        private readonly QuoteRequestRepositoryInterface $quoteRequestRepository,
+        private readonly CartContextInterface $cartContext,
         private readonly bool $allowGuests,
         private readonly ?RateLimiterFactoryInterface $ipLimiter = null,
         private readonly ?RateLimiterFactoryInterface $emailLimiter = null,
