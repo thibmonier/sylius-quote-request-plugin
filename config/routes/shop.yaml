@@ -2,7 +2,7 @@ tmonier_quote_request_shop_new:
     path: /quote-request
     methods: [GET, POST]
     defaults:
-        _controller: tmonier_quote_request.controller.shop::newAction
+        _controller: tmonier_quote_request.controller.shop.create::newAction
 
 tmonier_quote_request_shop_basket_add:
     path: /quote-request/products/{productId}
@@ -10,19 +10,19 @@ tmonier_quote_request_shop_basket_add:
     requirements:
         productId: '\d+'
     defaults:
-        _controller: tmonier_quote_request.controller.shop::addToBasketAction
+        _controller: tmonier_quote_request.controller.shop.basket::addToBasketAction
 
 tmonier_quote_request_shop_from_cart:
     path: /quote-request/from-cart
     methods: [POST]
     defaults:
-        _controller: tmonier_quote_request.controller.shop::fromCartAction
+        _controller: tmonier_quote_request.controller.shop.basket::fromCartAction
 
 tmonier_quote_request_shop_release_cart:
     path: /quote-request/release-cart
     methods: [POST]
     defaults:
-        _controller: tmonier_quote_request.controller.shop::releaseCartAction
+        _controller: tmonier_quote_request.controller.shop.conversation::releaseCartAction
 
 tmonier_quote_request_shop_show_by_token:
     path: /quotes/{token}
@@ -30,7 +30,7 @@ tmonier_quote_request_shop_show_by_token:
     requirements:
         token: '[A-Za-z0-9_-]{20,64}'
     defaults:
-        _controller: tmonier_quote_request.controller.shop::showByTokenAction
+        _controller: tmonier_quote_request.controller.shop.show::showByTokenAction
 
 tmonier_quote_request_shop_transition:
     path: /quotes/{token}/{action}
@@ -39,7 +39,7 @@ tmonier_quote_request_shop_transition:
         token: '[A-Za-z0-9_-]{20,64}'
         action: 'accept|decline|cancel'
     defaults:
-        _controller: tmonier_quote_request.controller.shop::transitionAction
+        _controller: tmonier_quote_request.controller.shop.conversation::transitionAction
 
 tmonier_quote_request_shop_message:
     path: /quotes/{token}/message
@@ -47,7 +47,7 @@ tmonier_quote_request_shop_message:
     requirements:
         token: '[A-Za-z0-9_-]{20,64}'
     defaults:
-        _controller: tmonier_quote_request.controller.shop::messageAction
+        _controller: tmonier_quote_request.controller.shop.conversation::messageAction
 
 tmonier_quote_request_shop_checkout:
     path: /quotes/{token}/checkout
@@ -55,13 +55,13 @@ tmonier_quote_request_shop_checkout:
     requirements:
         token: '[A-Za-z0-9_-]{20,64}'
     defaults:
-        _controller: tmonier_quote_request.controller.shop::checkoutAction
+        _controller: tmonier_quote_request.controller.shop.conversation::checkoutAction
 
 tmonier_quote_request_shop_account_index:
     path: /account/quotes
     methods: [GET]
     defaults:
-        _controller: tmonier_quote_request.controller.shop::accountIndexAction
+        _controller: tmonier_quote_request.controller.shop.show::accountIndexAction
 
 tmonier_quote_request_shop_account_show:
     path: /account/quotes/{number}
@@ -69,7 +69,7 @@ tmonier_quote_request_shop_account_show:
     requirements:
         number: '[A-Za-z0-9_-]{1,32}'
     defaults:
-        _controller: tmonier_quote_request.controller.shop::accountShowAction
+        _controller: tmonier_quote_request.controller.shop.show::accountShowAction
 
 tmonier_quote_request_shop_pdf:
     path: /quotes/{token}/pdf
@@ -77,4 +77,4 @@ tmonier_quote_request_shop_pdf:
     requirements:
         token: '[A-Za-z0-9_-]{20,64}'
     defaults:
-        _controller: tmonier_quote_request.controller.shop::pdfAction
+        _controller: tmonier_quote_request.controller.shop.show::pdfAction

@@ -13,8 +13,12 @@ use Tmonier\SyliusQuoteRequestPlugin\Checkout\QuoteCartManagerInterface;
 use Tmonier\SyliusQuoteRequestPlugin\Checkout\QuoteOrderabilityChecker;
 use Tmonier\SyliusQuoteRequestPlugin\Checkout\QuoteOrderabilityCheckerInterface;
 use Tmonier\SyliusQuoteRequestPlugin\Command\ExpireQuoteRequestsCommand;
-use Tmonier\SyliusQuoteRequestPlugin\Controller\Admin\QuoteRequestController as AdminQuoteRequestController;
-use Tmonier\SyliusQuoteRequestPlugin\Controller\Shop\QuoteRequestController as ShopQuoteRequestController;
+use Tmonier\SyliusQuoteRequestPlugin\Controller\Admin\QuoteAdminActionController;
+use Tmonier\SyliusQuoteRequestPlugin\Controller\Admin\QuoteProposalController;
+use Tmonier\SyliusQuoteRequestPlugin\Controller\Shop\QuoteBasketController;
+use Tmonier\SyliusQuoteRequestPlugin\Controller\Shop\QuoteConversationController;
+use Tmonier\SyliusQuoteRequestPlugin\Controller\Shop\QuoteRequestCreateController;
+use Tmonier\SyliusQuoteRequestPlugin\Controller\Shop\QuoteRequestShowController;
 use Tmonier\SyliusQuoteRequestPlugin\Conversion\QuoteOrderConverter;
 use Tmonier\SyliusQuoteRequestPlugin\Conversion\QuoteOrderConverterInterface;
 use Tmonier\SyliusQuoteRequestPlugin\Event\QuoteEventQueue;
@@ -312,28 +316,39 @@ return static function (ContainerConfigurator $container): void {
 
     // Controllers
     $services
-        ->set('tmonier_quote_request.controller.shop', ShopQuoteRequestController::class)
+        ->set('tmonier_quote_request.controller.shop.basket', QuoteBasketController::class)
         ->args([
-            service('tmonier_quote_request.repository.quote_request'),
-            service('tmonier_quote_request.factory'),
-            service('tmonier_quote_request.manager'),
-            service('tmonier_quote_request.cart_manager'),
             service('tmonier_quote_request.basket'),
             service('sylius.repository.product'),
+            service('sylius.context.channel'),
+            service('sylius.context.cart'),
+            service('sylius.context.customer'),
+            service('tmonier_quote_request.repository.quote_request'),
+            param('tmonier_quote_request.from_product_page'),
+            param('tmonier_quote_request.from_cart'),
+            param('tmonier_quote_request.max_lines'),
+        ])
+        ->call('setContainer', [service(\Psr\Container\ContainerInterface::class)])
+        ->tag('controller.service_arguments')
+        ->tag('container.service_subscriber')
+        ->public()
+    ;
+
+    $services
+        ->set('tmonier_quote_request.controller.shop.create', QuoteRequestCreateController::class)
+        ->args([
+            service('tmonier_quote_request.factory'),
+            service('tmonier_quote_request.manager'),
+            service('tmonier_quote_request.basket'),
             service('sylius.repository.product_variant'),
             service('sylius.context.channel'),
             service('sylius.context.locale'),
             service('sylius.context.customer'),
+            service('tmonier_quote_request.repository.quote_request'),
             service('sylius.context.cart'),
             param('tmonier_quote_request.allow_guests'),
-            param('tmonier_quote_request.from_product_page'),
-            param('tmonier_quote_request.from_cart'),
-            param('tmonier_quote_request.max_lines'),
-            service('tmonier_quote_request.pdf_generator'),
             service('limiter.tmonier_quote_request_ip')->nullOnInvalid(),
             service('limiter.tmonier_quote_request_email')->nullOnInvalid(),
-            service('limiter.tmonier_quote_request_message_ip')->nullOnInvalid(),
-            service('limiter.tmonier_quote_request_message_quote')->nullOnInvalid(),
             service('sylius.repository.order'),
         ])
         ->call('setContainer', [service(\Psr\Container\ContainerInterface::class)])
@@ -343,7 +358,58 @@ return static function (ContainerConfigurator $container): void {
     ;
 
     $services
-        ->set('tmonier_quote_request.controller.admin', AdminQuoteRequestController::class)
+        ->set('tmonier_quote_request.controller.shop.show', QuoteRequestShowController::class)
+        ->args([
+            service('tmonier_quote_request.repository.quote_request'),
+            service('sylius.context.channel'),
+            service('sylius.context.customer'),
+            service('sylius.context.cart'),
+            service('tmonier_quote_request.pdf_generator'),
+        ])
+        ->call('setContainer', [service(\Psr\Container\ContainerInterface::class)])
+        ->tag('controller.service_arguments')
+        ->tag('container.service_subscriber')
+        ->public()
+    ;
+
+    $services
+        ->set('tmonier_quote_request.controller.shop.conversation', QuoteConversationController::class)
+        ->args([
+            service('tmonier_quote_request.repository.quote_request'),
+            service('tmonier_quote_request.factory'),
+            service('tmonier_quote_request.manager'),
+            service('tmonier_quote_request.cart_manager'),
+            service('sylius.context.channel'),
+            service('sylius.context.customer'),
+            service('sylius.context.cart'),
+            service('limiter.tmonier_quote_request_message_ip')->nullOnInvalid(),
+            service('limiter.tmonier_quote_request_message_quote')->nullOnInvalid(),
+        ])
+        ->call('setContainer', [service(\Psr\Container\ContainerInterface::class)])
+        ->tag('controller.service_arguments')
+        ->tag('container.service_subscriber')
+        ->public()
+    ;
+
+    $services
+        ->set('tmonier_quote_request.controller.admin.proposal', QuoteProposalController::class)
+        ->args([
+            service('tmonier_quote_request.repository.quote_request'),
+            service('tmonier_quote_request.factory'),
+            service('tmonier_quote_request.manager'),
+            service('tmonier_quote_request.order_converter'),
+            service('translator'),
+            param('tmonier_quote_request.max_lines'),
+            param('tmonier_quote_request.customer_group_discounts'),
+        ])
+        ->call('setContainer', [service(\Psr\Container\ContainerInterface::class)])
+        ->tag('controller.service_arguments')
+        ->tag('container.service_subscriber')
+        ->public()
+    ;
+
+    $services
+        ->set('tmonier_quote_request.controller.admin.action', QuoteAdminActionController::class)
         ->args([
             service('tmonier_quote_request.repository.quote_request'),
             service('tmonier_quote_request.factory'),
@@ -354,8 +420,6 @@ return static function (ContainerConfigurator $container): void {
             service('sylius.factory.address'),
             service('translator'),
             service('tmonier_quote_request.pdf_generator'),
-            param('tmonier_quote_request.max_lines'),
-            param('tmonier_quote_request.customer_group_discounts'),
         ])
         ->call('setContainer', [service(\Psr\Container\ContainerInterface::class)])
         ->tag('controller.service_arguments')

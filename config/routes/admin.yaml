@@ -15,7 +15,7 @@ tmonier_quote_request_admin_quote_request_show:
     requirements:
         id: '\d+'
     defaults:
-        _controller: tmonier_quote_request.controller.admin::showAction
+        _controller: tmonier_quote_request.controller.admin.proposal::showAction
 
 tmonier_quote_request_admin_quote_request_transition:
     path: /quote-requests/{id}/transition/{transition}
@@ -24,7 +24,7 @@ tmonier_quote_request_admin_quote_request_transition:
         id: '\d+'
         transition: '[a-z_]+'
     defaults:
-        _controller: tmonier_quote_request.controller.admin::transitionAction
+        _controller: tmonier_quote_request.controller.admin.action::transitionAction
 
 tmonier_quote_request_admin_quote_request_message:
     path: /quote-requests/{id}/message
@@ -32,7 +32,7 @@ tmonier_quote_request_admin_quote_request_message:
     requirements:
         id: '\d+'
     defaults:
-        _controller: tmonier_quote_request.controller.admin::messageAction
+        _controller: tmonier_quote_request.controller.admin.action::messageAction
 
 tmonier_quote_request_admin_quote_request_convert:
     path: /quote-requests/{id}/convert
@@ -40,7 +40,7 @@ tmonier_quote_request_admin_quote_request_convert:
     requirements:
         id: '\d+'
     defaults:
-        _controller: tmonier_quote_request.controller.admin::convertAction
+        _controller: tmonier_quote_request.controller.admin.action::convertAction
 
 tmonier_quote_request_admin_quote_request_convert_now:
     path: /quote-requests/{id}/convert-now
@@ -48,7 +48,7 @@ tmonier_quote_request_admin_quote_request_convert_now:
     requirements:
         id: '\d+'
     defaults:
-        _controller: tmonier_quote_request.controller.admin::convertNowAction
+        _controller: tmonier_quote_request.controller.admin.action::convertNowAction
 
 tmonier_quote_request_admin_quote_request_pdf:
     path: /quote-requests/{id}/pdf
@@ -56,4 +56,4 @@ tmonier_quote_request_admin_quote_request_pdf:
     requirements:
         id: '\d+'
     defaults:
-        _controller: tmonier_quote_request.controller.admin::pdfAction
+        _controller: tmonier_quote_request.controller.admin.action::pdfAction
