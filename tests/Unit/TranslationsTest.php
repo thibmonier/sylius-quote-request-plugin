@@ -7,7 +7,7 @@ namespace Tests\Tmonier\SyliusQuoteRequestPlugin\Unit;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Yaml\Yaml;
-use Tmonier\SyliusQuoteRequestPlugin\Controller\Admin\QuoteRequestController;
+use Tmonier\SyliusQuoteRequestPlugin\Controller\Admin\QuoteProposalController;
 use Tmonier\SyliusQuoteRequestPlugin\Workflow\QuoteRequestStatuses;
 
 final class TranslationsTest extends TestCase
@@ -51,7 +51,7 @@ final class TranslationsTest extends TestCase
             self::assertArrayHasKey('tmonier_quote_request.status.' . $status, $messages);
             self::assertArrayHasKey('tmonier_quote_request.ui.status_help.' . $status, $messages);
         }
-        foreach (QuoteRequestController::TRANSITIONS as $transition) {
+        foreach (QuoteProposalController::TRANSITIONS as $transition) {
             self::assertArrayHasKey('tmonier_quote_request.flash.admin.' . $transition, $flashes);
             if ('propose' !== $transition) {
                 self::assertArrayHasKey('tmonier_quote_request.ui.transition.' . $transition, $messages);
