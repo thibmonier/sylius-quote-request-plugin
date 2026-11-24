@@ -92,14 +92,14 @@ final class QuoteBasketController extends AbstractController
             }
         }
 
-        if ([] === $quantities) {
+        if (null === $cart || [] === $quantities) {
             $this->addFlash('error', 'tmonier_quote_request.flash.empty_cart');
 
             return $this->redirectToRoute('sylius_shop_cart_summary');
         }
 
         $this->basket->replace($this->channel(), $quantities);
-        $request->getSession()->set(self::SOURCE_CART_KEY . $this->channel()->getCode(), $cart?->getId());
+        $request->getSession()->set(self::SOURCE_CART_KEY . $this->channel()->getCode(), $cart->getId());
 
         return $this->redirectToRoute('tmonier_quote_request_shop_new');
     }
